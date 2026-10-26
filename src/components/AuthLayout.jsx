@@ -1,0 +1,58 @@
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import BrandBanner from './BrandBanner';
+import { colors } from '../theme/colors';
+import { IN_APP_LEGAL_PAGES } from '../constants/legalLinks';
+
+/**
+ * Mirrors AllyDocReactApp's AuthLayout.jsx for a phone: the form area, plus the
+ * web page's dark-blue branding panel carried over as a slim header band (its
+ * gradient, decorative circles and white logo - see BrandBanner). The panel's
+ * desktop-only feature cards and stats are not ported.
+ */
+export default function AuthLayout({ children, hideFooter = false }) {
+  const navigation = useNavigation();
+
+  const openLegalPage = (page) => {
+    navigation.navigate('LegalWebView', page);
+  };
+
+  return (
+    <View style={styles.screen}>
+      {/* The dark-blue brand header with the white AllyDoc logo - the web login page's branding panel. */}
+      <BrandBanner />
+
+      <View style={styles.page}>
+        <View style={styles.formArea}>{children}</View>
+
+        {!hideFooter && (
+          <Text style={styles.footer}>
+            By continuing you agree to our{' '}
+            <Text
+              style={styles.footerLink}
+              onPress={() => openLegalPage(IN_APP_LEGAL_PAGES.termsAndConditions)}
+            >
+              Terms of Use
+            </Text>{' '}
+            and{' '}
+            <Text
+              style={styles.footerLink}
+              onPress={() => openLegalPage(IN_APP_LEGAL_PAGES.privacyPolicy)}
+            >
+              Privacy Policy
+            </Text>
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.white },
+  page: { flex: 1, padding: 24, justifyContent: 'center' },
+  formArea: { width: '100%' },
+  footer: { marginTop: 24, fontSize: 13, color: colors.roleLabel, textAlign: 'center' },
+  footerLink: { color: colors.accentDark, textDecorationLine: 'underline' },
+});
