@@ -47,6 +47,7 @@ export default function UpdateTempPasswordPage() {
 
         <FormField
           label="New password"
+          required
           icon="lock"
           secureToggle
           maxLength={25}
@@ -59,6 +60,7 @@ export default function UpdateTempPasswordPage() {
 
         <FormField
           label="Confirm password"
+          required
           icon="lock"
           secureToggle
           maxLength={25}

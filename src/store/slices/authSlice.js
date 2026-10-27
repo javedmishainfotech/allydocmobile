@@ -1,6 +1,14 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import * as authService from '../../services/authService';
 import { getItem, setItem, clearAll } from '../../utils/storage';
+import { validateSession } from '../../utils/roleAccess';
+import {
+  getTokenExpiryMs,
+  refreshAccessToken,
+  scheduleProactiveRefresh,
+  stopProactiveRefresh,
+} from '../../api/client';
+import { setAuthLogoutInProgress } from '../../services/authSessionState';
 
 const initialState = {
   status: 'idle', // idle | bootstrapping | loading | succeeded | failed
@@ -36,6 +44,19 @@ export const loginUser = createAsyncThunk(
 
     const userData = result.data || {};
 
+    // Role gate (web: ProtectedRoutes allow-list + OrgRouteHandler) - checked BEFORE anything
+    // is persisted, so a role this app has no shell for never gets a stored session.
+    const access = validateSession({
+      roleName: userData.roleName,
+      userType: userData.userType,
+      orgName: clientName,
+      loginTab: userType,
+    });
+    if (!access.ok) {
+      return rejectWithValue({ message: access.message });
+    }
+
+    setAuthLogoutInProgress(false);
     if (clientName) {
       await setItem('orgName', clientName);
     }
@@ -49,6 +70,7 @@ export const loginUser = createAsyncThunk(
       await setItem('refreshTokenExpiresAt', userData.refreshTokenExpiresAt);
     }
     await setItem('resetPinModalDismissedForSession', '0');
+    scheduleProactiveRefresh();
 
     const profile = {
       userId: userData.userId,
@@ -83,6 +105,25 @@ export const bootstrapAuth = createAsyncThunk('auth/bootstrap', async () => {
   const token = await getItem('auth_token');
   if (!token) return null;
 
+  // A persisted access token may have expired while the app was closed: renew it from the
+  // refresh token now, otherwise the first screen's request would 401 straight away.
+  const expiryMs = getTokenExpiryMs(token);
+  if (expiryMs && expiryMs <= Date.now()) {
+    let renewed = null;
+    try {
+      renewed = await refreshAccessToken();
+    } catch {
+      // refresh rejected - treated like "no session" below
+    }
+    if (!renewed) {
+      const preferredTab = await getItem('preferredLoginTab');
+      await clearAll(preferredTab ? ['preferredLoginTab'] : []);
+      return null;
+    }
+  } else {
+    scheduleProactiveRefresh();
+  }
+
   const [roleName, orgName, isTempPassword, userId, fullName, userType] = await Promise.all([
     getItem('roleName'),
     getItem('orgName'),
@@ -91,6 +132,14 @@ export const bootstrapAuth = createAsyncThunk('auth/bootstrap', async () => {
     getItem('fullName'),
     getItem('userType'),
   ]);
+
+  // Same role/org gate as login: never restore a session the app has no shell for.
+  if (!validateSession({ roleName, userType, orgName }).ok) {
+    stopProactiveRefresh();
+    const preferredTab = await getItem('preferredLoginTab');
+    await clearAll(preferredTab ? ['preferredLoginTab'] : []);
+    return null;
+  }
 
   return {
     profile: {
@@ -119,13 +168,25 @@ export const updateTempPassword = createAsyncThunk(
 );
 
 export const logoutUser = createAsyncThunk('auth/logoutUser', async () => {
-  // Deliberately minimal for this first pass: clears local session state.
-  // The web app's full runLogoutCleanup() (FCM token deregistration, refresh
-  // token revocation, activity-log flush) is cross-cutting infra best added
-  // once push notifications/activity logging land in later modules.
-  // Only the login-tab preference survives the wipe.
-  const preferredTab = await getItem('preferredLoginTab');
-  await clearAll(preferredTab ? ['preferredLoginTab'] : []);
+  // Mirrors the web's runLogoutCleanup(): revoke the refresh token server-side (best-effort,
+  // capped so a bad connection can't trap the user on a "logging out" state), then wipe local
+  // session state. FCM token deregistration and activity-log flush are still to be added once
+  // push notifications/activity logging land. Only the login-tab preference survives the wipe.
+  setAuthLogoutInProgress(true);
+  try {
+    stopProactiveRefresh();
+    const refreshToken = await getItem('refreshToken');
+    if (refreshToken) {
+      await Promise.race([
+        authService.revokeRefreshToken(refreshToken),
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+      ]);
+    }
+    const preferredTab = await getItem('preferredLoginTab');
+    await clearAll(preferredTab ? ['preferredLoginTab'] : []);
+  } finally {
+    setAuthLogoutInProgress(false);
+  }
 });
 
 const authSlice = createSlice({
@@ -134,6 +195,10 @@ const authSlice = createSlice({
   reducers: {
     dismissAccountDisabledMessage(state) {
       state.accountDisabledMessage = null;
+    },
+    // Merges profile fields the user just saved (web: ProfileContext.updateProfile).
+    profileUpdated(state, action) {
+      state.profile = { ...(state.profile || {}), ...action.payload };
     },
   },
   extraReducers: (builder) => {
@@ -179,5 +244,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { dismissAccountDisabledMessage } = authSlice.actions;
+export const { dismissAccountDisabledMessage, profileUpdated } = authSlice.actions;
 export default authSlice.reducer;

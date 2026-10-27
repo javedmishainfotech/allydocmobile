@@ -2,9 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, RefreshControl, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import { getFreelancerPatients } from '../../services/patientsService';
+import { getFreelancerPatients, getClinicPatients } from '../../services/patientsService';
+import { useAuth } from '../../hooks/useAuth';
 import {
   normalizeFreelancerPatient,
+  normalizeClinicPatient,
   formatProfileStatus,
   parsePagedListResponse,
 } from '../../utils/patientListUtils';
@@ -80,6 +82,13 @@ function PatientRow({ patient, onOpen, onOpenAppointmentHistory }) {
  */
 export default function DoctorPatientsPage() {
   const dockInset = useDockInset();
+  const { profile } = useAuth();
+  // Same routing as the web's DoctorPatientsRoute.jsx: only a freelancer "doctor" uses
+  // /FreelancerDoctorPatients; every clinic/hospital role (doctor sub, doctor admin, clinic
+  // doctors) uses /GetListOfPatients.
+  const isFreelancerDoctor =
+    String(profile?.userType || '').toLowerCase() === 'freelancer' &&
+    String(profile?.roleName || '').toLowerCase().trim() === 'doctor';
   const [patients, setPatients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -92,13 +101,15 @@ export default function DoctorPatientsPage() {
 
   const loadPatients = useCallback(async (pageNumber, activeFilter) => {
     setIsLoading(true);
-    const response = await getFreelancerPatients({ pageNumber, pageSize: PAGE_SIZE, filters: activeFilter });
+    const fetchPage = isFreelancerDoctor ? getFreelancerPatients : getClinicPatients;
+    const response = await fetchPage({ pageNumber, pageSize: PAGE_SIZE, filters: activeFilter });
     const parsed = parsePagedListResponse(response, pageNumber, PAGE_SIZE);
-    setPatients(parsed.list.map(normalizeFreelancerPatient));
+    const normalize = isFreelancerDoctor ? normalizeFreelancerPatient : normalizeClinicPatient;
+    setPatients(parsed.list.map(normalize));
     setTotalPages(parsed.totalPages || 1);
     setTotalRecords(parsed.totalRecords);
     setIsLoading(false);
-  }, []);
+  }, [isFreelancerDoctor]);
 
   useEffect(() => {
     loadPatients(page, filter);

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BrandBanner from './BrandBanner';
 import { colors } from '../theme/colors';
 import { IN_APP_LEGAL_PAGES } from '../constants/legalLinks';
@@ -13,6 +14,7 @@ import { IN_APP_LEGAL_PAGES } from '../constants/legalLinks';
  */
 export default function AuthLayout({ children, hideFooter = false }) {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
   const openLegalPage = (page) => {
     navigation.navigate('LegalWebView', page);
@@ -23,7 +25,9 @@ export default function AuthLayout({ children, hideFooter = false }) {
       {/* The dark-blue brand header with the white AllyDoc logo - the web login page's branding panel. */}
       <BrandBanner />
 
-      <View style={styles.page}>
+      {/* Edge-to-edge (always on, Android SDK 58): the system nav bar / gesture area overlaps the
+          screen bottom, so the bottom padding is the design's 24 PLUS the real inset. */}
+      <View style={[styles.page, { paddingBottom: 24 + insets.bottom }]}>
         <View style={styles.formArea}>{children}</View>
 
         {!hideFooter && (

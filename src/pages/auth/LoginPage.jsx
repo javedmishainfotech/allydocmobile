@@ -93,12 +93,23 @@ export default function LoginPage({ navigation }) {
           <Text style={styles.heading}>Welcome back</Text>
           <Text style={styles.desc}>Sign in to continue to your health dashboard</Text>
 
-          <Pressable style={styles.orgRow} onPress={changeOrg}>
-            <MaterialCommunityIcons name="domain" size={15} color={colors.bodyText} />
-            <Text style={styles.orgText}>
+          <Pressable
+            style={({ pressed }) => [styles.orgRow, orgName && styles.orgRowActive, pressed && styles.orgRowPressed]}
+            onPress={changeOrg}
+          >
+            <View style={[styles.orgIcon, orgName && styles.orgIconActive]}>
+              <MaterialCommunityIcons
+                name="domain"
+                size={16}
+                color={orgName ? colors.accentDark : colors.bodyText}
+              />
+            </View>
+            <Text style={styles.orgText} numberOfLines={1}>
               {orgName ? `Organization: ${orgName}` : 'No organization selected'}
             </Text>
-            <Text style={styles.orgChange}>Change</Text>
+            <View style={styles.orgChangePill}>
+              <Text style={styles.orgChange}>Change</Text>
+            </View>
           </Pressable>
 
           <Text style={styles.roleLabel}>I AM LOGGING IN AS A</Text>
@@ -132,6 +143,7 @@ export default function LoginPage({ navigation }) {
 
           <FormField
             label="Email address"
+            required
             icon="mail"
             autoCapitalize="none"
             keyboardType="email-address"
@@ -145,6 +157,7 @@ export default function LoginPage({ navigation }) {
 
           <FormField
             label="Password"
+            required
             icon="lock"
             secureToggle
             maxLength={25}
@@ -157,7 +170,7 @@ export default function LoginPage({ navigation }) {
 
           <View style={styles.forgotRow}>
             <View />
-            <Pressable>
+            <Pressable onPress={() => navigation.navigate('ForgotPassword')}>
               <Text style={styles.forgotText}>Forgot password?</Text>
             </Pressable>
           </View>
@@ -170,6 +183,14 @@ export default function LoginPage({ navigation }) {
             loading={isSubmitting}
             disabled={isSubmitting || !formik.isValid}
           />
+
+          {/* Org (hospital/clinic) logins never self-register - same as the web, which hides this link there. */}
+          {!orgName ? (
+            <Pressable style={styles.registerRow} onPress={() => navigation.navigate('Register', { activeTab })}>
+              <Text style={styles.registerText}>Don&apos;t have an account? </Text>
+              <Text style={styles.registerLink}>Register</Text>
+            </Pressable>
+          ) : null}
         </AuthLayout>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -177,28 +198,57 @@ export default function LoginPage({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  registerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 14 },
+  registerText: { fontSize: 14.5, color: colors.bodyText },
+  registerLink: { fontSize: 14.5, color: colors.accentDark, fontWeight: '600' },
   flex: { flex: 1, backgroundColor: colors.white },
   scroll: { flexGrow: 1 },
-  heading: { fontSize: 28, fontWeight: '700', color: colors.heading, marginBottom: 6, letterSpacing: -0.4 },
-  desc: { fontSize: 15, color: colors.bodyText, marginBottom: 22 },
+  heading: { fontSize: 26, fontWeight: '700', color: colors.heading, marginBottom: 4, letterSpacing: -0.4 },
+  desc: { fontSize: 14, color: colors.bodyText, marginBottom: 14 },
   orgRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: -10,
-    marginBottom: 20,
+    gap: 10,
+    marginTop: 0,
+    marginBottom: 14,
+    paddingVertical: 6,
+    paddingLeft: 8,
+    paddingRight: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+    borderRadius: 12,
   },
-  orgText: { flex: 1, fontSize: 13, color: colors.bodyText },
-  orgChange: { fontSize: 13, color: colors.accentDark, fontWeight: '600' },
+  orgRowActive: { backgroundColor: colors.hintBg, borderColor: colors.hintBorder },
+  orgRowPressed: { opacity: 0.8 },
+  orgIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EEF2F6',
+  },
+  orgIconActive: { backgroundColor: '#DBEAFE' },
+  orgText: { flex: 1, fontSize: 13, fontWeight: '500', color: colors.bodyText },
+  orgChangePill: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.hintBorder,
+  },
+  orgChange: { fontSize: 12.5, color: colors.accentDark, fontWeight: '600' },
   roleLabel: {
     fontSize: 12,
     fontWeight: '700',
     color: colors.roleLabel,
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  roleCards: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  roleCards: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   hint: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -207,8 +257,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.hintBorder,
     borderRadius: 10,
-    padding: 12,
-    marginBottom: 20,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    marginBottom: 14,
   },
   hintDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
   hintText: { flex: 1, fontSize: 13.5, color: colors.hintText, lineHeight: 18 },
@@ -229,7 +280,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 18,
+    marginBottom: 12,
   },
   forgotText: { fontSize: 14.5, color: colors.accentDark, fontWeight: '500' },
   submitError: { fontSize: 13, color: colors.dangerText, marginBottom: 12 },

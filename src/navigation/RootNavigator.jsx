@@ -3,18 +3,19 @@ import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../hooks/useAuth';
-import { useDashboardRole } from '../hooks/useDashboardRole';
 import OnboardingPage from '../pages/auth/OnboardingPage';
 import OrgEntryPage from '../pages/auth/OrgEntryPage';
 import LoginPage from '../pages/auth/LoginPage';
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
+import RegisterPage from '../pages/auth/RegisterPage';
 import UpdateTempPasswordPage from '../pages/auth/UpdateTempPasswordPage';
-import DashboardPage from '../pages/dashboard/DashboardPage';
 import LegalWebViewScreen from '../pages/legal/LegalWebViewScreen';
-import DoctorNavigator from './DoctorNavigator';
+import RoleNavigator from './RoleNavigator';
+import useAutoLogoutOnInactivity from '../hooks/useAutoLogoutOnInactivity';
+import { setSessionExpiredHandler, isAuthLogoutInProgress } from '../services/authSessionState';
+import { toast } from '../utils/toast';
 
 const AuthStack = createNativeStackNavigator();
-const PatientStack = createNativeStackNavigator();
-const NurseStack = createNativeStackNavigator();
 
 /**
  * Mirrors the web app's role-gating split across SignInNew.jsx (redirect once
@@ -24,13 +25,35 @@ const NurseStack = createNativeStackNavigator();
  * which stack is even mounted is the gate, rather than a per-route check.
  */
 export default function RootNavigator() {
-  const { status, isAuthenticated, isTempPassword, bootstrap } = useAuth();
-  const dashboardRole = useDashboardRole();
+  const { status, isAuthenticated, isTempPassword, bootstrap, logout } = useAuth();
 
   useEffect(() => {
     bootstrap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // The API client reports a dead session (refresh failed / no refresh token) through this
+  // handler; logging out flips isAuthenticated, which unmounts the signed-in tree and
+  // lands the user back on the logged-out stack (web: performGlobalLogout).
+  useEffect(
+    () =>
+      setSessionExpiredHandler((message) => {
+        if (isAuthLogoutInProgress()) return;
+        toast.error(message);
+        logout();
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  // Web AuthContext: 30 minutes without activity logs the user out.
+  const { responderProps } = useAutoLogoutOnInactivity({
+    enabled: isAuthenticated,
+    onTimeout: () => {
+      toast.error('You were logged out due to inactivity.');
+      logout();
+    },
+  });
 
   if (status === 'bootstrapping') {
     return (
@@ -41,6 +64,7 @@ export default function RootNavigator() {
   }
 
   return (
+    <View style={{ flex: 1 }} {...responderProps}>
     <NavigationContainer>
       {!isAuthenticated ? (
         // Onboarding is the logged-out landing page, like the web app's "/" LandingPage: it is
@@ -50,6 +74,8 @@ export default function RootNavigator() {
           <AuthStack.Screen name="Onboarding" component={OnboardingPage} />
           <AuthStack.Screen name="OrgEntry" component={OrgEntryPage} />
           <AuthStack.Screen name="Login" component={LoginPage} />
+          <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordPage} />
+          <AuthStack.Screen name="Register" component={RegisterPage} />
           <AuthStack.Screen
             name="LegalWebView"
             component={LegalWebViewScreen}
@@ -65,23 +91,12 @@ export default function RootNavigator() {
             options={{ headerShown: true }}
           />
         </AuthStack.Navigator>
-      ) : dashboardRole === 'patient' ? (
-        <PatientStack.Navigator screenOptions={{ title: 'AllyDoc' }}>
-          <PatientStack.Screen name="PatientDashboard">
-            {() => <DashboardPage roleLabel="Patient" />}
-          </PatientStack.Screen>
-          <PatientStack.Screen name="LegalWebView" component={LegalWebViewScreen} />
-        </PatientStack.Navigator>
-      ) : dashboardRole === 'nurse' ? (
-        <NurseStack.Navigator screenOptions={{ title: 'AllyDoc' }}>
-          <NurseStack.Screen name="NurseDashboard">
-            {() => <DashboardPage roleLabel="Nurse" />}
-          </NurseStack.Screen>
-          <NurseStack.Screen name="LegalWebView" component={LegalWebViewScreen} />
-        </NurseStack.Navigator>
       ) : (
-        <DoctorNavigator />
+        // Every signed-in role (doctor / nurse / patient) gets the same API-menu-driven shell; which
+        // screens its menu entries open comes from the role's own registry (see RoleNavigator).
+        <RoleNavigator />
       )}
     </NavigationContainer>
+    </View>
   );
 }

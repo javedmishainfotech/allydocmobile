@@ -4,7 +4,10 @@ import { Avatar, Menu } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { useNotifications } from '../hooks/useNotifications';
+import { useIdpStatus } from '../hooks/useIdpStatus';
+import { toast } from '../utils/toast';
 import { formatUnreadCount } from '../utils/notificationUtils';
+import { ROLE_ROUTE_KEYS, normalizeRole } from '../navigation/doctorMenuItems';
 import { adTokens } from '../theme/colors';
 
 /** First letter of the first and last word of the name ("John A. Smith" -> "JS"). */
@@ -35,15 +38,19 @@ function DropdownItem({ icon, label, color = adTokens.textPrimary, onPress }) {
   );
 }
 
-/** Right side of the doctor navbar: notification bell with unread badge, then
- * the initials avatar whose dropdown has the profile card, Profile Settings,
- * Change Password and Logout. (Identity Proofing lives in the More sheet now,
- * not here.) `navigation` is the tab screen's own navigation - `navigate` on
+/** Right side of the doctor header (AppHeader, on the dark-blue brand background,
+ * so white icons): the Identity Proofing shortcut with its status mark, the
+ * notification bell with unread badge, then the initials avatar whose dropdown has
+ * the profile card, Profile Settings, Change Password and Logout.
+ * The IDP shortcut lives here (not only in the More sheet) because the backend
+ * menu does not always include Identity Proofing, and a doctor must always be able
+ * to reach it. `navigation` is the tab screen's own navigation - `navigate` on
  * it bubbles up to the parent stack for the pushed screens. */
 export default function DoctorHeaderRight({ navigation }) {
   const { profile, logout } = useAuth();
   const { unreadCount, refreshUnreadCount } = useNotifications();
   const [menuVisible, setMenuVisible] = useState(false);
+  const idpStatus = useIdpStatus(profile?.idpStatus);
 
   // Single shared Redux slice backs both this badge and the Notifications
   // screen, so a count fetched here is already in sync once that screen loads -
@@ -60,20 +67,56 @@ export default function DoctorHeaderRight({ navigation }) {
     .map((part) => String(part).toUpperCase())
     .join(' | ');
 
+  // Same rules as the web header: no IDP for the 'doctor admin' role; nothing to open until an
+  // admin initiates it (not_started); a green tick when done, a red cross while in progress / failed.
+  // Identity Proofing is a doctor-only flow (web Header.jsx: doctor roles, not Doctor Admin, not nurse).
+  const showIdp = roleName === 'doctor' || roleName === 'doctor sub';
+  // Settings / Notifications are separate routes per role, so each role's menu stays its own.
+  const routeKeys = ROLE_ROUTE_KEYS[normalizeRole(roleName)] || ROLE_ROUTE_KEYS.doctor;
+  const idpNotStarted = idpStatus === 'not_started';
+  const idpDone = idpStatus === 'idpsuccess';
+  const idpOpen = idpStatus === 'started' || idpStatus === 'pending' || idpStatus === 'idperror';
+
+  const openIdp = () => {
+    if (idpNotStarted) {
+      toast.info('Your IDP has not been initiated by the admin yet.');
+      return;
+    }
+    navigation.navigate('IdentityProofing');
+  };
+
   const openSettings = (tab) => {
     closeMenu();
-    navigation.navigate('DoctorSettings', { tab });
+    navigation.navigate(routeKeys.settings, { tab });
   };
 
   return (
     <View style={styles.row}>
+      {showIdp ? (
+        <Pressable
+          onPress={openIdp}
+          style={[styles.idpButton, idpNotStarted && styles.idpDimmed]}
+          accessibilityRole="button"
+          accessibilityLabel={idpNotStarted ? 'Identity verification, not initiated by admin' : 'Identity verification'}
+          hitSlop={6}
+        >
+          <MaterialCommunityIcons name="shield-account-outline" size={23} color={adTokens.white} />
+          {idpDone ? (
+            <MaterialCommunityIcons name="check-circle" size={13} color="#34D399" style={styles.idpMark} />
+          ) : null}
+          {idpOpen ? (
+            <MaterialCommunityIcons name="close-circle" size={13} color="#F87171" style={styles.idpMark} />
+          ) : null}
+        </Pressable>
+      ) : null}
+
       <Pressable
-        onPress={() => navigation.navigate('DoctorNotification')}
+        onPress={() => navigation.navigate(routeKeys.notification)}
         style={styles.bellButton}
         accessibilityLabel="Notifications"
         hitSlop={6}
       >
-        <MaterialCommunityIcons name="bell-outline" size={22} color={adTokens.textSecondary} />
+        <MaterialCommunityIcons name="bell-outline" size={23} color={adTokens.white} />
         {unreadCount > 0 ? (
           <View style={styles.bellBadge}>
             <Text style={styles.bellBadgeText} numberOfLines={1}>
@@ -93,7 +136,12 @@ export default function DoctorHeaderRight({ navigation }) {
             onPress={() => setMenuVisible((visible) => !visible)}
             style={({ pressed }) => [styles.trigger, pressed && styles.triggerPressed]}
           >
-            <Avatar.Text size={30} label={getInitials(profile?.fullName)} />
+            <Avatar.Text
+              size={30}
+              label={getInitials(profile?.fullName)}
+              color={adTokens.white}
+              style={styles.triggerAvatar}
+            />
           </Pressable>
         }
       >
@@ -126,8 +174,20 @@ export default function DoctorHeaderRight({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 4 },
+  // Tight gap + no right padding: the IDP, bell and avatar sit packed against the right edge
+  // (each button already has its own touch padding around its icon).
+  row: { flexDirection: 'row', alignItems: 'center', gap: 2 },
 
+  idpButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Greyed (not disabled): tapping still explains why there is nothing to open.
+  idpDimmed: { opacity: 0.5 },
+  idpMark: { position: 'absolute', top: 2, right: 2 },
   bellButton: {
     width: 38,
     height: 38,
@@ -144,6 +204,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
     borderRadius: 8,
     backgroundColor: adTokens.danger,
+    // A ring in the header's own dark blue separates the badge from the bell icon.
+    borderWidth: 1.5,
+    borderColor: '#0F172A',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -153,12 +216,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 3,
-    backgroundColor: adTokens.gray50,
+    // Glass ring on the dark-blue header (the dropdown itself stays a white card).
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
     borderWidth: 1,
-    borderColor: adTokens.border,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
     borderRadius: 9999,
   },
-  triggerPressed: { backgroundColor: adTokens.white },
+  triggerPressed: { backgroundColor: 'rgba(255, 255, 255, 0.26)' },
+  triggerAvatar: { backgroundColor: 'rgba(255, 255, 255, 0.22)' },
 
   dropdown: {
     width: 248,

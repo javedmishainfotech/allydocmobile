@@ -6,6 +6,7 @@ import {
   bootstrapAuth,
   updateTempPassword,
   dismissAccountDisabledMessage,
+  profileUpdated,
 } from '../store/slices/authSlice';
 
 /**
@@ -31,6 +32,8 @@ export function useAuth() {
     [dispatch],
   );
 
+  const updateProfileState = useCallback((fields) => dispatch(profileUpdated(fields)), [dispatch]);
+
   return {
     ...state,
     login,
@@ -38,5 +41,6 @@ export function useAuth() {
     bootstrap,
     setNewPassword,
     dismissAccountDisabled,
+    updateProfileState,
   };
 }

@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import AllyDocLogo from '../components/AllyDocLogo';
+import AppHeader from '../components/AppHeader';
 import DoctorHeaderRight from '../components/DoctorHeaderRight';
 import DoctorTabBar, { DOCK_HEIGHT } from '../components/DoctorTabBar';
 import DoctorMoreMenu from '../components/DoctorMoreMenu';
@@ -14,13 +14,12 @@ import { adTokens } from '../theme/colors';
 
 const Tab = createBottomTabNavigator();
 
+// Every role's home screen (DoctorDashboard / NurseDashboard / PatientDashboard) shows the full
+// logo in the header instead of a title.
+const DASHBOARD_KEY = /Dashboard$/;
+
 // The More tab is never shown - pressing it opens DoctorMoreMenu instead (see DoctorTabBar).
 const MoreScreen = () => null;
-
-// The actual AllyDoc logo (same SVG as the web app), not a stand-in icon + text.
-function BrandTitle() {
-  return <AllyDocLogo height={28} />;
-}
 
 // The navigator's own tab bar renders nothing. The glass dock has to live OUTSIDE
 // the navigator (next to the blur target, not inside it - a blur can't sample the
@@ -36,14 +35,14 @@ function TabBarBridge({ state, navigation, navigationRef, onStateChange }) {
 /**
  * The doctor's main surface: the first four backend menu entries as tabs, plus a
  * More tab that opens a sheet with the rest (DoctorMenuContext, built by
- * DoctorNavigator from `/AllMenus`). More's screens are pushed on the parent
+ * RoleNavigator from `/AllMenus`). More's screens are pushed on the parent
  * stack. `navigation` here is that parent stack's, so the sheet can navigate to a
  * tab or a pushed screen with one navigate() call.
  *
  * The scenes sit inside a BlurTargetView and the dock floats over them, so the
  * dock's glass genuinely blurs the page scrolling beneath it.
  */
-export default function DoctorTabsNavigator({ navigation }) {
+export default function RoleTabsNavigator({ navigation }) {
   const { tabItems, moreItems } = useDoctorMenu();
   const insets = useSafeAreaInsets();
   const [moreVisible, setMoreVisible] = useState(false);
@@ -75,11 +74,15 @@ export default function DoctorTabsNavigator({ navigation }) {
             )}
             screenOptions={({ navigation: tabNavigation }) => ({
               headerShown: true,
-              headerTitleAlign: 'left',
-              headerTitleStyle: styles.headerTitle,
-              headerStyle: styles.header,
-              headerShadowVisible: false,
-              headerRight: () => <DoctorHeaderRight navigation={tabNavigation} />,
+              // The shared compact brand header. Home (Dashboard) has no title so it shows the
+              // full logo; the other tabs show the brand mark + their title. The bell and
+              // profile menu sit on its right.
+              header: ({ options }) => (
+                <AppHeader
+                  title={options.headerTitleText}
+                  right={<DoctorHeaderRight navigation={tabNavigation} />}
+                />
+              ),
               sceneStyle: styles.scene,
             })}
           >
@@ -90,7 +93,8 @@ export default function DoctorTabsNavigator({ navigation }) {
                 component={getMenuScreenComponent(item)}
                 options={{
                   title: item.title,
-                  ...(item.key === 'DoctorDashboard' ? { headerTitle: () => <BrandTitle /> } : null),
+                  // What AppHeader prints; Dashboard leaves it out so it gets the full logo instead.
+                  headerTitleText: DASHBOARD_KEY.test(item.key) ? undefined : item.title,
                 }}
               />
             ))}
@@ -119,6 +123,4 @@ export default function DoctorTabsNavigator({ navigation }) {
 const styles = StyleSheet.create({
   flex1: { flex: 1 },
   scene: { backgroundColor: adTokens.bgBody },
-  header: { backgroundColor: adTokens.white },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: adTokens.textPrimary },
 });

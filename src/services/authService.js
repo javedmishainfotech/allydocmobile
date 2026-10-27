@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import apiClient from '../api/client';
 import { encryptValuesWithTime } from '../utils/encryption';
 import { callApi } from '../utils/apiResponse';
@@ -14,12 +15,20 @@ export function login({ email, password, userType, clientName }) {
     email,
     password,
     '', // deviceToken - deliberately empty, same reasoning as the web app
-    'android',
+    Platform.OS, // 'android' | 'ios'
     userType,
     clientName,
   );
 
   return callApi(() => apiClient.post('/loginV3.1', { loginData: encryptedValue }));
+}
+
+/** Mirrors runLogoutCleanup's POST /RevokeRefreshToken in the web app: best-effort,
+ * and it must not trigger the refresh/expired-session flow while logging out. */
+export function revokeRefreshToken(refreshToken) {
+  return callApi(() =>
+    apiClient.post('/RevokeRefreshToken', { refreshToken }, { skipAuthRefreshFlow: true }),
+  );
 }
 
 /** Mirrors UpdateTempPasswordActions in AllyDocReactApp/src/store/actions:

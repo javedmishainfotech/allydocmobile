@@ -7,6 +7,7 @@ import { colors } from '../theme/colors';
 // newStyle.css: left icon, 1px border, blue focus ring, red error text.
 export default function FormField({
   label,
+  required = false,
   icon,
   iconSet = 'feather',
   error,
@@ -20,7 +21,12 @@ export default function FormField({
 
   return (
     <View style={[styles.group, containerStyle]}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {label ? (
+        <Text style={styles.label}>
+          {label}
+          {required ? <Text style={styles.required}> *</Text> : null}
+        </Text>
+      ) : null}
       <View style={styles.inputWrap}>
         <IconComponent name={icon} size={18} color={colors.placeholder} style={styles.iconStart} />
         <TextInput
@@ -51,12 +57,13 @@ export default function FormField({
 const styles = StyleSheet.create({
   group: { marginBottom: 4 },
   label: { fontSize: 15, fontWeight: '500', color: colors.fieldLabel, marginBottom: 6 },
+  required: { color: colors.dangerText },
   inputWrap: { position: 'relative', justifyContent: 'center' },
   iconStart: { position: 'absolute', left: 14, zIndex: 1 },
   iconEnd: { position: 'absolute', right: 14, zIndex: 1 },
   input: {
     width: '100%',
-    paddingVertical: 13,
+    paddingVertical: 10,
     paddingLeft: 42,
     paddingRight: 42,
     borderRadius: 8,

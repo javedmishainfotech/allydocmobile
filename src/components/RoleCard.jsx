@@ -18,7 +18,7 @@ export default function RoleCard({ icon, label, description, active, onPress }) 
       <View style={[styles.iconWrap, active ? styles.iconWrapActive : styles.iconWrapInactive]}>
         <MaterialCommunityIcons
           name={icon}
-          size={28}
+          size={22}
           color={active ? colors.accent : colors.roleIconColorInactive}
         />
       </View>
@@ -32,9 +32,9 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 20,
-    paddingHorizontal: 12,
+    gap: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderRadius: 16,
     borderWidth: 2,
   },
@@ -42,9 +42,9 @@ const styles = StyleSheet.create({
   cardActive: { backgroundColor: colors.accentLight, borderColor: colors.accent },
   check: { position: 'absolute', top: 8, right: 8 },
   iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 2,
@@ -53,6 +53,6 @@ const styles = StyleSheet.create({
   iconWrapActive: { backgroundColor: colors.accentActiveIconBg },
   title: { fontSize: 15, fontWeight: '700', color: colors.roleTitleInactive },
   titleActive: { color: colors.accentDark },
-  desc: { fontSize: 12.5, color: colors.roleDescInactive, textAlign: 'center', lineHeight: 16 },
+  desc: { fontSize: 12, color: colors.roleDescInactive, textAlign: 'center', lineHeight: 15 },
   descActive: { color: colors.accent },
 });

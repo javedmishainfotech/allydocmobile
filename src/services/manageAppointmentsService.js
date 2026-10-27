@@ -1,6 +1,7 @@
 import apiClient from '../api/client';
 import { callApi } from '../utils/apiResponse';
 import { localDateOnlyToApiString } from '../utils/dateOnly';
+import { buildDoctorAppointmentsQuery } from '../utils/appointmentListApi';
 
 /** Mirrors getAllAppointmentsBasedOnDate in AllyDocReactApp/src/store/actions. Date-only filter. */
 export function getAppointmentsBasedOnDate(date) {
@@ -41,4 +42,10 @@ export function saveAppointmentNotes({ appointmentId, userId, notes }) {
   return callApi(() =>
     apiClient.post('/api/AppointmentNotes/AppointmentNoteSaveAndEdit', { appointmentId, userId, notes }),
   );
+}
+
+/** Mirrors GetDoctorAppointmentsListAction (server-paginated, filterable). The web's
+ * `GET /AllDoctorAppointment?...` query is built by utils/appointmentListApi.js. */
+export function getDoctorAppointmentsList(doctorId, filter) {
+  return callApi(() => apiClient.get(`/AllDoctorAppointment?${buildDoctorAppointmentsQuery(doctorId, filter)}`));
 }

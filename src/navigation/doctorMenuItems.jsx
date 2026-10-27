@@ -1,38 +1,52 @@
 import React from 'react';
+import DashboardPage from '../pages/dashboard/DashboardPage';
 import DoctorDashboardPage from '../pages/doctor/DoctorDashboardPage';
 import DoctorManageAppointmentsPage from '../pages/doctor/DoctorManageAppointmentsPage';
+import DoctorAppointmentsPage from '../pages/doctor/DoctorAppointmentsPage';
 import DoctorSettingsPage from '../pages/doctor/DoctorSettingsPage';
 import DoctorPatientsPage from '../pages/doctor/DoctorPatientsPage';
+import PatientDashboardPage from '../pages/patient/PatientDashboardPage';
+import PatientAppointmentsPage from '../pages/patient/PatientAppointmentsPage';
+import PatientTreatmentPlanPage from '../pages/patient/PatientTreatmentPlanPage';
+import PatientPaymentsPage from '../pages/patient/PatientPaymentsPage';
+import PatientFeedbackPage from '../pages/patient/PatientFeedbackPage';
+import PatientSettingsPage from '../pages/patient/PatientSettingsPage';
+import ChatRoomsPage from '../pages/chat/ChatRoomsPage';
 import DoctorSupportPage from '../pages/doctor/DoctorSupportPage';
 import DoctorIdentityProofingPage from '../pages/doctor/DoctorIdentityProofingPage';
 import DoctorNotificationPage from '../pages/doctor/DoctorNotificationPage';
 import PlaceholderScreen from '../components/PlaceholderScreen';
+import { requiresIdpGate, withIdpGate } from './IdpGate';
 
 /**
- * Verified Freelancer-doctor menu/page inventory (see the plan file and this
- * session's research for the audit trail against AllyDocReactApp/src/routes.jsx).
- * Explicitly excluded (confirmed not applicable to a freelancer, not built):
- * Clinic Favorites, sub-doctor "Doctors" management list, any clinic-location CRUD.
+ * Menu/page inventory per role. The real sidebar of the web app
+ * (AllyDocReactApp/src/components/DefaultLayout/SideBar.jsx) is backend-driven via
+ * `GET /AllMenus?userId=...` (RoleRightsMappings rows for the user's role, so each
+ * role already gets only its own menus) - NOT a hardcoded list. Each entry below is
+ * a KNOWN SCREEN our app can render for that role, matched against the live menu
+ * response by its route `path` (see `matchKnownScreen`). The array also serves as a
+ * fallback menu if the API call fails or returns nothing, so the app is never left empty.
  *
- * The real sidebar (see AllyDocReactApp/src/components/DefaultLayout/SideBar.jsx)
- * is backend-driven via `GET /AllMenus?userId=...` - NOT a hardcoded list. Each
- * entry below is a KNOWN SCREEN our app can render, matched against the live
- * menu response by its route `path` (see `matchKnownScreen` below). This array
- * also serves as a fallback menu if the API call fails or returns nothing, so
- * the app is never left with an empty drawer.
+ * Route keys are prefixed per role (Doctor* / Nurse* / Patient*) so one role's
+ * screens can never collide with another's, even where they share a component.
+ * `component` is null for items not yet implemented - they render PlaceholderScreen
+ * via `resolveMenuScreenComponent` instead.
  *
- * `component` is null for items not yet implemented in this phase - they render
- * PlaceholderScreen via `resolveMenuScreenComponent` instead.
+ * Order matters inside each array: the first entry whose keyword is found in the
+ * API path wins, so more specific keywords (e.g. 'pending-appointment') sit before
+ * more general ones ('appointment').
  */
+
+// ── Doctor (roleName: Doctor, Doctor Sub, Doctor Admin) ──
 export const DOCTOR_MENU_ITEMS = [
   { key: 'DoctorDashboard', title: 'Dashboard', icon: 'view-dashboard-outline', component: DoctorDashboardPage, pathKeywords: ['dashboard'] },
   { key: 'ManageAppointments', title: 'Manage Appointments', icon: 'calendar-edit', component: DoctorManageAppointmentsPage, pathKeywords: ['manageappointment'] },
-  { key: 'DoctorAppointments', title: 'Appointments', icon: 'calendar-month-outline', component: null, pathKeywords: ['appointment'] },
+  { key: 'DoctorAppointments', title: 'Appointments', icon: 'calendar-month-outline', component: DoctorAppointmentsPage, pathKeywords: ['appointment'] },
   { key: 'DoctorPatients', title: 'Patients', icon: 'account-multiple-outline', component: DoctorPatientsPage, pathKeywords: ['patient'] },
   { key: 'DoctorTreatmentPlan', title: 'Treatment Plan', icon: 'clipboard-text-outline', component: null, pathKeywords: ['treatment-plan', 'treatmentplan'] },
   { key: 'PharmacyRequests', title: 'Pharmacy Requests', icon: 'pill', component: null, pathKeywords: ['pharmacy-request', 'pharmacyrequest', 'rxrequest', 'rx-request'] },
   { key: 'Favorites', title: 'Favorites', icon: 'star-outline', component: null, pathKeywords: ['favorite'] },
-  { key: 'DoctorMessage', title: 'Messages', icon: 'message-text-outline', component: null, pathKeywords: ['message'] },
+  { key: 'DoctorMessage', title: 'Messages', icon: 'message-text-outline', component: ChatRoomsPage, pathKeywords: ['message'] },
   { key: 'DoctorPayments', title: 'Payments', icon: 'credit-card-outline', component: null, pathKeywords: ['payment'] },
   { key: 'DoctorRequests', title: 'Requests', icon: 'inbox-arrow-down-outline', component: null, pathKeywords: ['request'] },
   { key: 'DoctorNotification', title: 'Notifications', icon: 'bell-outline', component: DoctorNotificationPage, pathKeywords: ['notification'] },
@@ -47,34 +61,103 @@ export const DOCTOR_MENU_ITEMS = [
   { key: 'DoctorSupport', title: 'Support', icon: 'lifebuoy', component: DoctorSupportPage, pathKeywords: ['support'] },
 ];
 
-/** Matches one backend menu entry ({ path, title, icon }) to a known local
- * screen by keyword-matching its route path (case-insensitive substring,
- * since the backend's exact path casing/format isn't guaranteed to match the
- * web app's route strings 1:1 and hasn't been verified against a live
- * response yet). Returns null if nothing matches - caller decides what to
- * do with an unrecognized item. */
-export function matchKnownScreen(apiItem) {
-  const path = String(apiItem?.path || '').toLowerCase();
-  if (!path) return null;
-  return DOCTOR_MENU_ITEMS.find((known) => known.pathKeywords.some((kw) => path.includes(kw))) || null;
+// Stable component identities (an inline arrow passed as a navigator `component` would
+// remount its screen on every render).
+function NurseDashboardPlaceholder() {
+  return <DashboardPage roleLabel="Nurse" />;
 }
 
-/** Turns the `/AllMenus` response (redux `menu` slice) into the doctor's screen
- * list, in the order the API returned it: each entry matched to a known local
- * screen by path keyword, unknown ones kept as placeholders under the backend's
- * own title. Falls back to the static DOCTOR_MENU_ITEMS while the API hasn't
- * resolved (or failed / returned nothing) so the app is never left empty.
- * De-duplicated by key - two API rows can match the same local screen, and a
- * duplicate route name would crash the navigator. */
-export function buildDoctorMenuItems(menu) {
+// ── Nurse (roleName: Nurse) - web: module/Nurse/*, portal /nurse/* ──
+// Settings reuses the doctor Settings screen, which hides the tabs a nurse doesn't get
+// (as the web's Settings/index.jsx does). Notifications are the same API for every role.
+export const NURSE_MENU_ITEMS = [
+  { key: 'NurseDashboard', title: 'Home', icon: 'view-dashboard-outline', component: NurseDashboardPlaceholder, pathKeywords: ['dashboard'] },
+  { key: 'NursePendingAppointments', title: 'Pending Appointments', icon: 'calendar-clock-outline', component: null, pathKeywords: ['pending-appointment'] },
+  { key: 'NurseAppointments', title: 'Appointments', icon: 'calendar-month-outline', component: null, pathKeywords: ['appointment'] },
+  { key: 'NurseDoctors', title: 'Doctors', icon: 'doctor', component: null, pathKeywords: ['doctor'] },
+  { key: 'NursePatients', title: 'Patients', icon: 'account-multiple-outline', component: null, pathKeywords: ['patient'] },
+  { key: 'NurseMessage', title: 'Messages', icon: 'message-text-outline', component: ChatRoomsPage, pathKeywords: ['message'] },
+  { key: 'NurseTreatmentPlan', title: 'Treatment Plan', icon: 'clipboard-text-outline', component: null, pathKeywords: ['treatment-plan', 'treatmentplan'] },
+  { key: 'NursePayments', title: 'Payments', icon: 'credit-card-outline', component: null, pathKeywords: ['payment'] },
+  { key: 'NurseFavorites', title: 'Favorites', icon: 'star-outline', component: null, pathKeywords: ['favorite'] },
+  { key: 'NurseNotification', title: 'Notifications', icon: 'bell-outline', component: DoctorNotificationPage, pathKeywords: ['notification'] },
+  { key: 'NurseSettings', title: 'Settings', icon: 'cog-outline', component: DoctorSettingsPage, pathKeywords: ['setting'] },
+  { key: 'NurseSupport', title: 'Support', icon: 'lifebuoy', component: DoctorSupportPage, pathKeywords: ['support'] },
+];
+
+// ── Patient (roleName: Patient) - web: module/Patient/*, portal /patient/* ──
+export const PATIENT_MENU_ITEMS = [
+  { key: 'PatientDashboard', title: 'Home', icon: 'view-dashboard-outline', component: PatientDashboardPage, pathKeywords: ['dashboard'] },
+  { key: 'PatientAppointments', title: 'Appointments', icon: 'calendar-month-outline', component: PatientAppointmentsPage, pathKeywords: ['appointment'] },
+  { key: 'PatientMessage', title: 'Messages', icon: 'message-text-outline', component: ChatRoomsPage, pathKeywords: ['message'] },
+  { key: 'PatientTreatmentPlan', title: 'Treatment Plan', icon: 'clipboard-text-outline', component: PatientTreatmentPlanPage, pathKeywords: ['treatment-plan', 'treatmentplan'] },
+  { key: 'PatientFeedback', title: 'Feedback', icon: 'comment-text-outline', component: PatientFeedbackPage, pathKeywords: ['feedback'] },
+  { key: 'PatientPayments', title: 'Payments', icon: 'credit-card-outline', component: PatientPaymentsPage, pathKeywords: ['payment'] },
+  { key: 'PatientNotification', title: 'Notifications', icon: 'bell-outline', component: DoctorNotificationPage, pathKeywords: ['notification'] },
+  { key: 'PatientSettings', title: 'Settings', icon: 'cog-outline', component: PatientSettingsPage, pathKeywords: ['setting'] },
+  { key: 'PatientSupport', title: 'Support', icon: 'lifebuoy', component: DoctorSupportPage, pathKeywords: ['support'] },
+];
+
+export const MENU_ITEMS_BY_ROLE = {
+  doctor: DOCTOR_MENU_ITEMS,
+  nurse: NURSE_MENU_ITEMS,
+  patient: PATIENT_MENU_ITEMS,
+};
+
+/** The route keys other parts of the UI (header bell / profile menu) navigate to, per role. */
+export const ROLE_ROUTE_KEYS = {
+  doctor: { settings: 'DoctorSettings', notification: 'DoctorNotification' },
+  nurse: { settings: 'NurseSettings', notification: 'NurseNotification' },
+  patient: { settings: 'PatientSettings', notification: 'PatientNotification' },
+};
+
+/** Normalises the web's roleName the way ProtectedRoutes / getRoleDashboardPath do:
+ * "doctor admin" / "doctor sub" -> "doctor"; "nurse" and "patient" stay as they are. */
+export function normalizeRole(roleName) {
+  const lower = String(roleName || '').toLowerCase().trim();
+  if (lower === 'doctor admin' || lower === 'doctor sub') return 'doctor';
+  return lower;
+}
+
+export function getMenuItemsForRole(role) {
+  return MENU_ITEMS_BY_ROLE[role] || DOCTOR_MENU_ITEMS;
+}
+
+/** Matches one backend menu entry ({ path, title, icon }) to a known local screen of
+ * `items` by keyword-matching its route path (case-insensitive substring, since the
+ * backend's exact path casing/format isn't guaranteed to match the web app's route
+ * strings 1:1). Returns null if nothing matches - caller decides what to do with an
+ * unrecognized item. */
+export function matchKnownScreen(apiItem, items = DOCTOR_MENU_ITEMS) {
+  const path = String(apiItem?.path || '').toLowerCase();
+  if (!path) return null;
+  return items.find((known) => known.pathKeywords.some((kw) => path.includes(kw))) || null;
+}
+
+/** Turns the `/AllMenus` response (redux `menu` slice) into the role's screen list, in
+ * the order the API returned it: each entry matched to a known local screen by path
+ * keyword, unknown ones kept as placeholders under the backend's own title. Falls back
+ * to the role's static list while the API hasn't resolved (or failed / returned nothing)
+ * so the app is never left empty. De-duplicated by key - two API rows can match the same
+ * local screen, and a duplicate route name would crash the navigator.
+ *
+ * `isDoctorAdmin`: the web filters Identity Proofing and Two-Factor items out of a Doctor
+ * Admin's menu (SideBar.jsx) - they don't use those flows - so the same is done here. */
+export function buildRoleMenuItems(menu, role, { isDoctorAdmin = false } = {}) {
+  const roleItems = getMenuItemsForRole(role);
+  const isIdpItem = (item) => item.key === 'IdentityProofing';
+
   if (menu.status !== 'succeeded' || !menu.items.length) {
-    return DOCTOR_MENU_ITEMS;
+    return isDoctorAdmin ? roleItems.filter((item) => !isIdpItem(item)) : roleItems;
   }
 
   const seen = new Set();
   const items = [];
   menu.items.forEach((apiItem, index) => {
-    const known = matchKnownScreen(apiItem);
+    const path = String(apiItem?.path || '').toLowerCase();
+    if (isDoctorAdmin && (path.includes('/identity-proofing') || path.includes('/two-factor'))) return;
+
+    const known = matchKnownScreen(apiItem, roleItems);
     const item = known
       ? { ...known, title: apiItem.title || known.title }
       : {
@@ -95,7 +178,15 @@ export function buildDoctorMenuItems(menu) {
 // render. Cached so the same item always yields the same component identity.
 const screenComponentCache = new Map();
 export function getMenuScreenComponent(item) {
-  if (item.component) return item.component;
+  const base = item.component || getUnbuiltScreenComponent(item);
+  // Doctor screens (other than dashboard / identity-proofing / setting / notification) are
+  // locked behind Identity Proofing, as in the web's ProtectedRoutes. The gate itself skips
+  // nurse and doctor admin by reading the signed-in role.
+  const isDoctorScreen = DOCTOR_MENU_ITEMS.some((doctorItem) => doctorItem.key === item.key);
+  return isDoctorScreen && requiresIdpGate(item.key) ? withIdpGate(base) : base;
+}
+
+function getUnbuiltScreenComponent(item) {
   const cacheKey = `${item.key}|${item.title}|${item.icon}`;
   if (!screenComponentCache.has(cacheKey)) {
     screenComponentCache.set(cacheKey, resolveMenuScreenComponent(item));

@@ -58,7 +58,7 @@ function MenuCard({ card, badge, width, onPress }) {
  * (DoctorMenuContext.moreItems, from `/AllMenus`), as a 3-column card grid with
  * search, plus Logout pinned at the bottom. Slides up like this app's other
  * bottom sheets. `navigation` is the stack-level navigation (from
- * DoctorTabsNavigator), so one navigate(key) reaches the pushed screens.
+ * RoleTabsNavigator), so one navigate(key) reaches the pushed screens.
  */
 export default function DoctorMoreMenu({ visible, onClose, navigation }) {
   const insets = useSafeAreaInsets();

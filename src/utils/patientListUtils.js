@@ -82,7 +82,7 @@ export function formatProfileStatus(patient) {
   return profileStatusLabel === 'profile created' ? 'Registered' : 'Not registered';
 }
 
-const INNER_LIST_KEYS = ['data', 'items', 'list', 'records', 'patients', 'result', 'results'];
+const INNER_LIST_KEYS = ['data', 'items', 'list', 'records', 'patients', 'Patients', 'doctors', 'Doctors', 'subDoctors', 'result', 'results'];
 
 /** `response` here is the already-unwrapped global envelope ({success,data,...}
  * from callApi()), one level shallower than the web's raw axios response. */
@@ -110,4 +110,33 @@ export function parsePagedListResponse(response, fallbackPage, fallbackPageSize)
     totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
   }
   return { list, totalPages, page, totalRecords };
+}
+
+/** Port of normalizePatientForList in the web's module/Doctor/Pages/Patients/index.jsx - the row
+ * shape of GET /GetListOfPatients (hospital/clinic doctors), which uses different keys than
+ * /FreelancerDoctorPatients. Returns the same shape as normalizeFreelancerPatient so one list UI
+ * renders both. */
+export function normalizeClinicPatient(row) {
+  const firstName = String(getRowValue(row, ['FirstName', 'firstName', 'firstname'], '')).trim();
+  const lastName = String(getRowValue(row, ['LastName', 'lastName', 'lastname'], '')).trim();
+  const fullName = `${firstName} ${lastName}`.trim();
+  const active = row?.Active ?? row?.active;
+
+  return {
+    userId: getRowValue(row, ['PatientId', 'patientId', 'userId', 'id', 'Id'], ''),
+    fullName: fullName || getRowValue(row, ['PatientName', 'patientName', 'name'], 'N/A'),
+    email: getRowValue(row, ['Email', 'email'], 'N/A'),
+    phoneNumber: getRowValue(row, ['PhoneNumber', 'phoneNumber', 'MobileNo', 'mobileNo'], 'N/A'),
+    profilePicture: getRowValue(row, ['profileImage', 'ProfileImage', 'profilePicture', 'ProfilePicture'], ''),
+    gender: formatListGender(getRowValue(row, ['Gender', 'gender', 'Sex', 'sex'], '')),
+    dob: formatListDob(
+      getRowValue(row, ['DateOfBirth', 'dateOfBirth', 'Dob', 'dob', 'DOB', 'BirthDate', 'birthDate'], ''),
+    ),
+    age: getRowValue(row, ['age', 'Age'], 'N/A'),
+    doseSpotRefrenceId: getRowValue(row, ['doseSpotRefrenceId', 'DoseSpotRefrenceId', 'DoseSpotReferenceId'], 'N/A'),
+    profileStatusLabel:
+      getRowValue(row, ['profileStatusLabel', 'ProfileStatusLabel'], '') ||
+      (active === true || active === 'true' || active === 1 ? 'Profile Created' : 'Not Registered'),
+    hospitalName: getRowValue(row, ['hospitalName', 'HospitalName'], ''),
+  };
 }

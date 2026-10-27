@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, Text, StyleSheet, Pressable } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, Pressable } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useOrg } from '../../hooks/useOrg';
 import { colors } from '../../theme/colors';
@@ -51,9 +51,25 @@ export default function OrgEntryPage({ navigation }) {
           onPress={() => goToLogin(code.trim())}
         />
 
-        <Pressable style={styles.skipRow} onPress={() => goToLogin('')}>
-          <Text style={styles.skipText}>Continue without an organization code</Text>
-          <MaterialCommunityIcons name="arrow-right" size={16} color={colors.accentDark} />
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>OR</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <Pressable
+          style={({ pressed }) => [styles.skipButton, pressed && styles.skipButtonPressed]}
+          onPress={() => goToLogin('')}
+          accessibilityRole="button"
+        >
+          <View style={styles.skipIcon}>
+            <MaterialCommunityIcons name="account-outline" size={20} color={colors.accentDark} />
+          </View>
+          <View style={styles.skipBody}>
+            <Text style={styles.skipTitle}>Continue without a code</Text>
+            <Text style={styles.skipSub}>For freelancer doctors and patients</Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={22} color={colors.accentDark} />
         </Pressable>
       </AuthLayout>
     </ScrollView>
@@ -64,12 +80,31 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, backgroundColor: colors.white },
   heading: { fontSize: 26, fontWeight: '700', color: colors.heading, marginBottom: 6 },
   desc: { fontSize: 14.5, color: colors.bodyText, marginBottom: 24, lineHeight: 20 },
-  skipRow: {
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 20 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.inputBorder },
+  dividerText: { fontSize: 12, fontWeight: '700', letterSpacing: 1, color: colors.roleLabel },
+  skipButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 20,
+    gap: 12,
+    paddingVertical: 12,
+    paddingLeft: 12,
+    paddingRight: 10,
+    backgroundColor: colors.hintBg,
+    borderWidth: 1,
+    borderColor: colors.hintBorder,
+    borderRadius: 12,
   },
-  skipText: { color: colors.accentDark, fontSize: 14.5, fontWeight: '500' },
+  skipButtonPressed: { opacity: 0.8 },
+  skipIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DBEAFE',
+  },
+  skipBody: { flex: 1 },
+  skipTitle: { fontSize: 15, fontWeight: '600', color: colors.accentDark },
+  skipSub: { fontSize: 12.5, color: colors.bodyText, marginTop: 1 },
 });

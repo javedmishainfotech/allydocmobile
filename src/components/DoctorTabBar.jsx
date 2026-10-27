@@ -3,22 +3,34 @@ import { View, Pressable, Animated, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { adTokens } from '../theme/colors';
+import { adTokens, colors } from '../theme/colors';
 
 // 'More' is not a real screen: pressing it opens the More sheet (see
-// DoctorTabsNavigator) instead of navigating.
+// RoleTabsNavigator) instead of navigating.
 const MORE_META = { label: 'More', icon: 'dots-horizontal', iconActive: 'dots-horizontal' };
 
 // The tabs are whatever the backend menu returned (title + icon from the menu
 // item); a few well-known screens get a filled "active" icon / a different
 // default icon so each tab keeps ONE recognisable symbol. Label is only used
 // for accessibility - the dock itself shows icons only.
-const ICON_OVERRIDES = { DoctorDashboard: 'home-outline', ManageAppointments: 'calendar-month-outline' };
+const ICON_OVERRIDES = {
+  DoctorDashboard: 'home-outline',
+  NurseDashboard: 'home-outline',
+  PatientDashboard: 'home-outline',
+  ManageAppointments: 'calendar-month-outline',
+};
 const ACTIVE_ICONS = {
   DoctorDashboard: 'home',
+  NurseDashboard: 'home',
+  PatientDashboard: 'home',
   DoctorPatients: 'account-multiple',
+  NursePatients: 'account-multiple',
   ManageAppointments: 'calendar-month',
+  NurseAppointments: 'calendar-month',
+  PatientAppointments: 'calendar-month',
   DoctorMessage: 'message-text',
+  NurseMessage: 'message-text',
+  PatientMessage: 'message-text',
 };
 
 function metaForItem(item) {
@@ -83,7 +95,7 @@ function TabItem({ meta, isActive, onPress }) {
  * showing, since More never becomes the focused route.
  *
  * Positioned absolutely over the scenes (the navigator's own tab bar renders
- * nothing - see DoctorTabsNavigator), so pages pad their bottom by the dock inset.
+ * nothing - see RoleTabsNavigator), so pages pad their bottom by the dock inset.
  */
 export default function DoctorTabBar({
   state,
@@ -162,8 +174,10 @@ export default function DoctorTabBar({
                   { width: pillWidth, transform: [{ translateX: pillX }, { scaleX: stretch }] },
                 ]}
               >
+                {/* The header's own dark-blue brand gradient (#0F172A -> #1E3A5F -> #1D4ED8). */}
                 <LinearGradient
-                  colors={['#4F9BFF', '#2563EB']}
+                  colors={colors.authGradient}
+                  locations={[0, 0.4, 1]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.pill}
@@ -227,6 +241,6 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: PILL_HEIGHT / 2,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.45)',
+    borderColor: 'rgba(255, 255, 255, 0.16)',
   },
 });
