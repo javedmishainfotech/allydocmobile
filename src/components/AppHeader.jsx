@@ -10,7 +10,6 @@ import { colors } from '../theme/colors';
 // Height of the header below the status bar. Compact on purpose: the large branded
 // banner belongs to the logged-out screens (BrandBanner); signed-in screens need the room.
 const ROW_HEIGHT = 56;
-const CORNER_RADIUS = 20;
 
 /**
  * The compact signed-in header: the same dark-blue brand treatment as the login banner
@@ -97,9 +96,7 @@ export function renderStackHeader({ navigation, options, back }) {
 
 const styles = StyleSheet.create({
   header: {
-    borderBottomLeftRadius: CORNER_RADIUS,
-    borderBottomRightRadius: CORNER_RADIUS,
-    // Clips the gradient and the ring to the rounded corners.
+    // Straight edge (no curve) - clips the decorative ring to the band.
     overflow: 'hidden',
   },
   row: {

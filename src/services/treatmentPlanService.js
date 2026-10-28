@@ -13,3 +13,11 @@ export function getTreatmentPlansList(filter) {
 export function getTreatmentPlanDetails(appointmentId) {
   return callApi(() => apiClient.get('/TreatmentPlanDetails', { params: { AppointmentId: appointmentId } }));
 }
+
+/** Mirrors SaveTranscriptDataAction: saves the SOAP notes, either as a draft (`isSubmitted: false`)
+ * or final (`isSubmitted: true`, with `isCompleted` optionally also marking the appointment done). */
+export function saveTranscriptData({ appointmentId, subjective, objective, assessment, plan, isSubmitted, isCompleted }) {
+  return callApi(() =>
+    apiClient.post('/SaveTranscriptData', { appointmentId, subjective, objective, assessment, plan, isSubmitted, isCompleted }),
+  );
+}

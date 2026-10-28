@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, useWindowDimensions, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { IdpSelectField } from '../identityProofing/IdpUi';
+import SearchableDropdown from './SearchableDropdown';
 import { getAllSymptoms, getBookingConsent, recordConsentAcceptance } from '../../services/bookingService';
-import { Card, ButtonRow, ErrorText, LoadingBlock, PrimaryButton, SecondaryButton, StepHeader } from './BookingUi';
+import { Card, ButtonRow, ErrorText, LoadingBlock, PrimaryButton, SecondaryButton, StepHeader, soloButtonStyle } from './BookingUi';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
 
@@ -69,8 +70,10 @@ export function ConsentStep({ onNext, questionnaireId }) {
   };
 
   return (
-    <View>
+    <View style={styles.consentStep}>
       <StepHeader title="Patient Consent" subtitle="Please review and accept the following before booking your appointment." />
+      {/* Plain bordered box (web: .bk-consent-body) - the shadow lives on the screen's own card,
+          drawn by BookAppointmentPage around every step, not on this inner box. */}
       <View style={styles.consentBox}>
         {state.loading ? (
           <LoadingBlock text="Loading consent..." />
@@ -78,7 +81,7 @@ export function ConsentStep({ onNext, questionnaireId }) {
           <View style={styles.consentError}>
             <Text style={styles.consentErrorTitle}>Consent could not be loaded</Text>
             <Text style={styles.consentErrorText}>{state.error}</Text>
-            <SecondaryButton label="Try again" onPress={load} />
+            <SecondaryButton label="Try again" onPress={load} style={soloButtonStyle} />
           </View>
         ) : (
           <WebView originWhitelist={['*']} source={{ html: consentDocument(state.html) }} style={styles.consentWeb} />
@@ -162,7 +165,7 @@ export function ConditionStep({ onNext, onPrev, setSymptomList }) {
       {loadError ? (
         <Card>
           <Text style={styles.consentErrorText}>{loadError}</Text>
-          <SecondaryButton label="Try again" onPress={load} />
+          <SecondaryButton label="Try again" onPress={load} style={soloButtonStyle} />
         </Card>
       ) : symptoms == null ? (
         <LoadingBlock text="Loading conditions..." />
@@ -172,9 +175,8 @@ export function ConditionStep({ onNext, onPrev, setSymptomList }) {
             <Text style={styles.fieldTitle}>
               Condition / Symptom <Text style={styles.required}>*</Text>
             </Text>
-            <IdpSelectField
+            <SearchableDropdown
               placeholder="Select a condition..."
-              searchable
               options={options}
               value={selectedId}
               onChange={(value) => {
@@ -194,35 +196,50 @@ export function ConditionStep({ onNext, onPrev, setSymptomList }) {
   );
 }
 
-function MedicalSection({ section }) {
+// Bullet dot before a list item - blue for a section's own top-level items (web:
+// .bk-medinfo__list--primary li::before, #60A5FA), neutral grey for a subsection's nested items
+// (web: .bk-medinfo__list li::before, #94A3B8, which is exactly adTokens.textMuted).
+function MedicalListItem({ text, primary }) {
+  return (
+    <View style={styles.medListItem}>
+      <View style={[styles.medBullet, { backgroundColor: primary ? '#60A5FA' : adTokens.textMuted }]} />
+      <Text style={styles.medItem}>{text}</Text>
+    </View>
+  );
+}
+
+function MedicalSection({ section, isLast }) {
   const items = section.items ?? [];
   const subsections = section.subsections ?? [];
   return (
-    <View style={styles.medSection}>
-      <Text style={styles.medTitle}>{section.title}</Text>
+    <View style={[styles.medSection, isLast && styles.medSectionLast]}>
+      {/* Blue rule before the heading (web: .bk-medinfo__section-title::before), so sections read
+          as a scannable outline. */}
+      <View style={styles.medSectionTitleRow}>
+        <View style={styles.medSectionBar} />
+        <Text style={styles.medTitle}>{section.title}</Text>
+      </View>
       {section.body ? <Text style={styles.medBody}>{section.body}</Text> : null}
       {subsections.map((sub, index) => (
         <View key={index} style={styles.medSub}>
           <Text style={styles.medSubTitle}>{sub.title}</Text>
           {(sub.items ?? []).map((item, j) => (
-            <Text key={j} style={styles.medItem}>
-              • {item}
-            </Text>
+            <MedicalListItem key={j} text={item} />
           ))}
         </View>
       ))}
       {items.map((item, j) => (
-        <Text key={j} style={styles.medItem}>
-          • {item}
-        </Text>
+        <MedicalListItem key={j} text={item} primary />
       ))}
     </View>
   );
 }
 
 /** Reference information about the chosen condition, written per condition by a super admin. It
- * skips itself when there is nothing to show (an empty card with a Continue button would be worse). */
+ * skips itself when there is nothing to show (an empty card with a Continue button would be worse).
+ * Styling matches the web's `.bk-medinfo__*` rules (components.css) at its own phone breakpoint. */
 export function MedicalInfoStep({ symptomList, onNext, onPrev }) {
+  const { height: windowHeight } = useWindowDimensions();
   const condition = Array.isArray(symptomList) ? symptomList[0] : symptomList;
   const sections = (condition?.medicalInfo ?? []).filter(
     (section) => section?.title || section?.body || section?.items?.length || section?.subsections?.length,
@@ -238,25 +255,38 @@ export function MedicalInfoStep({ symptomList, onNext, onPrev }) {
 
   return (
     <View>
-      <Card>
-        <Text style={styles.medLabel}>MEDICAL INFORMATION</Text>
-        <Text style={styles.medHero}>{condition?.patientDisplayName || condition?.symptonName || 'About this condition'}</Text>
-        <Text style={styles.medBody}>
-          Please read the following information carefully before proceeding with your health questionnaire.
-        </Text>
-        {sections.length > 0 ? (
-          sections.map((section, index) => <MedicalSection key={index} section={section} />)
-        ) : (
-          <Text style={styles.medBody}>{shortDescription}</Text>
-        )}
+      {/* Plain bordered box (web: .bk-medinfo__card { overflow: hidden }) - the shadow lives on the
+          screen's own card, drawn by BookAppointmentPage around every step, not on this inner box. */}
+      <View style={styles.medCard}>
+        {/* Dark-blue hero band (web: bk-medinfo__hero, linear-gradient 135deg #2563EB -> #1D4ED8). */}
+        <LinearGradient colors={['#2563EB', '#1D4ED8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.medHeroBand}>
+          <Text style={styles.medLabel}>MEDICAL INFORMATION</Text>
+          <Text style={styles.medHero}>{condition?.patientDisplayName || condition?.symptonName || 'About this condition'}</Text>
+          <Text style={styles.medHeroSubtitle}>
+            Please read the following information carefully before proceeding with your health questionnaire.
+          </Text>
+        </LinearGradient>
+
+        {/* Capped and scrollable (web: 38vh on phones), so a long condition's text never pushes the
+            Continue button off screen; the acknowledgement note stays fixed below it. */}
+        <ScrollView style={{ maxHeight: windowHeight * 0.38 }} nestedScrollEnabled contentContainerStyle={styles.medScroll}>
+          {sections.length > 0 ? (
+            sections.map((section, index) => (
+              <MedicalSection key={index} section={section} isLast={index === sections.length - 1} />
+            ))
+          ) : (
+            <Text style={styles.medBody}>{shortDescription}</Text>
+          )}
+        </ScrollView>
+
         <View style={styles.ack}>
-          <MaterialCommunityIcons name="information-outline" size={16} color={adTokens.infoDark} />
+          <MaterialCommunityIcons name="information-outline" size={16} color="#92400E" />
           <Text style={styles.ackText}>
-            Continuing confirms you have read and understood this information. It is general guidance, not a diagnosis
-            or a treatment plan.
+            Continuing confirms you have read and understood this information. It is general guidance, not a
+            diagnosis or a treatment plan.
           </Text>
         </View>
-      </Card>
+      </View>
       <ButtonRow>
         <SecondaryButton label="Back" onPress={onPrev} />
         <PrimaryButton label="I have read this" onPress={onNext} />
@@ -309,7 +339,16 @@ export function SuccessStep({ onClose }) {
 }
 
 const styles = StyleSheet.create({
-  consentBox: { height: 320, borderRadius: 14, borderWidth: 1, borderColor: adTokens.border, overflow: 'hidden', backgroundColor: adTokens.white },
+  consentStep: { flex: 1 },
+  consentBox: {
+    flex: 1,
+    minHeight: 320,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: adTokens.border,
+    overflow: 'hidden',
+    backgroundColor: adTokens.gray50,
+  },
   consentWeb: { flex: 1, backgroundColor: 'transparent' },
   consentError: { padding: 18, gap: 10, alignItems: 'center' },
   consentErrorTitle: { fontSize: 15, fontWeight: '700', color: adTokens.danger },
@@ -321,16 +360,48 @@ const styles = StyleSheet.create({
   fieldTitle: { fontSize: 15, fontWeight: '700', color: adTokens.textPrimary },
   required: { color: adTokens.danger },
 
-  medLabel: { fontSize: 11.5, fontWeight: '800', letterSpacing: 0.8, color: adTokens.primary },
-  medHero: { fontSize: 20, fontWeight: '800', color: adTokens.textPrimary },
-  medBody: { fontSize: 13.5, color: adTokens.textSecondary, lineHeight: 19 },
-  medSection: { gap: 6, paddingTop: 8, borderTopWidth: 1, borderTopColor: adTokens.border },
-  medTitle: { fontSize: 15, fontWeight: '700', color: adTokens.textPrimary },
-  medSub: { gap: 4, marginTop: 4 },
-  medSubTitle: { fontSize: 13.5, fontWeight: '700', color: adTokens.primaryDark },
-  medItem: { fontSize: 13.5, color: adTokens.textPrimary, lineHeight: 19 },
-  ack: { flexDirection: 'row', gap: 8, padding: 10, borderRadius: 10, backgroundColor: adTokens.infoLight },
-  ackText: { flex: 1, fontSize: 12.5, color: adTokens.infoDark, lineHeight: 17 },
+  medCard: {
+    borderRadius: adTokens.cardBorderRadius,
+    borderWidth: 1,
+    borderColor: adTokens.border,
+    backgroundColor: adTokens.white,
+    overflow: 'hidden',
+  },
+  // Dark-blue hero band - web: .bk-medinfo__hero, phone breakpoint (<=575.98px) padding/sizes.
+  medHeroBand: { paddingTop: 18, paddingHorizontal: 16, paddingBottom: 16, gap: 6 },
+  medLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1.1, textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' },
+  medHero: { fontSize: 19, fontWeight: '700', lineHeight: 24, letterSpacing: -0.3, color: adTokens.white },
+  medHeroSubtitle: { fontSize: 13.5, lineHeight: 20, color: 'rgba(255,255,255,0.88)' },
+
+  // Scrollable body - web: .bk-medinfo__scroll, phone breakpoint padding.
+  medScroll: { paddingTop: 14, paddingHorizontal: 16, paddingBottom: 4 },
+  medBody: { fontSize: 14, lineHeight: 23, color: '#334155', marginBottom: 10 },
+  medSection: { marginBottom: 20 },
+  medSectionLast: { marginBottom: 8 },
+  medSectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  medSectionBar: { width: 3, height: 15, borderRadius: 999, backgroundColor: adTokens.primary },
+  medTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', color: '#1D4ED8' },
+  // Nested under a section heading - web: .bk-medinfo__sub (left rule, indent).
+  medSub: { marginLeft: 12, paddingLeft: 12, borderLeftWidth: 2, borderLeftColor: adTokens.gray200, marginBottom: 10 },
+  medSubTitle: { fontSize: 12.5, fontWeight: '700', color: '#475569', marginBottom: 4 },
+  medListItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 6 },
+  medBullet: { width: 5, height: 5, borderRadius: 2.5, marginTop: 8 },
+  medItem: { flex: 1, fontSize: 14, lineHeight: 22, color: '#334155' },
+
+  // Acknowledgement note - web: .bk-medinfo__ack (amber, sits fixed below the scroll area).
+  ack: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginHorizontal: 14,
+    marginBottom: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 12,
+    backgroundColor: '#FFFBEB',
+  },
+  ackText: { flex: 1, fontSize: 12.5, lineHeight: 19, color: '#92400E' },
 
   success: { alignItems: 'center', gap: 10, paddingTop: 24 },
   successIcon: { width: 84, height: 84, borderRadius: 42, backgroundColor: adTokens.successLight, alignItems: 'center', justifyContent: 'center' },

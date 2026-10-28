@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, FlatList, Pressable, RefreshControl, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 import { getDoctorAppointmentsList } from '../../services/manageAppointmentsService';
@@ -14,7 +15,6 @@ import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import { getInfoButtonProps } from '../../utils/appointmentFields';
 import StatusBadge from '../../components/StatusBadge';
 import AppointmentInfoButton from '../../components/AppointmentInfoButton';
-import AppointmentDetailSheet from '../../components/appointments/AppointmentDetailSheet';
 import AppointmentFilterSheet, { EMPTY_APPOINTMENT_FILTER } from '../../components/appointments/AppointmentFilterSheet';
 import { adTokens } from '../../theme/colors';
 import { useDockInset } from '../../navigation/DockInsetContext';
@@ -69,9 +69,8 @@ function AppointmentListRow({ appointment, onOpen }) {
  * Doctor "Appointments" - port of AllyDocReactApp's module/Doctor/Pages/DoctorAppointments
  * (SharedAppointmentTable + FilterAppointmentsModal): the doctor's own appointments from
  * `GET /AllDoctorAppointment`, server-paginated (20 a page), filterable by status (multi),
- * date range and patient. The web table's "view" icon opens the appointment's detail screen
- * (it routes to the merged treatment-plan/detail page); here a row opens the shared
- * AppointmentDetailSheet. "Rescheduled" is not offered to a freelancer doctor, as on the web.
+ * date range and patient. The web table's "view" icon routes to the merged
+ * treatment-plan detail page; here a row opens the same screen (`TreatmentPlanDetail`). "Rescheduled" is not offered to a freelancer doctor, as on the web.
  * (A nurse's version of this page reads `/AllFacilityAppointment` instead - added with the
  * Nurse module.)
  */
@@ -90,7 +89,7 @@ export default function DoctorAppointmentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [detailsId, setDetailsId] = useState(null);
+  const navigation = useNavigation();
   const requestCounter = useRef(0);
 
   const hasActiveFilters = Object.entries(filter).some(([key, value]) => {
@@ -185,7 +184,7 @@ export default function DoctorAppointmentsPage() {
         data={isLoading || loadError ? [] : appointments}
         keyExtractor={(appointment, index) => String(appointment.appointmentId ?? index)}
         renderItem={({ item }) => (
-          <AppointmentListRow appointment={item} onOpen={() => setDetailsId(item.appointmentId)} />
+          <AppointmentListRow appointment={item} onOpen={() => navigation.navigate('TreatmentPlanDetail', { appointmentId: item.appointmentId })} />
         )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         ListHeaderComponent={header}
@@ -223,7 +222,6 @@ export default function DoctorAppointmentsPage() {
         onApply={applyFilter}
         onClose={() => setFilterOpen(false)}
       />
-      <AppointmentDetailSheet appointmentId={detailsId} onClose={() => setDetailsId(null)} onChanged={load} />
     </View>
   );
 }

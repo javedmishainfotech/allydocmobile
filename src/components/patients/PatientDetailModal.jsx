@@ -10,7 +10,7 @@ import SelfReportedMedicationsTab from './SelfReportedMedicationsTab';
 import AllergiesTab from './AllergiesTab';
 import RxChangeTab from './RxChangeTab';
 import RefillsTab from './RefillsTab';
-import DeferredTabNotice from './DeferredTabNotice';
+import PrescriptionsTab from './PrescriptionsTab';
 import PatientDetailTabBar from './PatientDetailTabBar';
 import { consentToMedicationHistory } from '../../services/doseSpotClinicalService';
 import { toast } from '../../utils/toast';
@@ -55,7 +55,7 @@ export default function PatientDetailModal({ visible, patientId, patientName, in
     }
   };
 
-  const needsDoseSpotId = ['allergies', 'coverage', 'selfreported', 'rxchange', 'refills', 'history'].includes(activeTab);
+  const needsDoseSpotId = ['allergies', 'coverage', 'selfreported', 'rxchange', 'refills', 'history', 'prescriptions'].includes(activeTab);
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -81,7 +81,9 @@ export default function PatientDetailModal({ visible, patientId, patientName, in
           </View>
 
           {activeTab === 'appointments' ? <PatientAppointmentsTab patientId={patientId} /> : null}
-          {activeTab === 'prescriptions' ? <DeferredTabNotice label="Prescriptions (Add Prescription / EPCS flow)" /> : null}
+          {activeTab === 'prescriptions' ? (
+            doseSpotPatientId ? <PrescriptionsTab doseSpotPatientId={doseSpotPatientId} /> : null
+          ) : null}
           {activeTab === 'history' ? (
             doseSpotPatientId ? <MedicationHistoryTab doseSpotPatientId={doseSpotPatientId} /> : null
           ) : null}

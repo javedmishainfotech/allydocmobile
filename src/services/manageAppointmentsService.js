@@ -49,3 +49,18 @@ export function saveAppointmentNotes({ appointmentId, userId, notes }) {
 export function getDoctorAppointmentsList(doctorId, filter) {
   return callApi(() => apiClient.get(`/AllDoctorAppointment?${buildDoctorAppointmentsQuery(doctorId, filter)}`));
 }
+
+/** Mirrors UpdateAppointmentAction (reschedule). `appointMentTime` keeps the backend's own
+ * capitalization typo - `AppointmentDetailsVM.AppointMentTime` on the server. */
+export function updateAppointment({ appointmentId, appointmentDate, appointMentTime, rescheduleReason }) {
+  return callApi(() =>
+    apiClient.put('/UpdateAppointment', { appointmentId, appointmentDate, appointMentTime, rescheduleReason }),
+  );
+}
+
+/** Mirrors GetAppointmentRecordingLinkAction. `forceSync` asks Daily.co directly (can take ~1 minute). */
+export function getAppointmentRecordingLink(appointmentId, forceSync = false) {
+  return callApi(() =>
+    apiClient.get(`/AppointmentRecordingLink?appointmentId=${appointmentId}&forceSync=${forceSync}`),
+  );
+}

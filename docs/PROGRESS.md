@@ -10,27 +10,33 @@ Legend: [x] built · [~] partly built · [ ] not started · (T) built but **not 
 > was written from the web source and the Android bundle exports without errors. Update this file whenever a
 > screen is finished or its scope changes.
 
-Last updated: 2026-10-27 (patient side feature-complete; needs device testing)
+Last updated: 2026-10-28 (Reschedule, Daily.co audio/video calls, "core flow" Prescribe wizard, and a UX pass on dropdowns/loaders/pharmacy UI - all untested, see caveats below)
+
+> See `docs/WEB_VS_ANDROID_AUDIT.md` for a full page-by-page, button-by-button web-vs-Android gap audit
+> (done 2026-10-28) - the punch list there is more granular than this file's checklist and is what
+> corrected the Support status below.
 
 ---
 
 ## Next up (start here in the next session)
-1. Doctor: Requests (Refill / Rx Change), Feedback, Treatment Plan list (wire the shared `TreatmentPlanList`).
-2. Doctor + Nurse: Treatment Plan detail, staff view (SOAP edit, prescribe, notes, complete / cancel / reschedule).
-3. Nurse-only pages (Dashboard, Doctors, Patients, Pending Appointments), then clinic / hospital doctor pages (Doctors list, clinic Patients, Settings extra tabs).
-4. Heavy ones last: Favorites, Patients prescription flows (DoseSpot / EPCS), calls (Daily.co), FCM push.
-Before building on top: test the patient screens on a real phone (Book Appointment, Messages, payment WebView, Edit / Create Profile) and fix what breaks.
+1. **Test everything built this session on a real device first** - especially calls, which needs an EAS development build (`eas build --profile development`), not Expo Go: Daily's RN SDK is native code. Nothing about the call screen, Reschedule, or the Prescribe wizard has been run anywhere yet.
+2. Prescribe flow, phase 2 (deferred by choice - see the Doctor section below for the exact scope cut): EPCS / controlled-substance e-signing, compound medications, custom supply, benefits check, print preview, prescription favorites, edit-existing-prescription.
+3. Doctor: Requests (Refill / Rx Change), Feedback.
+4. Nurse-only pages (Dashboard, Doctors, Patients, Pending Appointments), then clinic / hospital doctor pages (Doctors list, clinic Patients, Settings extra tabs).
+5. Heavy ones last: Favorites, FCM push (also a prerequisite for the incoming-call ring popup below).
+Before building on top: test the patient screens AND the new Treatment Plan detail (staff view, including Reschedule, Calls, and Prescribe) on a real phone and fix what breaks.
 
 ---
 
 ## 1. Auth / app shell (all roles)
 - [x] Onboarding, organization code, login (patient / clinician tabs), register (patient, freelance clinician, clinic owner), forgot password (4-box OTP), update temp password — see `AUTH_CHECKLIST.md`
 - [x] Role-based menus from `/AllMenus` → bottom tabs (4) + More sheet, header (back + title | IDP, bell, profile)
-- [x] Notifications screen, Support screen, Identity Proofing (doctor)
+- [x] Notifications screen, Identity Proofing (doctor)
+- [~] Support screen — **was wrongly marked complete; corrected 2026-10-28.** Android's `DoctorSupportPage.jsx` (shared by every role) is a 17-line stub with only static legal links. Web has a full ticket system (list, create with attachments, reply, close, attachment preview/download - `GET/POST /api/Support/Tickets`, `POST /Tickets/{id}/Replies`, `POST /Tickets/{id}/Close`, `GET /Attachments/{id}`), none of which is ported. See `docs/WEB_VS_ANDROID_AUDIT.md` §1.
 - [ ] IDP route gate (needs owner's OK — their test account is `not_started`)
 - [ ] 401 handling polish, logout: revoke FCM token
 - [ ] FCM push notifications (needs Firebase files)
-- [ ] Calls: audio / video (Daily.co) + incoming-call popup
+- [~] Calls: audio / video (Daily.co) built (T, not run anywhere - needs an EAS dev build device), incoming-call popup NOT built (web's version is entirely FCM-push-driven - blocked on the FCM item above)
 
 ## 2. Patient (freelancer, clinic, hospital — same screens, org branches inside)
 - [x] Dashboard (stats, next appointment, recent appointments, subscription card, payment-pending banner)
@@ -43,7 +49,8 @@ Before building on top: test the patient screens on a real phone (Book Appointme
 - [x] Settings → Change Password
 - [x] Settings → My Pharmacy (search, default / preferred, remove, map)
 - [x] Settings → Subscription Plans (active plan, renew / buy, history, invoices, payment WebView) (T)
-- [x] Notifications, Support
+- [x] Notifications
+- [~] Support — see the corrected note in §1 (Auth / app shell), ticket system not ported
 - [x] **Book Appointment** (web `BookAppointmentModal`) as a full screen (T) — never run end to end on a device:
   - [x] Resume prompt (abandoned booking) — `GET /BookingProgress/GetPending`, `POST /BookingProgress/Dismiss`
   - [x] Consent (CMS html in a WebView + `POST /api/PatientBookingConsent/RecordAcceptance`)
@@ -59,21 +66,29 @@ Before building on top: test the patient screens on a real phone (Book Appointme
 
 ## 3. Doctor (Doctor, Doctor Sub, Doctor Admin)
 - [x] Dashboard, Manage Appointments (calendar + pending), Appointments list (+ shared detail sheet), Messages (+ Chat button on appointment sheet) (T)
-- [x] Patients list + patient detail tabs
+- [x] Patients list + patient detail tabs (personal/appointments/history/allergies/coverage/selfreported/rxchange/refills), including **Prescriptions (T, 2026-10-28)**: every prescription the patient ever had (`GetPatientPrescriptions`, no status filter, 20/page) with View (full detail sheet), History (`PrescriptionHistoryModal` - the `/log` audit trail, oldest first), and Cancel (same rules as Treatment Plan's) - hidden entirely for doctor admin, History/Cancel hidden for nurse. Delete and "Add Prescription" are commented out on web itself right now, so neither is built here.
 - [x] Settings: My Profile, Change Password, Certifications, Account (TFA / PIN)
-- [ ] Treatment Plan list (shared `TreatmentPlanList` is ready — needs patient filter wiring)
-- [ ] Treatment Plan detail — staff view (SOAP edit, prescribe, notes, complete / cancel / reschedule, calls, chat) (~3600 web lines)
+- [x] Treatment Plan list (`DoctorTreatmentPlanPage`, new this fix — the "Treatment Plan" tab/menu item was registered with `component: null` and silently fell back to the generic "Coming soon" placeholder; now wired to the shared `TreatmentPlanList`, filtered by patient via `PATIENT_PERSON`/`GET /DoctorPatientDropdown`, same `GET /AllTreatmentPlanListV2` the patient's own Treatment Plan page already uses). Nurse's own "Treatment Plan" menu entry is still unwired — left alone since the rest of the Nurse module (Dashboard, Doctors, Patients, Appointments) isn't built yet either.
+- [x] Treatment Plan detail — staff view (T) (now laid out like web: tabs Consultation / Questionnaire / SOAP / Prescription / Notes; header with condition, age, gender, phone and Default Pharmacy; Appointment Information, Call Recording ('Check now', opens the link externally - no in-app video player) and Video Call Transcript cards; Notes is an inline tab. Not ported: Manage/Preferred Pharmacy links, medicine modal): Mark Complete / Cancel, Notes, Chat, editable SOAP (`POST /SaveTranscriptData`, gated on `allowedEditTranscript` + not doctor admin/nurse), questionnaire, all-status prescriptions (read-only), Reschedule. Doctor Dashboard's "Today's Schedule" and the appointment-detail sheet's "Treatment Plan" button both open it now, matching web's `/<role>/treatment-plan/<id>`.
+  - Reschedule (T): `RescheduleModal` (`src/components/appointments/RescheduleModal.jsx`) - inline calendar (reuses `InlineCalendar`) + that day's slots (`GET /ScheduleList?UserId=<patient id>...`, reusing `getScheduleList`/`getSlotRangeLabel`/`getSlotValue`) + required reason, `PUT /UpdateAppointment` (new `updateAppointment` in `manageAppointmentsService.js`) on confirm, then reloads both the TreatmentPlanVM and the AppointmentDetailsVM. Button gated exactly like web: `actionMeta.isRescheduleVisible` AND not patient/nurse AND not (freelancer doctor) AND not (clinic doctor admin).
+  - Audio / video calls (T, **unverified** - see "Next up" above): `VideoCallPage` (`src/pages/calls/VideoCallPage.jsx`), pushed as a full-screen `VideoCall` route from both Treatment Plan detail's Call/Video buttons and the shared `AppointmentDetailSheet`'s. `POST /StartAppointmentCall` → Daily room url/token (`src/services/callService.js`, mirrors web's `GetURlAction`/recording actions), `@daily-co/react-native-daily-js` call object (web uses Daily's *embeddable iframe* UI; that's "not supported in react-native-daily-js" per Daily's own docs, so this screen builds its own minimal two-tile UI with `react-native-webrtc`'s `RTCView` instead - mute / camera / end controls, a 30s "participant left" reconnect countdown, and doctor-only auto-recording + transcription once two participants have joined - same triggers and `start/stop-recording` calls as web's `VideoCall.jsx`). New packages: `@daily-co/react-native-daily-js`, `@daily-co/react-native-webrtc` (exact pin, per Daily's install docs), `react-native-background-timer`, `react-native-get-random-values`; a local Expo config plugin (`plugins/withDailyCo.js`) replaces `@daily-co/config-plugin-rn-daily-js` (that package only supports Expo <58 as of 0.0.13) - **needs a custom dev build** (`eas build --profile development` or `expo prebuild` + `expo run:android`), Expo Go cannot load it.
+  - Not built: the incoming-call ring popup (web's is entirely FCM-push-driven - `CALL_RINGING`/`CALL_STOP_RINGING`/etc. push types - which this app doesn't have yet)
+  - **Prescribe/Pharmacy UX pass (T, 2026-10-28, fourth pass)**: `OptionPicker` (every dropdown in the pharmacy/prescribe flow - state/city/specialty/dose form/route/frequency/dispense unit/build-format) now expands INLINE directly below its own field in normal layout flow instead of opening a modal/bottom sheet (search box for long lists, capped scrollable panel, "no option" state, tap again or pick a value to close). All prescribe/pharmacy/Treatment-Plan-prescription action buttons with a text label now show the label AND an inline spinner together (spinner to the right of the text) instead of the spinner replacing the label — `PharmacyPicker` (Search, Remove Pharmacy), `ManagePharmaciesPage` (Save/Update Default), `MedicationFormModal`/`SupplyFormModal`'s shared footer (Create/Update Prescription), `AddPrescriptionPage` (medication/supply Search, Send), `ProviderPinModal` (Authorize & Send), `PrescriptionActionModal` (Delete/Cancel prescription on Treatment Plan). `ManagePharmaciesPage`'s duplicate bottom back-arrow button removed (the stack header's own back button is the only one now). Manage Pharmacy's Default Pharmacy card now has a dark, blurred (`expo-blur`) "hero" treatment distinct from the plain light cards below it, manage-mode only (the prescribe flow's own pharmacy step 1 keeps the plain card look). Treatment Plan detail's Default Pharmacy + "Manage Pharmacy" link + "Preferred Pharmacy" toggle - previously three loose text lines inside the profile card - are now one unified `Card` ("Pharmacy"): a dark hero box for the default, a Manage-Pharmacy button + a proper pill-style Preferred-Pharmacy toggle (filled when expanded) side by side, and an expandable list of preferred-pharmacy rows (card style, DEFAULT badge) instead of plain bullet text.
+  - **Prescribe flow, web-parity pass (T, 2026-10-28, third pass)**: stack header (title + back), carded stepper (Select Pharmacy / Add Prescription / Review & Save), collapsible patient+doctor+DEA header. Step 1 = web SelectPharmacy: collapsible "Search Pharmacy" (collapsed by default, closes after a search with results), State/City dropdowns (`/api/Location/GetStates`, `GetCitiesByStateId`), two Specialty filters, 3-char validation, "Patient Pharmacies" / "Search Results N", Preferred + Current Default badges, fax, specialties, tap to select / deselect, View map; footer Cancel + Next. Step 2 = web AddPrescription: search card (Medication / Supplies type, `SearchSupplies`), "Add Custom Supply" (`AddSupplyFreeTextPrescription`), tabs Medication & Supplies / Clinic Presets (`/api/ClinicFavorites/{clinicId}/prescriptionFavorites`, hidden for freelancer doctors) / Favorites (`/api/ClinicianFavorites/{clinicianId}/prescriptionFavorites`, type filter, "+" routes to medication / supply / custom-supply modal), "Items to prescribe (N)" from `GetPatientPrescriptions?status=Entered,Edited,ReadyToSign,EpcsError` with EPCS pill, type / status / Appt ID badges, Edit (coded, supply, custom supply), × delete, Delete all; medication modal with "Save as favorite" (`POST /api/ClinicianFavorites/prescriptionFavorites/coded`); footer Back / Cancel / Review Prescription (disabled when empty). Step 3 reads the same list. Manage Pharmacies: same picker in manage mode, Add as Preferred / Remove as Preferred (confirmation), footer Back / Cancel / Save-Update Default. Text contrast raised (meta text no longer uses `textMuted`). Still NOT ported: Add Custom Compound, Prescription Benefits, EPCS, print/PDF, Order Sets (empty on web too), embedded map (opens Google Maps instead).
+  - **Prescribe gap-fill (T, 2026-10-28, second pass)**: added on top of the core flow below — (1) Treatment Plan prescription card: View detail modal (`GetPrescriptionById`), Delete (Entered/Edited only), Cancel with required reason (sent + active only, web's CANCELABLE sets), hidden for doctor admin / nurse; (2) full sig builder (delivery method, dose quantity/form, route, frequency, day supply -> generated directions, auto total dispense, dispense unit -> `dispenseUnitId`, effective date picker, pharmacy-note chips, char limits, required-field validation) or custom directions; (3) edit an added prescription (`EditCodedPrescription`); (4) review step: select, per-row Edit/Delete, Delete all, past-effective-date warning, prescriber PIN modal when `hasPinSetForTFA`, per-item send results banner; (5) pharmacy step = shared `PharmacyPicker` (Default / Preferred lists, search by name/city/state/zip/address/phone/NCPDP, pagination) plus a new Manage Pharmacies screen (add/remove Preferred, set Default) linked from the Treatment Plan header's Default Pharmacy block; (6) collapsible patient/doctor/DEA/appointment header. Still NOT ported: EPCS workflow, compounds, custom supply, benefits check, favorites/presets/order sets tabs, substitution + replace-medication confirmations, print/PDF, state/city dropdowns on pharmacy search (plain text fields instead).
+  - **Prescribe (T, "core flow" only, scope chosen by the user)**: `AddPrescriptionPage` (`src/pages/prescriptions/AddPrescriptionPage.jsx`), a 3-step wizard pushed from the Treatment Plan detail's new "+ Add Prescription" button (visible to doctor / doctor-sub only, same gate as SOAP editing) - pick a pharmacy (the patient's saved ones via `getPatientPharmacies`, or search the directory), search + add standard medications one at a time (`searchMedications` → `selectMedication` → new `addCodedPrescription`, `src/services/prescriptionService.js`, mirrors `AddCodedPrescriptionAction`), then review and Send (`sendPrescriptions`) or delete (`deletePrescriptions`) what was added. A selected drug whose `Schedule` is 2-5 (controlled substance) is refused with a message instead of being added - EPCS e-signing isn't built. Deliberately NOT ported (explicit scope cut, see "Next up" above): EPCS / controlled-substance workflow, compound medications, custom supply, benefits check, print preview, favorites, editing an existing prescription, and web's extra `/AppointmentPrescriptions/UpdateStatus` sync call (the Treatment Plan detail screen already reloads from `GetTreatmentPlanDetails` after every action here, which keeps its own Prescriptions card correct).
 - [ ] Requests (Refill / Rx Change queues)
 - [ ] Feedback (doctor)
 - [ ] Favorites, Clinic Favorites
 - [ ] Payments (web page itself is an "under development" placeholder)
-- [ ] Patients sub-flows: add prescription (EPCS), manage pharmacies, merge patients, patient profile page
+- [ ] Patients sub-flows: manage pharmacies (add a NEW pharmacy to a patient's saved list - `AddPatientPharmacyAction` isn't ported; the prescribe flow's pharmacy step only reads existing ones / picks any directory result), merge patients, patient profile page
 - [ ] Pending Appointments page
 - [ ] Clinic / hospital only: Doctors list, doctor profile / appointments / treatment plans / feedback, clinic Patients list + sub-pages
 - [ ] Settings extra tabs: Clinic Available Hours, Assign Disease, Merge Patient, disease questionnaire page
 
 ## 4. Nurse
-- [x] Notifications, Settings, Support, Messages (shared screens)
+- [x] Notifications, Settings, Messages (shared screens)
+- [~] Support — shared stub, same gap as §1/§2 (ticket system not ported)
 - [ ] Dashboard, Doctors, Patients, Pending Appointments (nurse-only web pages)
 - [ ] Appointments (shared doctor page, nurse variant reads `/AllFacilityAppointment`), Treatment Plan, Payments, Favorites (shared with doctor)
 

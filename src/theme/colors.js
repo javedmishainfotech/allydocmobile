@@ -87,10 +87,12 @@ export const adTokens = {
 
   white: '#FFFFFF',
 
-  // ── Page background (--ad-bg-body) ──
-  // The web app's content area sits on this pale blue-grey, not plain white,
-  // so white cards (ad-card/ad-stat-card) read as raised surfaces against it.
-  bgBody: '#E8EDF4',
+  // ── Page background ──
+  // The web app's content area sits on a pale blue-grey (--ad-bg-body: #E8EDF4) so its white cards
+  // read as raised surfaces against it. On a phone that same tone reads as flat grey rather than a
+  // backdrop, so the app background is white instead (2026-10-28) - cards still separate from it
+  // via their own border + shadow (adTokens.border / cardShadow).
+  bgBody: '#FFFFFF',
 
   // ── Dark navy navigation chrome (--ad-bg-sidebar + .ad-sidebar's exact
   // gradient/link colors) - used for the drawer (sidebar) and bottom nav,

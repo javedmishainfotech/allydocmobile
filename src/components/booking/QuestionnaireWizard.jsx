@@ -16,7 +16,7 @@ import {
 import { validateAnswer } from '../../utils/questionnaire/questionnaireValidation';
 import { mapAnswersToLegacyPayload, formatLegacyAnswerString } from '../../utils/questionnaire/mapAnswersToLegacyPayload';
 import QuestionRenderer from './QuestionInputs';
-import { ButtonRow, Card, DangerButton, LoadingBlock, PrimaryButton, SecondaryButton, StepHeader } from './BookingUi';
+import { ButtonRow, Card, DangerButton, LoadingBlock, PrimaryButton, SecondaryButton, StepHeader, soloButtonStyle } from './BookingUi';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
 
@@ -301,7 +301,7 @@ export default function QuestionnaireWizard({
 
       {blockMessage ? (
         <OutcomeDialog icon="close-octagon-outline" tone={TONES.block} title="Booking cannot continue" message={blockMessage}>
-          <DangerButton label="Close" onPress={handleBlockedClose} loading={isSubmitting} />
+          <DangerButton label="Close" onPress={handleBlockedClose} loading={isSubmitting} style={soloButtonStyle} />
         </OutcomeDialog>
       ) : null}
 
@@ -312,7 +312,7 @@ export default function QuestionnaireWizard({
           title="Additional medical attention may be required"
           message={warning.message || 'Based on your response, your healthcare provider may need additional information.'}
         >
-          <PrimaryButton label="Continue" onPress={advancePastCurrent} loading={isSubmitting} icon={null} />
+          <PrimaryButton label="Continue" onPress={advancePastCurrent} loading={isSubmitting} icon={null} style={soloButtonStyle} />
         </OutcomeDialog>
       ) : null}
 
@@ -334,6 +334,7 @@ export default function QuestionnaireWizard({
             }}
             loading={isSubmitting}
             icon={null}
+            style={soloButtonStyle}
           />
         </OutcomeDialog>
       ) : null}

@@ -108,11 +108,12 @@ function StatCard({ icon, label, value, variant = 'primary' }) {
   );
 }
 
-// Exact port of .ad-schedule-item in Today's Schedule.
-function ScheduleRow({ item }) {
+// Exact port of .ad-schedule-item in Today's Schedule. A row tap opens the Treatment Plan detail
+// screen for that appointment, same as web's `/<role>/treatment-plan/<appointmentId>`.
+function ScheduleRow({ item, onPress }) {
   const badge = getStatusBadge(item.appointmentStatus);
   return (
-    <View style={styles.scheduleRow}>
+    <Pressable style={({ pressed }) => [styles.scheduleRow, pressed && styles.scheduleRowPressed]} onPress={onPress}>
       <View style={styles.scheduleAvatar}>
         <Text style={styles.scheduleAvatarText}>
           {(item.name || item.patientName || 'P').slice(0, 1).toUpperCase()}
@@ -139,7 +140,7 @@ function ScheduleRow({ item }) {
         </View>
       </View>
       <Feather name="chevron-right" size={18} color={adTokens.textMuted} />
-    </View>
+    </Pressable>
   );
 }
 
@@ -397,7 +398,11 @@ export default function DoctorDashboardPage() {
             // ScrollView - a scroll area nested inside another one fights it for
             // the same swipe gesture on Android instead of just scrolling through.
             filteredTodaySchedule.map((item, index) => (
-              <ScheduleRow key={item.appointmentId ?? index} item={item} />
+              <ScheduleRow
+                key={item.appointmentId ?? index}
+                item={item}
+                onPress={() => navigation.navigate('TreatmentPlanDetail', { appointmentId: item.appointmentId })}
+              />
             ))
           )}
         </View>
@@ -582,6 +587,7 @@ const styles = StyleSheet.create({
     backgroundColor: adTokens.white,
     marginBottom: 8,
   },
+  scheduleRowPressed: { backgroundColor: adTokens.gray50 },
   scheduleAvatar: {
     width: 40,
     height: 40,

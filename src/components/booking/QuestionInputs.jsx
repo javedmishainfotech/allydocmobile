@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, Platform, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { IdpSelectField } from '../identityProofing/IdpUi';
 import DatePickerSheet from '../DatePickerSheet';
 import { localDateOnlyToApiString, formatDateLabel } from '../../utils/dateOnly';
-import { QUESTION_TYPES, TEXT_CHAR_LIMITS, getActiveTextInputOptions } from '../../utils/questionnaire/questionnaireTypes';
+import {
+  QUESTION_TYPES,
+  TEXT_CHAR_LIMITS,
+  getActiveTextInputOptions,
+  getDateInputConstraints,
+} from '../../utils/questionnaire/questionnaireTypes';
 import { ErrorText } from './BookingUi';
 import { adTokens } from '../../theme/colors';
 
@@ -374,23 +380,40 @@ function ScaleQuestion({ question, value, onChange, error }) {
   );
 }
 
+/**
+ * A normal date field - web renders `<input type="date">`, whose picker is the OS's own; the
+ * closest native match on Android is the system date-picker dialog (`@react-native-community/
+ * datetimepicker`), not the app's own calendar sheet. Tapping the field opens it directly.
+ */
 function DateQuestion({ question, value, onChange, error }) {
-  const [picking, setPicking] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
   const day = parseDay(value?.answerText);
+  const { min, max } = getDateInputConstraints(question);
+
+  const handleChange = (event, selectedDate) => {
+    // Android closes the dialog itself after a pick or a cancel; iOS stays open (its picker is
+    // inline) until the field is tapped again or away.
+    if (Platform.OS === 'android') setShowPicker(false);
+    if (event.type === 'dismissed' || !selectedDate) return;
+    onChange({ answerId: null, answerText: localDateOnlyToApiString(selectedDate) });
+  };
+
   return (
     <View style={styles.group}>
-      <Pressable style={styles.dateField} onPress={() => setPicking(true)}>
+      <Pressable style={styles.dateField} onPress={() => setShowPicker(true)}>
         <MaterialCommunityIcons name="calendar-outline" size={18} color={adTokens.textMuted} />
         <Text style={[styles.dateText, !day && styles.placeholder]}>{day ? formatDateLabel(day) : 'Select date'}</Text>
       </Pressable>
-      <DatePickerSheet
-        visible={picking}
-        title={question.question}
-        value={day}
-        onSelect={(date) => onChange({ answerId: null, answerText: localDateOnlyToApiString(date) })}
-        onClear={() => onChange({ answerId: null, answerText: '' })}
-        onClose={() => setPicking(false)}
-      />
+      {showPicker ? (
+        <DateTimePicker
+          value={day || new Date()}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'inline' : 'default'}
+          minimumDate={parseDay(min) || undefined}
+          maximumDate={parseDay(max) || undefined}
+          onChange={handleChange}
+        />
+      ) : null}
       <ErrorText>{error}</ErrorText>
     </View>
   );

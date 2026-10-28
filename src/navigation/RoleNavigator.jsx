@@ -6,6 +6,9 @@ import RoleTabsNavigator from './RoleTabsNavigator';
 import LegalWebViewScreen from '../pages/legal/LegalWebViewScreen';
 import TreatmentPlanDetailPage from '../pages/treatmentPlan/TreatmentPlanDetailPage';
 import ChatWindowPage from '../pages/chat/ChatWindowPage';
+import VideoCallPage from '../pages/calls/VideoCallPage';
+import AddPrescriptionPage from '../pages/prescriptions/AddPrescriptionPage';
+import ManagePharmaciesPage from '../pages/prescriptions/ManagePharmaciesPage';
 import BookAppointmentPage from '../pages/patient/BookAppointmentPage';
 import { renderStackHeader } from '../components/AppHeader';
 import { DoctorMenuContext } from './DoctorMenuContext';
@@ -106,6 +109,9 @@ export default function RoleNavigator() {
         <Stack.Screen name="TreatmentPlanDetail" component={TreatmentPlanDetailPage} options={{ title: 'Treatment Plan' }} />
         <Stack.Screen name="BookAppointment" component={BookAppointmentPage} options={{ title: 'Book Appointment' }} />
         <Stack.Screen name="ChatWindow" component={ChatWindowPage} options={{ title: 'Chat' }} />
+        <Stack.Screen name="VideoCall" component={VideoCallPage} options={{ headerShown: false }} />
+        <Stack.Screen name="AddPrescription" component={AddPrescriptionPage} options={{ title: 'Add Prescription' }} />
+        <Stack.Screen name="ManagePharmacies" component={ManagePharmaciesPage} options={{ title: 'Manage Pharmacies' }} />
         <Stack.Screen name="LegalWebView" component={LegalWebViewScreen} />
       </Stack.Navigator>
     </DoctorMenuContext.Provider>

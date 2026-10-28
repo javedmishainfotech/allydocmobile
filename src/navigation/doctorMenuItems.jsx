@@ -5,6 +5,7 @@ import DoctorManageAppointmentsPage from '../pages/doctor/DoctorManageAppointmen
 import DoctorAppointmentsPage from '../pages/doctor/DoctorAppointmentsPage';
 import DoctorSettingsPage from '../pages/doctor/DoctorSettingsPage';
 import DoctorPatientsPage from '../pages/doctor/DoctorPatientsPage';
+import DoctorTreatmentPlanPage from '../pages/doctor/DoctorTreatmentPlanPage';
 import PatientDashboardPage from '../pages/patient/PatientDashboardPage';
 import PatientAppointmentsPage from '../pages/patient/PatientAppointmentsPage';
 import PatientTreatmentPlanPage from '../pages/patient/PatientTreatmentPlanPage';
@@ -43,7 +44,7 @@ export const DOCTOR_MENU_ITEMS = [
   { key: 'ManageAppointments', title: 'Manage Appointments', icon: 'calendar-edit', component: DoctorManageAppointmentsPage, pathKeywords: ['manageappointment'] },
   { key: 'DoctorAppointments', title: 'Appointments', icon: 'calendar-month-outline', component: DoctorAppointmentsPage, pathKeywords: ['appointment'] },
   { key: 'DoctorPatients', title: 'Patients', icon: 'account-multiple-outline', component: DoctorPatientsPage, pathKeywords: ['patient'] },
-  { key: 'DoctorTreatmentPlan', title: 'Treatment Plan', icon: 'clipboard-text-outline', component: null, pathKeywords: ['treatment-plan', 'treatmentplan'] },
+  { key: 'DoctorTreatmentPlan', title: 'Treatment Plan', icon: 'clipboard-text-outline', component: DoctorTreatmentPlanPage, pathKeywords: ['treatment-plan', 'treatmentplan'] },
   { key: 'PharmacyRequests', title: 'Pharmacy Requests', icon: 'pill', component: null, pathKeywords: ['pharmacy-request', 'pharmacyrequest', 'rxrequest', 'rx-request'] },
   { key: 'Favorites', title: 'Favorites', icon: 'star-outline', component: null, pathKeywords: ['favorite'] },
   { key: 'DoctorMessage', title: 'Messages', icon: 'message-text-outline', component: ChatRoomsPage, pathKeywords: ['message'] },

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Modal, View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
+import { Modal, View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -18,8 +18,8 @@ import { colors, adTokens } from '../../theme/colors';
 /**
  * One appointment's details as a bottom sheet: patient, date/time, status, notes,
  * questionnaire, Mark as Complete, and the chat / call / video buttons (visible on the
- * same API flags as the web). Chat opens the appointment's chat room; calls / video are not
- * built yet).
+ * same API flags as the web). Chat opens the appointment's chat room; "Treatment Plan" opens the
+ * shared staff Treatment Plan detail screen; calls / video are not built yet.
  *
  * Shared by every screen that lists appointments (Manage Appointments, the Appointments
  * list, ...) - the web likewise has one detail view that all its lists open. The parent
@@ -103,9 +103,6 @@ export default function AppointmentDetailSheet({ appointmentId, onClose, onChang
     navigation.navigate('ChatWindow', { chat });
   };
 
-  const comingSoon = (feature) =>
-    Alert.alert('Coming soon', `${feature} is not available in the app yet.`);
-
   const appointmentStartMs = useMemo(() => {
     const raw = appointmentDetails?.appointmentStartUtc;
     const date = raw ? new Date(raw) : null;
@@ -179,7 +176,13 @@ export default function AppointmentDetailSheet({ appointmentId, onClose, onChang
                         </Pressable>
                       ) : null}
                       {appointmentDetails.isTreatmentPlanVisible ? (
-                        <Pressable style={styles.primaryButton} onPress={() => comingSoon('Treatment Plan')}>
+                        <Pressable
+                          style={styles.primaryButton}
+                          onPress={() => {
+                            onClose();
+                            navigation.navigate('TreatmentPlanDetail', { appointmentId: appointmentDetails.appointmentId });
+                          }}
+                        >
                           <MaterialCommunityIcons name="clipboard-text-outline" size={14} color={colors.white} />
                           <Text style={styles.actionButtonText}>Treatment Plan</Text>
                         </Pressable>
@@ -216,7 +219,14 @@ export default function AppointmentDetailSheet({ appointmentId, onClose, onChang
                         <Pressable
                           style={[styles.commButton, isRealtimeActionDisabled && styles.commButtonDisabled]}
                           disabled={isRealtimeActionDisabled}
-                          onPress={() => comingSoon('Audio call')}
+                          onPress={() => {
+                            onClose();
+                            navigation.navigate('VideoCall', {
+                              appointmentId: appointmentDetails.appointmentId,
+                              isAudio: true,
+                              counterpartName: appointmentDetails.patientName,
+                            });
+                          }}
                         >
                           <MaterialCommunityIcons name="phone-outline" size={18} color={adTokens.textPrimary} />
                           <Text style={styles.commButtonText}>Call</Text>
@@ -226,7 +236,14 @@ export default function AppointmentDetailSheet({ appointmentId, onClose, onChang
                         <Pressable
                           style={[styles.commButton, isRealtimeActionDisabled && styles.commButtonDisabled]}
                           disabled={isRealtimeActionDisabled}
-                          onPress={() => comingSoon('Video call')}
+                          onPress={() => {
+                            onClose();
+                            navigation.navigate('VideoCall', {
+                              appointmentId: appointmentDetails.appointmentId,
+                              isAudio: false,
+                              counterpartName: appointmentDetails.patientName,
+                            });
+                          }}
                         >
                           <MaterialCommunityIcons name="video-outline" size={18} color={adTokens.textPrimary} />
                           <Text style={styles.commButtonText}>Video</Text>

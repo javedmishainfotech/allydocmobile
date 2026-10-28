@@ -93,6 +93,11 @@ export default function BookAppointmentPage() {
     setResumeResolved(true);
   };
 
+  // The consent step's own text needs most of the screen to read comfortably, so it gets a
+  // non-scrolling flex container (its WebView scrolls internally) instead of the ScrollView every
+  // other step uses.
+  const isConsentStep = resumeResolved && !pendingAttempt && views[currentIndex] === 'consent';
+
   const renderStep = () => {
     if (!resumeResolved && !pendingAttempt) return <LoadingBlock text="Loading..." />;
     if (pendingAttempt && !resumeResolved) {
@@ -147,16 +152,40 @@ export default function BookAppointmentPage() {
           />
         ))}
       </View>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {renderStep()}
-      </ScrollView>
+      {/* One screen-level card holds everything the current step renders (header, fields, buttons) -
+          web: the modal's `.bk-card` + `.bk-card-body`, not a shadow/border on each inner section. */}
+      {isConsentStep ? (
+        <View style={styles.consentContent}>
+          <View style={[styles.screenCard, styles.flex1]}>{renderStep()}</View>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <View style={styles.screenCard}>{renderStep()}</View>
+        </ScrollView>
+      )}
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   flex1: { flex: 1 },
-  content: { padding: 16, paddingBottom: 40 },
+  content: { padding: 12, paddingBottom: 32 },
+  consentContent: { flex: 1, padding: 12 },
+  // Web: .bk-card (white, rounded, bordered, two-layer shadow) + .bk-card-body (padding, mobile
+  // breakpoint 20px/16px).
+  screenCard: {
+    padding: 16,
+    paddingVertical: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: adTokens.white,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
   stepper: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingTop: 14 },
   dot: { width: 28, height: 6, borderRadius: 3, backgroundColor: adTokens.border },
   dotDone: { backgroundColor: adTokens.primaryLight },
