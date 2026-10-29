@@ -4,7 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DatePickerSheet from '../DatePickerSheet';
-import { getDoctorPatientDropdown } from '../../services/patientsService';
+import { usePatients } from '../../hooks/usePatients';
 import { localDateOnlyToApiString, formatDateLabel } from '../../utils/dateOnly';
 import { adTokens } from '../../theme/colors';
 
@@ -26,16 +26,19 @@ export const TREATMENT_PLAN_STATUS_OPTIONS = [
 export const EMPTY_APPOINTMENT_FILTER = { status: [], fromDate: '', toDate: '', patientId: '', patientName: '' };
 
 /** Which "person" the sheet filters by: a doctor filters by their patients, a patient by their
- * doctors (web: personFilterType). `idKey`/`nameKey` are the filter fields it reads and writes. */
-export const PATIENT_PERSON = {
+ * doctors (web: personFilterType). `idKey`/`nameKey` are the filter fields it reads and writes.
+ * `load` must resolve to the old `{success, data}` service shape - callers that build this from
+ * `usePatients()`'s unwrap-based `getDoctorPatientDropdown` wrap it to match (see `patientPerson`
+ * below, and `AppointmentFilterSheet`'s own default). */
+export const patientPerson = (load) => ({
   label: 'Patient',
   allLabel: 'All patients',
   searchPlaceholder: 'Search patients...',
   emptyText: 'No patients available',
   idKey: 'patientId',
   nameKey: 'patientName',
-  load: () => getDoctorPatientDropdown(),
-};
+  load,
+});
 
 /** A patient's own doctors: `GET /PatientDoctorDropdown/{patientId}`. */
 export const doctorPerson = (load) => ({
@@ -130,7 +133,7 @@ function PersonPicker({ person, visible, people, loading, error, selectedId, onS
 export default function AppointmentFilterSheet({
   visible,
   filter,
-  person = PATIENT_PERSON,
+  person,
   title = 'Filter appointments',
   statusOptions: statusOptionsProp,
   showRescheduledOption = true,
@@ -138,13 +141,24 @@ export default function AppointmentFilterSheet({
   onClose,
 }) {
   const insets = useSafeAreaInsets();
+  const { getDoctorPatientDropdown } = usePatients();
+  const defaultPerson = useMemo(
+    () =>
+      patientPerson(() =>
+        getDoctorPatientDropdown()
+          .then((data) => ({ success: true, data }))
+          .catch((message) => ({ success: false, message })),
+      ),
+    [getDoctorPatientDropdown],
+  );
+  const effectivePerson = person || defaultPerson;
   const [draft, setDraft] = useState(filter);
   const [datePicking, setDatePicking] = useState(null); // 'from' | 'to' | null
   const [personPickerOpen, setPersonPickerOpen] = useState(false);
   const [people, setPeople] = useState([]);
   const [peopleLoading, setPeopleLoading] = useState(false);
   const [peopleError, setPeopleError] = useState(null);
-  const { idKey, nameKey } = person;
+  const { idKey, nameKey } = effectivePerson;
 
   useEffect(() => {
     if (!visible) return undefined;
@@ -152,12 +166,12 @@ export default function AppointmentFilterSheet({
     let active = true;
     setPeopleLoading(true);
     setPeopleError(null);
-    person.load().then((response) => {
+    effectivePerson.load().then((response) => {
       if (!active) return;
       setPeopleLoading(false);
       if (!response.success) {
         setPeople([]);
-        setPeopleError(response.message || `Could not load ${person.label.toLowerCase()}s.`);
+        setPeopleError(response.message || `Could not load ${effectivePerson.label.toLowerCase()}s.`);
         return;
       }
       const rows = Array.isArray(response.data) ? response.data : [];
@@ -257,11 +271,11 @@ export default function AppointmentFilterSheet({
               </Pressable>
               {!fromDay ? <Text style={styles.hint}>Select a From date first.</Text> : null}
 
-              <Text style={styles.label}>{person.label}</Text>
+              <Text style={styles.label}>{effectivePerson.label}</Text>
               <Pressable style={styles.field} onPress={() => setPersonPickerOpen(true)}>
                 <MaterialCommunityIcons name="account-outline" size={18} color={adTokens.textMuted} />
                 <Text style={[styles.fieldText, !draft[idKey] && styles.placeholder]} numberOfLines={1}>
-                  {draft[idKey] ? draft[nameKey] || `Selected ${person.label.toLowerCase()}` : person.allLabel}
+                  {draft[idKey] ? draft[nameKey] || `Selected ${effectivePerson.label.toLowerCase()}` : effectivePerson.allLabel}
                 </Text>
               </Pressable>
             </ScrollView>
@@ -307,7 +321,7 @@ export default function AppointmentFilterSheet({
         onClose={() => setDatePicking(null)}
       />
       <PersonPicker
-        person={person}
+        person={effectivePerson}
         visible={personPickerOpen}
         people={people}
         loading={peopleLoading}

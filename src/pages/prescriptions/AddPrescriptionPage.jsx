@@ -4,7 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
-import { getUserDetails } from '../../services/patientsService';
+import { usePatients } from '../../hooks/usePatients';
 import { getAppointmentDetails } from '../../services/pendingRequestDetailsService';
 import { searchMedications, selectMedication } from '../../services/doseSpotClinicalService';
 import {
@@ -20,6 +20,10 @@ import {
   addSupplyFreeTextPrescription,
   editSupplyFreeTextPrescription,
   createCodedFavorite,
+  addCompiledCompoundPrescription,
+  editCompiledCompoundPrescription,
+  createCompoundFavorite,
+  setPrintedPrescriptions,
 } from '../../services/prescriptionService';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import { localDateOnlyToApiString } from '../../utils/dateOnly';
@@ -33,7 +37,13 @@ import ProviderPinModal from '../../components/prescriptions/ProviderPinModal';
 import PastDateWarningModal from '../../components/prescriptions/PastDateWarningModal';
 import MedicationFormModal, { formatDateOnly, isPastDate } from '../../components/prescriptions/MedicationFormModal';
 import SupplyFormModal, { emptySupplyForm, validateSupplyForm } from '../../components/prescriptions/SupplyFormModal';
+import CompoundFormModal, { emptyCompoundForm, validateCompoundForm } from '../../components/prescriptions/CompoundFormModal';
+import PrescriptionBenefitsModal from '../../components/prescriptions/PrescriptionBenefitsModal';
+import EpcsWorkflowModal from '../../components/prescriptions/EpcsWorkflowModal';
+import PrescriptionPrintPreviewModal from '../../components/prescriptions/PrescriptionPrintPreviewModal';
+import { buildPrescriptionPrintHtml } from '../../utils/prescriptionPrintHtml';
 import FavoritesList from '../../components/prescriptions/FavoritesList';
+import EPCSAuthorizationRequiredModal from '../../components/prescriptions/EPCSAuthorizationRequiredModal';
 import PrescriptionItemCard, { rxField, rxIdOf, rxNameOf, rxTypeOf } from '../../components/prescriptions/PrescriptionItemCard';
 import StatusBadge from '../../components/StatusBadge';
 import { adTokens, colors } from '../../theme/colors';
@@ -115,6 +125,7 @@ const medicationFormFromDetail = (detail) => ({
 
 const CLOSED_MED = { visible: false, drug: null, form: null, editingId: null, saving: false, tried: false };
 const CLOSED_SUPPLY = { visible: false, isCustom: false, item: null, form: null, editingId: null, saving: false, tried: false };
+const CLOSED_COMPOUND = { visible: false, form: null, editingId: null, saving: false, tried: false };
 
 function StepBar({ currentIndex }) {
   return (
@@ -190,17 +201,19 @@ function ContextHeader({ patient, doctor, appointment, fallbackPatientName }) {
 /**
  * Prescribe wizard - port of AllyDocReactApp's AddPrescriptionFlowWrapper / AddPrescriptionPage / steps:
  *   1. Select Pharmacy  - shared PharmacyPicker (collapsible search, patient pharmacies, select / deselect).
- *   2. Add Prescription - search card (Medication / Supplies, "Add Custom Supply"), tabs Medication & Supplies /
- *      Clinic Presets (not for freelancer doctors) / Favorites, and "Items to prescribe"
- *      (`GetPatientPrescriptions?status=Entered,Edited,ReadyToSign,EpcsError`) with edit / delete / delete all.
- *   3. Review & Save    - select and send (`SendPrescriptions`), past-date warning, prescriber PIN, results banner.
- * Not ported (see docs/PROGRESS.md): EPCS signing (controlled drugs are refused), custom compounds, benefits check,
- * print / PDF, Order Sets (an empty tab on web too).
+ *   2. Add Prescription - search card (Medication / Supplies, "Add Custom Supply" / "Add Custom Compound"), tabs
+ *      Medication & Supplies / Clinic Presets (not for freelancer doctors) / Favorites, and "Items to prescribe"
+ *      (`GetPatientPrescriptions?status=Entered,Edited,ReadyToSign,EpcsError`) with edit / delete / delete all /
+ *      prescription benefits check.
+ *   3. Review & Save    - select and send (`SendPrescriptions`), past-date warning, prescriber PIN, EPCS sign+send
+ *      for controlled substances, print/PDF, results banner.
+ * Not ported (see docs/PROGRESS.md): Order Sets (an empty tab on web too).
  */
 export default function AddPrescriptionPage() {
   const navigation = useNavigation();
   const route = useRoute();
   const { profile } = useAuth();
+  const { getUserDetails } = usePatients();
   const { appointmentId, doseSpotPatientId, patientId, patientName } = route.params || {};
   const isFreelancerDoctor =
     String(profile?.userType || '').toLowerCase() === 'freelancer' && String(profile?.roleName || '').toLowerCase().trim() === 'doctor';
@@ -213,9 +226,10 @@ export default function AddPrescriptionPage() {
   const [appointment, setAppointment] = useState(null);
 
   useEffect(() => {
-    if (patientId) getUserDetails(patientId).then((result) => result.success && setPatientDetails(result.data));
-    if (profile?.userId) getUserDetails(profile.userId).then((result) => result.success && setDoctorDetails(result.data));
+    if (patientId) getUserDetails(patientId).then(setPatientDetails).catch(() => {});
+    if (profile?.userId) getUserDetails(profile.userId).then(setDoctorDetails).catch(() => {});
     if (appointmentId) getAppointmentDetails(appointmentId).then((result) => result.success && setAppointment(result.data));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId, profile?.userId, appointmentId]);
 
   // ---- Step 1 ----
@@ -238,6 +252,16 @@ export default function AddPrescriptionPage() {
   const [resolvingId, setResolvingId] = useState(null);
   const [blockedDrugName, setBlockedDrugName] = useState('');
   const [favoritesRefresh, setFavoritesRefresh] = useState(0);
+  const [epcsModalVisible, setEpcsModalVisible] = useState(false);
+  const [epcsTfaCompleted, setEpcsTfaCompleted] = useState(false);
+  const [epcsPinSet, setEpcsPinSet] = useState(false);
+
+  const openEpcsModal = async () => {
+    const [tfaStatus, pinFlag] = await Promise.all([getItem('tfaStatus'), getItem('hasPinSetForTFA')]);
+    setEpcsTfaCompleted((tfaStatus || '').toLowerCase() === 'tfaactivatedsuccess');
+    setEpcsPinSet(pinFlag === 'true' || pinFlag === '1');
+    setEpcsModalVisible(true);
+  };
 
   const showMedTab = query.trim().length >= MIN_SEARCH_LENGTH || hasSearched;
   const tabs = [
@@ -325,6 +349,9 @@ export default function AddPrescriptionPage() {
   }, [med.form]);
 
   // Web handleMedicationSelect: SelectMedication for the details, then the EPCS gate, then the modal.
+  // Web's checkEPCSAuthorization only blocks a controlled drug from being ADDED when TFA/PIN aren't
+  // both complete - once they are, it's added normally like any other medication, and the actual
+  // DEA signing happens later at send time (see the "Send (EPCS)" flow / EpcsWorkflowModal).
   const openMedication = async (drug, prefill) => {
     const id = drug.DispensableDrugId;
     setBlockedDrugName('');
@@ -335,8 +362,16 @@ export default function AddPrescriptionPage() {
     const merged = { ...drug, ...(detail || {}) };
     const schedule = Number(merged.Schedule ?? drug.Schedule ?? 0);
     if (schedule >= 2 && schedule <= 5) {
-      setBlockedDrugName(merged.DisplayName || merged.NameWithRouteDoseForm || 'This medication');
-      return;
+      const [tfaStatus, pinFlag] = await Promise.all([getItem('tfaStatus'), getItem('hasPinSetForTFA')]);
+      const tfaDone = (tfaStatus || '').toLowerCase() === 'tfaactivatedsuccess';
+      const pinDone = pinFlag === 'true' || pinFlag === '1';
+      if (!tfaDone || !pinDone) {
+        setEpcsTfaCompleted(tfaDone);
+        setEpcsPinSet(pinDone);
+        setEpcsModalVisible(true);
+        setBlockedDrugName(merged.DisplayName || merged.NameWithRouteDoseForm || 'This medication');
+        return;
+      }
     }
     setMed({ ...CLOSED_MED, visible: true, drug: merged, form: medicationForm(merged, prefill) });
   };
@@ -477,11 +512,151 @@ export default function AddPrescriptionPage() {
     loadItems();
   };
 
+  // ---- compound / custom compound modal ----
+  const [compound, setCompound] = useState(CLOSED_COMPOUND);
+  const changeCompound = (name, value) => setCompound((prev) => ({ ...prev, form: { ...prev.form, [name]: value } }));
+
+  const compoundIngredientFromFavorite = (ing) => ({
+    key: Math.random().toString(36).slice(2),
+    query: '',
+    results: [],
+    searching: false,
+    name: ing.FreeText || ing.DrugName || ing.Name || '',
+    dispensableDrugId: ing.DispensableDrugId ?? null,
+    isCustom: Boolean(ing.FreeText),
+    notControlledSubstance: ing.IsFreeTextEPCS === false || !ing.FreeText,
+    totalDispense: String(ing.Quantity ?? ''),
+    dispenseForm: DISPENSE_UNIT_NAMES[ing.DispenseUnitId] || 'Each',
+  });
+
+  const openCustomCompound = (prefill = {}) =>
+    setCompound({
+      ...CLOSED_COMPOUND,
+      visible: true,
+      form: emptyCompoundForm({
+        compoundName: prefill.Title || prefill.CompoundDescription || '',
+        ingredients: Array.isArray(prefill.CompoundIngredients) && prefill.CompoundIngredients.length
+          ? prefill.CompoundIngredients.map(compoundIngredientFromFavorite)
+          : undefined,
+        noSubstitutions: Boolean(prefill.NoSubstitutions),
+        patientDirections: prefill.Directions || '',
+        totalDispense: prefill.Quantity != null ? String(prefill.Quantity) : '',
+        totalDispenseForm: DISPENSE_UNIT_NAMES[prefill.DispenseUnitId] || 'Each',
+        refills: prefill.Refills != null ? String(prefill.Refills) : '0',
+        daySupply: prefill.DaysSupply != null ? String(prefill.DaysSupply) : '',
+        pharmacyNotesText: prefill.Notes || '',
+      }),
+    });
+
+  const saveCompound = async () => {
+    setCompound((prev) => ({ ...prev, tried: true }));
+    const pharmacyId = getPharmacyId(selectedPharmacy);
+    if (!pharmacyId) {
+      toast.error('Select a pharmacy first.');
+      return;
+    }
+    const { form, editingId } = compound;
+    if (Object.keys(validateCompoundForm(form)).length > 0) return;
+    setCompound((prev) => ({ ...prev, saving: true }));
+    const payload = {
+      compoundDescription: form.compoundName.trim(),
+      compoundIngredients: form.ingredients.map((ing) =>
+        ing.isCustom
+          ? {
+              quantity: Number(ing.totalDispense) || 0,
+              dispenseUnitId: DISPENSE_UNIT_ID_BY_NAME[ing.dispenseForm] || 0,
+              freeText: ing.name.trim(),
+              isFreeTextEPCS: !ing.notControlledSubstance,
+            }
+          : {
+              quantity: Number(ing.totalDispense) || 0,
+              dispenseUnitId: DISPENSE_UNIT_ID_BY_NAME[ing.dispenseForm] || 0,
+              dispensableDrugId: ing.dispensableDrugId,
+            },
+      ),
+      refills: parseInt(form.refills, 10) || 0,
+      dispenseUnitId: DISPENSE_UNIT_ID_BY_NAME[form.totalDispenseForm] || 0,
+      quantity: String(form.totalDispense),
+      directions: form.patientDirections,
+      status: '1',
+      pharmacyId,
+      pharmacyNotes: form.pharmacyNotesText || '',
+      noSubstitutions: form.noSubstitutions,
+      effectiveDate: form.effectiveDate || todayString(),
+      isUrgent: form.urgent,
+    };
+    const result = editingId
+      ? await editCompiledCompoundPrescription(doseSpotPatientId, editingId, payload, appointmentId)
+      : await addCompiledCompoundPrescription(doseSpotPatientId, payload, appointmentId);
+    if (!result.success || result.raw?.data?.Result?.ResultCode === 'ERROR') {
+      setCompound((prev) => ({ ...prev, saving: false }));
+      toast.error(result.message || result.raw?.data?.Result?.ResultDescription || 'Failed to save the compound prescription.');
+      return;
+    }
+    toast.success(result.message || (editingId ? 'Prescription updated successfully' : 'Prescription added successfully'));
+    if (!editingId && form.createAsFavorite && form.favoriteName.trim()) {
+      // Fire-and-forget, same as web - doesn't block the main success path.
+      createCompoundFavorite('clinician', null, {
+        compoundDescription: form.compoundName.trim(),
+        title: form.favoriteName.trim(),
+        compoundIngredients: payload.compoundIngredients,
+        notes: payload.pharmacyNotes,
+        directions: payload.directions,
+        refills: payload.refills,
+        daysSupply: parseInt(form.daySupply, 10) || 0,
+        quantity: payload.quantity,
+        dispenseUnitTypeId: payload.dispenseUnitId,
+        noSubstitutions: payload.noSubstitutions,
+        firstPrescriptionDiagnosis1: 0,
+        firstPrescriptionDiagnosis2: 0,
+        firstPrescriptionDiagnosis3: 0,
+        firstPrescriptionDiagnosis4: 0,
+      }).catch(() => {});
+    }
+    setCompound(CLOSED_COMPOUND);
+    loadItems();
+  };
+
+  // ---- prescription benefits (live eligibility/formulary check) ----
+  const [benefitsModal, setBenefitsModal] = useState({ visible: false, ndc: null, currentPrescription: null });
+  const [benefitsLoading, setBenefitsLoading] = useState(null);
+
+  const openBenefits = async (rx) => {
+    const drugId = rxField(rx, 'DispensableDrugId', 'dispensableDrugId');
+    if (!drugId) return;
+    setBenefitsLoading(rxIdOf(rx));
+    const drugResult = await selectMedication(drugId);
+    setBenefitsLoading(null);
+    const drugItem = drugResult?.success ? drugResult.data?.Item || drugResult.data?.item || {} : {};
+    const ndc = drugItem.NDC || drugItem.Ndc;
+    setBenefitsModal({ visible: true, ndc, currentPrescription: rx });
+  };
+
+  const handleReplaceMedication = async (selectedRow) => {
+    const rx = benefitsModal.currentPrescription;
+    setBenefitsModal({ visible: false, ndc: null, currentPrescription: null });
+    const drugId = selectedRow.dispensableDrugId;
+    if (!drugId) return;
+    const drugResult = await selectMedication(drugId);
+    const drugItem = drugResult?.success ? drugResult.data?.Item || drugResult.data?.item || {} : {};
+    const merged = { ...drugItem, DispensableDrugId: drugId, DisplayName: selectedRow.displayName || drugItem.DisplayName };
+    const pricing = selectedRow.pricingSet?.PricingCoverage;
+    await openMedication(merged, {
+      Directions: rxField(rx, 'Directions', 'directions'),
+      Refills: rxField(rx, 'Refills', 'refills'),
+      IsUrgent: rxField(rx, 'IsUrgent', 'isUrgent'),
+      NoSubstitutions: rxField(rx, 'NoSubstitutions', 'noSubstitutions'),
+      Quantity: pricing?.QuantityPricedValue || '30',
+      DaysSupply: pricing?.DaysSupplyPriced || '30',
+      DispenseUnitTypeId: pricing?.DispenseUnitTypeID ?? drugItem.DispenseUnitId,
+    });
+  };
+
   // Web ClinicPresetsTab / FavoritesTab "+" routing.
   const [pendingFavoriteId, setPendingFavoriteId] = useState(null);
   const applyFavorite = async (fav, id) => {
-    if (fav.IsCompound || fav.CompoundId) {
-      toast.info('Compound prescriptions can only be created from the web portal for now.');
+    if (fav.IsCompound || fav.CompoundId || Array.isArray(fav.CompoundIngredients)) {
+      openCustomCompound(fav);
       return;
     }
     if (fav.DispensableDrugId) {
@@ -519,6 +694,51 @@ export default function AddPrescriptionPage() {
         visible: true,
         drug: { ...drugItem, DispensableDrugId: drugId, DisplayName: detail.DisplayName || rxNameOf(rx) || drugItem.DisplayName },
         form: medicationFormFromDetail(detail),
+        editingId: id,
+      });
+      return;
+    }
+    if (kind === 'compound') {
+      const rawIngredients = Array.isArray(detail.CompoundIngredients) ? detail.CompoundIngredients : [];
+      const ingredients = await Promise.all(
+        rawIngredients.map(async (ing) => {
+          let name = ing.FreeText || ing.DrugName || ing.Name || '';
+          if (!ing.FreeText && ing.DispensableDrugId && name.length < 5) {
+            const drugResult = await selectMedication(ing.DispensableDrugId);
+            const drugItem = drugResult?.success ? drugResult.data?.Item || drugResult.data?.item || {} : {};
+            name = drugItem.DisplayName || name;
+          }
+          return {
+            key: Math.random().toString(36).slice(2),
+            query: '',
+            results: [],
+            searching: false,
+            name,
+            dispensableDrugId: ing.DispensableDrugId ?? null,
+            isCustom: Boolean(ing.FreeText),
+            notControlledSubstance: ing.IsFreeTextEPCS === false || !ing.FreeText,
+            totalDispense: String(ing.Quantity ?? ''),
+            dispenseForm: DISPENSE_UNIT_NAMES[ing.DispenseUnitId] || 'Each',
+          };
+        }),
+      );
+      setBusyId(null);
+      setCompound({
+        ...CLOSED_COMPOUND,
+        visible: true,
+        form: emptyCompoundForm({
+          compoundName: detail.DisplayName || rxNameOf(rx) || '',
+          ingredients: ingredients.length ? ingredients : undefined,
+          noSubstitutions: Boolean(detail.NoSubstitutions),
+          urgent: Boolean(detail.IsUrgent),
+          patientDirections: String(detail.Directions ?? ''),
+          totalDispense: String(detail.Quantity ?? ''),
+          totalDispenseForm: DISPENSE_UNIT_NAMES[detail.DispenseUnitId ?? detail.DispenseUnitTypeId] || 'Each',
+          refills: String(detail.Refills ?? '0'),
+          effectiveDate: String(detail.EffectiveDate ?? todayString()).slice(0, 10),
+          daySupply: String(detail.DaysSupply ?? ''),
+          pharmacyNotesText: String(detail.PharmacyNotes ?? ''),
+        }),
         editingId: id,
       });
       return;
@@ -627,6 +847,99 @@ export default function AddPrescriptionPage() {
     }
   };
 
+  // ---- EPCS send (controlled substances selected for sending) ----
+  const isControlledRx = (rx) => {
+    const schedule = Number(rxField(rx, 'Schedule', 'schedule') ?? 0);
+    return schedule >= 2 && schedule <= 5;
+  };
+  const selectedControlledItems = reviewItems.filter((rx) => selectedIds.has(rxIdOf(rx)) && isControlledRx(rx));
+  const [epcsWorkflowVisible, setEpcsWorkflowVisible] = useState(false);
+
+  const startEpcsSend = () => {
+    const ids = selectedControlledItems.map(rxIdOf);
+    if (ids.length === 0) {
+      toast.warning('No controlled-substance prescriptions selected');
+      return;
+    }
+    const pastRows = selectedControlledItems.filter((rx) => isPastDate(rxField(rx, 'EffectiveDate', 'effectiveDate')));
+    if (pastRows.length > 0) {
+      setPastDateRows(pastRows);
+      return;
+    }
+    setEpcsWorkflowVisible(true);
+  };
+
+  // ---- print / PDF preview ----
+  const [printPinVisible, setPrintPinVisible] = useState(false);
+  const [printLoading, setPrintLoading] = useState(false);
+  const [printHtml, setPrintHtml] = useState(null);
+
+  const buildPrintRows = async (selectedRxItems) => {
+    return Promise.all(
+      selectedRxItems.map(async (rx) => {
+        let ingredientsText = '';
+        if (itemKind(rx) === 'compound') {
+          const detailRes = await getPrescriptionById(doseSpotPatientId, rxIdOf(rx));
+          const detail = detailRes.success ? detailRes.data?.Prescription || detailRes.data : null;
+          const rawIngredients = Array.isArray(detail?.CompoundIngredients) ? detail.CompoundIngredients : [];
+          const names = await Promise.all(
+            rawIngredients.map(async (ing) => {
+              if (ing.FreeText) return ing.FreeText;
+              if (ing.DispensableDrugId) {
+                const drugResult = await selectMedication(ing.DispensableDrugId);
+                const drugItem = drugResult?.success ? drugResult.data?.Item || drugResult.data?.item || {} : {};
+                return drugItem.DisplayName || drugItem.DrugName || drugItem.NameWithRouteDoseForm || '';
+              }
+              return '';
+            }),
+          );
+          ingredientsText = names.filter(Boolean).join(', ');
+        }
+        return {
+          medicationName: rxNameOf(rx),
+          ingredientsText,
+          writtenDate: rxField(rx, 'CreatedDate', 'WrittenDate', 'createdDate'),
+          effectiveDate: rxField(rx, 'EffectiveDate', 'effectiveDate'),
+          directions: rxField(rx, 'Directions', 'directions'),
+          quantity: rxField(rx, 'Quantity', 'quantity'),
+          refills: rxField(rx, 'Refills', 'refills'),
+        };
+      }),
+    );
+  };
+
+  const finalizePrint = async (pin) => {
+    const ids = [...selectedIds];
+    setPrintLoading(true);
+    const result = await setPrintedPrescriptions(doseSpotPatientId, { pin, prescriptionIds: ids, appointmentId });
+    if (!result.success) {
+      setPrintLoading(false);
+      setPrintPinVisible(false);
+      toast.error(result.message || 'Unable to mark these prescriptions as printed.');
+      return;
+    }
+    const selectedRxItems = reviewItems.filter((rx) => ids.includes(rxIdOf(rx)));
+    const rows = await buildPrintRows(selectedRxItems);
+    const html = buildPrescriptionPrintHtml({ patientDetails, doctorDetails, pharmacy: selectedPharmacy, rows });
+    setPrintLoading(false);
+    setPrintPinVisible(false);
+    setPrintHtml(html);
+  };
+
+  const startPrint = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) {
+      toast.warning('No prescriptions selected');
+      return;
+    }
+    const pinFlag = await getItem('hasPinSetForTFA');
+    if (pinFlag === 'true' || pinFlag === '1') {
+      setPrintPinVisible(true);
+    } else {
+      finalizePrint(undefined);
+    }
+  };
+
   // ---- renders ----
   const pharmacyName = selectedPharmacy ? getPharmacyName(selectedPharmacy) : '';
 
@@ -649,6 +962,10 @@ export default function AddPrescriptionPage() {
         <Pressable style={styles.customButton} onPress={() => openCustomSupply()}>
           <Feather name="plus" size={14} color={colors.white} />
           <Text style={styles.customButtonText}>Add Custom Supply</Text>
+        </Pressable>
+        <Pressable style={styles.customButton} onPress={() => openCustomCompound()}>
+          <Feather name="plus" size={14} color={colors.white} />
+          <Text style={styles.customButtonText}>Add Custom Compound</Text>
         </Pressable>
       </View>
       <View style={styles.searchRow}>
@@ -762,15 +1079,16 @@ export default function AddPrescriptionPage() {
           {items.map((rx) => {
             const id = rxIdOf(rx);
             const mine = isCurrentAppointment(rx);
-            const editable = mine && itemKind(rx) !== 'compound' && EDITABLE.has(statusKey(rx));
+            const editable = mine && EDITABLE.has(statusKey(rx));
             return (
               <PrescriptionItemCard
                 key={String(id)}
                 rx={rx}
                 canModify={mine}
-                busy={busyId === id}
+                busy={busyId === id || benefitsLoading === id}
                 onEdit={editable ? () => startEdit(rx) : undefined}
                 onDelete={() => confirmDelete([id], `Delete ${rxNameOf(rx)}? This cannot be undone.`)}
+                onBenefits={() => openBenefits(rx)}
               />
             );
           })}
@@ -807,12 +1125,13 @@ export default function AddPrescriptionPage() {
             {renderSearchCard()}
 
             {blockedDrugName ? (
-              <View style={styles.blockedBox}>
+              <Pressable style={styles.blockedBox} onPress={openEpcsModal}>
                 <MaterialCommunityIcons name="shield-alert-outline" size={20} color={adTokens.dangerDark} />
                 <Text style={styles.blockedText}>
-                  {blockedDrugName} is a controlled substance. EPCS signing is not available in the app yet - please prescribe it from the web portal.
+                  {blockedDrugName} is a controlled substance. Complete your EPCS authorization (TFA + PIN) to add
+                  it - tap to view status and finish the remaining steps.
                 </Text>
-              </View>
+              </Pressable>
             ) : null}
 
             <View style={styles.card}>
@@ -897,9 +1216,10 @@ export default function AddPrescriptionPage() {
                           selected={selectedIds.has(id)}
                           onToggle={() => toggleSelected(id)}
                           canModify
-                          busy={busyId === id}
-                          onEdit={itemKind(rx) !== 'compound' ? () => startEdit(rx) : undefined}
+                          busy={busyId === id || benefitsLoading === id}
+                          onEdit={() => startEdit(rx)}
                           onDelete={() => confirmDelete([id], `Delete ${rxNameOf(rx)}? This cannot be undone.`)}
+                          onBenefits={() => openBenefits(rx)}
                         />
                         {isPastDate(effective) ? <Text style={styles.pastText}>Effective date {formatDateOnly(effective)} is in the past</Text> : null}
                       </View>
@@ -944,6 +1264,26 @@ export default function AddPrescriptionPage() {
             <Pressable style={styles.secondaryButton} onPress={() => navigation.goBack()}>
               <Text style={styles.secondaryButtonText}>Done</Text>
             </Pressable>
+            <Pressable
+              style={[styles.printButton, (printLoading || selectedIds.size === 0) && styles.disabled]}
+              disabled={printLoading || selectedIds.size === 0}
+              onPress={startPrint}
+            >
+              {printLoading ? (
+                <ActivityIndicator size="small" color={adTokens.primaryDark} />
+              ) : (
+                <Feather name="printer" size={14} color={adTokens.primaryDark} />
+              )}
+              <Text style={styles.printButtonText}>Print</Text>
+            </Pressable>
+            {selectedControlledItems.length > 0 ? (
+              <Pressable style={styles.epcsButton} onPress={startEpcsSend}>
+                <Feather name="shield" size={14} color={colors.white} />
+                <Text style={styles.primaryButtonText} numberOfLines={1}>
+                  EPCS ({selectedControlledItems.length})
+                </Text>
+              </Pressable>
+            ) : null}
             <Pressable style={[styles.primaryButton, (isSending || selectedIds.size === 0) && styles.disabled]} disabled={isSending || selectedIds.size === 0} onPress={startSend}>
               <Text style={styles.primaryButtonText}>Send ({selectedIds.size})</Text>
               {isSending ? <ActivityIndicator size="small" color={colors.white} style={styles.buttonSpinner} /> : null}
@@ -978,7 +1318,46 @@ export default function AddPrescriptionPage() {
         onSubmit={saveSupply}
         onClose={() => setSupply(CLOSED_SUPPLY)}
       />
+      <CompoundFormModal
+        visible={compound.visible}
+        pharmacyName={pharmacyName}
+        form={compound.form}
+        triedSubmit={compound.tried}
+        isEdit={Boolean(compound.editingId)}
+        saving={compound.saving}
+        onChange={changeCompound}
+        onSubmit={saveCompound}
+        onClose={() => setCompound(CLOSED_COMPOUND)}
+      />
+      <PrescriptionBenefitsModal
+        visible={benefitsModal.visible}
+        patientId={doseSpotPatientId}
+        ndc={benefitsModal.ndc}
+        currentPrescription={benefitsModal.currentPrescription}
+        onClose={() => setBenefitsModal({ visible: false, ndc: null, currentPrescription: null })}
+        onReplace={handleReplaceMedication}
+      />
+      <EpcsWorkflowModal
+        visible={epcsWorkflowVisible}
+        doseSpotPatientId={doseSpotPatientId}
+        appointmentId={appointmentId}
+        prescriptions={selectedControlledItems.map((rx) => ({ id: rxIdOf(rx), name: rxNameOf(rx) }))}
+        onClose={() => setEpcsWorkflowVisible(false)}
+        onSent={() => {
+          setEpcsWorkflowVisible(false);
+          toast.success('Prescription signed and sent successfully.');
+          loadItems();
+        }}
+      />
       <ProviderPinModal visible={pinVisible} loading={isSending} onConfirm={(pin) => sendNow(pendingSendIds, pin)} onClose={() => setPinVisible(false)} />
+      <ProviderPinModal
+        visible={printPinVisible}
+        loading={printLoading}
+        actionLabel="Authorize & Print"
+        onConfirm={(pin) => finalizePrint(pin)}
+        onClose={() => setPrintPinVisible(false)}
+      />
+      <PrescriptionPrintPreviewModal visible={Boolean(printHtml)} html={printHtml} onClose={() => setPrintHtml(null)} />
       <PastDateWarningModal
         visible={pastDateRows.length > 0}
         prescriptions={pastDateRows.map((rx) => ({ ...rx, medicationDisplayName: rxNameOf(rx) }))}
@@ -988,6 +1367,13 @@ export default function AddPrescriptionPage() {
           startEdit(rx);
         }}
         onClose={() => setPastDateRows([])}
+      />
+      <EPCSAuthorizationRequiredModal
+        visible={epcsModalVisible}
+        tfaCompleted={epcsTfaCompleted}
+        pinSet={epcsPinSet}
+        onClose={() => setEpcsModalVisible(false)}
+        onPinSet={() => setEpcsPinSet(true)}
       />
     </View>
   );
@@ -1045,7 +1431,7 @@ const styles = StyleSheet.create({
   pharmacyBannerLabel: { fontSize: 11.5, fontWeight: '700', color: adTokens.textSecondary },
   pharmacyBannerText: { fontSize: 14, fontWeight: '800', color: adTokens.primaryDark },
 
-  searchTypeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  searchTypeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   searchTypePicker: { flex: 1 },
   customButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 11, paddingHorizontal: 12, borderRadius: 10, backgroundColor: adTokens.primary },
   customButtonText: { fontSize: 13, fontWeight: '700', color: colors.white },
@@ -1090,8 +1476,11 @@ const styles = StyleSheet.create({
   pharmacyLineText: { flex: 1, fontSize: 13, fontWeight: '600', color: adTokens.textPrimary },
   pastText: { fontSize: 12.5, color: adTokens.warningDark, marginTop: 4, marginLeft: 4 },
 
-  footer: { flexDirection: 'row', gap: 10, padding: 16, borderTopWidth: 1, borderTopColor: adTokens.border, backgroundColor: adTokens.white },
+  footer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, padding: 16, borderTopWidth: 1, borderTopColor: adTokens.border, backgroundColor: adTokens.white },
   iconButton: { width: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: adTokens.border },
+  epcsButton: { flex: 1, minWidth: 100, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 13, borderRadius: 10, backgroundColor: adTokens.dangerDark },
+  printButton: { flex: 1, minWidth: 80, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 13, borderRadius: 10, borderWidth: 1, borderColor: adTokens.primary },
+  printButtonText: { fontSize: 13, fontWeight: '700', color: adTokens.primaryDark },
   primaryButton: { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 13, borderRadius: 10, backgroundColor: adTokens.primary },
   primaryButtonText: { fontSize: 14, fontWeight: '700', color: colors.white },
   secondaryButton: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 13, borderRadius: 10, borderWidth: 1, borderColor: adTokens.border, backgroundColor: adTokens.white },

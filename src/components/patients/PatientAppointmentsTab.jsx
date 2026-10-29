@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
-import { getPatientAppointmentHistory } from '../../services/patientsService';
+import { usePatients } from '../../hooks/usePatients';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import StatusBadge from '../StatusBadge';
 import AppointmentInfoButton from '../AppointmentInfoButton';
@@ -51,6 +51,7 @@ function AppointmentRow({ item }) {
 /** Port of ViewPatientPage.jsx's "appointments" tab (SharedAppointmentTable,
  * personColumnType="doctor") - GET /HistoryAppointmentPatient?PatientId=. */
 export default function PatientAppointmentsTab({ patientId }) {
+  const { getPatientAppointmentHistory } = usePatients();
   const [appointments, setAppointments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -58,11 +59,14 @@ export default function PatientAppointmentsTab({ patientId }) {
   useEffect(() => {
     if (!patientId) return;
     setIsLoading(true);
-    getPatientAppointmentHistory(patientId).then((response) => {
-      const list = Array.isArray(response.data) ? response.data : response.data?.data;
-      setAppointments(response.success && Array.isArray(list) ? list : []);
-      setIsLoading(false);
-    });
+    getPatientAppointmentHistory(patientId)
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data?.data;
+        setAppointments(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setAppointments([]))
+      .finally(() => setIsLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId]);
 
   const filtered = useMemo(() => {

@@ -4,7 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
-import { getPatientAppointmentsList, getPatientDoctorDropdown } from '../../services/patientAppointmentsService';
+import { usePatientAppointments } from '../../hooks/usePatientAppointments';
 import {
   extractAppointmentList,
   formatStatusFilterLabel,
@@ -143,6 +143,7 @@ export default function PatientAppointmentsPage() {
   const dockInset = useDockInset();
   const { profile } = useAuth();
   const patientId = profile?.userId;
+  const { getPatientAppointmentsList, getPatientDoctorDropdown } = usePatientAppointments();
   const isClinicPatient =
     String(profile?.userType || '').toLowerCase().trim() === 'clinic' &&
     String(profile?.roleName || '').toLowerCase().trim() === 'patient';
@@ -156,7 +157,15 @@ export default function PatientAppointmentsPage() {
   const [reviewTarget, setReviewTarget] = useState(null);
   const requestCounter = useRef(0);
 
-  const person = useMemo(() => doctorPerson(() => getPatientDoctorDropdown(patientId)), [patientId]);
+  const person = useMemo(
+    () =>
+      doctorPerson(() =>
+        getPatientDoctorDropdown(patientId)
+          .then((data) => ({ success: true, data }))
+          .catch((message) => ({ success: false, message })),
+      ),
+    [patientId, getPatientDoctorDropdown],
+  );
 
   const hasActiveFilters = Object.entries(filter).some(([key, value]) => {
     if (key === 'doctorName') return false;
@@ -171,17 +180,17 @@ export default function PatientAppointmentsPage() {
     setIsLoading(true);
     setLoadError(null);
 
-    const result = await getPatientAppointmentsList(patientId, filter);
-    if (requestId !== requestCounter.current) return;
-
-    if (!result.success) {
+    try {
+      const raw = await getPatientAppointmentsList(patientId, filter);
+      if (requestId !== requestCounter.current) return;
+      setAllAppointments(extractAppointmentList(raw));
+    } catch (message) {
+      if (requestId !== requestCounter.current) return;
       setAllAppointments([]);
-      setLoadError(result.message || 'Unable to load appointments.');
-    } else {
-      setAllAppointments(extractAppointmentList(result.raw));
+      setLoadError(message || 'Unable to load appointments.');
     }
     setIsLoading(false);
-  }, [patientId, filter]);
+  }, [patientId, filter, getPatientAppointmentsList]);
 
   useEffect(() => {
     load();

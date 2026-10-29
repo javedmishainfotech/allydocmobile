@@ -13,6 +13,7 @@ import { getAppointmentSymptom, STATUS_STYLE } from '../../utils/appointmentFiel
 import NotesModal from '../NotesModal';
 import QuestionnaireModal from '../QuestionnaireModal';
 import ConfirmationModal from '../ConfirmationModal';
+import RescheduleModal from './RescheduleModal';
 import { colors, adTokens } from '../../theme/colors';
 
 /**
@@ -30,6 +31,11 @@ export default function AppointmentDetailSheet({ appointmentId, onClose, onChang
   const visible = appointmentId != null;
   const { profile } = useAuth();
   const roleName = (profile?.roleName || '').toLowerCase().trim();
+  const userType = (profile?.userType || '').toLowerCase().trim();
+  // Web's showRescheduleButton: excludes a freelancer "doctor" and a clinic "doctor admin" even
+  // when the backend's own isRescheduleVisible flag is true.
+  const canSeeReschedule =
+    !((roleName === 'doctor admin' && userType === 'clinic') || (roleName === 'doctor' && userType === 'freelancer'));
   const navigation = useNavigation();
   const [isChatLoading, setIsChatLoading] = useState(false);
 
@@ -39,6 +45,7 @@ export default function AppointmentDetailSheet({ appointmentId, onClose, onChang
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [isQuestionnaireModalOpen, setIsQuestionnaireModalOpen] = useState(false);
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
   const [completeRemarks, setCompleteRemarks] = useState('');
   const [isSubmitLoader, setIsSubmitLoader] = useState(false);
 
@@ -161,7 +168,9 @@ export default function AppointmentDetailSheet({ appointmentId, onClose, onChang
                     </View>
                   </View>
 
-                  {(appointmentDetails.isMarkAsCompleteVisible || appointmentDetails.isTreatmentPlanVisible) ? (
+                  {(appointmentDetails.isMarkAsCompleteVisible ||
+                    appointmentDetails.isTreatmentPlanVisible ||
+                    (appointmentDetails.isRescheduleVisible && canSeeReschedule)) ? (
                     <View style={styles.detailActionsRow}>
                       {appointmentDetails.isMarkAsCompleteVisible ? (
                         <Pressable
@@ -185,6 +194,12 @@ export default function AppointmentDetailSheet({ appointmentId, onClose, onChang
                         >
                           <MaterialCommunityIcons name="clipboard-text-outline" size={14} color={colors.white} />
                           <Text style={styles.actionButtonText}>Treatment Plan</Text>
+                        </Pressable>
+                      ) : null}
+                      {appointmentDetails.isRescheduleVisible && canSeeReschedule ? (
+                        <Pressable style={styles.secondaryButton} onPress={() => setIsRescheduleOpen(true)}>
+                          <MaterialCommunityIcons name="calendar-sync-outline" size={14} color={adTokens.primaryDark} />
+                          <Text style={styles.secondaryButtonText}>Reschedule</Text>
                         </Pressable>
                       ) : null}
                     </View>
@@ -337,6 +352,19 @@ export default function AppointmentDetailSheet({ appointmentId, onClose, onChang
         onClose={() => setIsConfirmationModalOpen(false)}
         onConfirm={handleComplete}
       />
+
+      <RescheduleModal
+        visible={isRescheduleOpen}
+        appointmentId={appointmentDetails?.appointmentId}
+        patientId={appointmentDetails?.patitentId ?? appointmentDetails?.patientId ?? appointmentDetails?.userId}
+        initialDate={appointmentStartMs != null ? new Date(appointmentStartMs) : null}
+        onClose={() => setIsRescheduleOpen(false)}
+        onRescheduled={async () => {
+          setIsRescheduleOpen(false);
+          await loadDetails(appointmentDetails.appointmentId);
+          onChanged?.();
+        }}
+      />
     </>
   );
 }
@@ -395,6 +423,18 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   actionButtonText: { color: colors.white, fontWeight: '700', fontSize: 12.5 },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: adTokens.gray50,
+    borderWidth: 1,
+    borderColor: adTokens.border,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+  },
+  secondaryButtonText: { color: adTokens.primaryDark, fontWeight: '700', fontSize: 12.5 },
 
   commGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
   commButton: {

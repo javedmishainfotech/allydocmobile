@@ -93,10 +93,10 @@ function SectionListCard({ title, subtitle, loading, emptyText, items, selectedI
  * Reschedule button for the freelancer doctor variant (the only variant this
  * app currently supports), so there is nothing to port for it yet.
  *
- * Chat/Call/Video buttons are rendered (same visibility flags as web) but show
- * a "Coming soon" notice when tapped - Daily.co video calling and the
- * WebSocket chat transport are separate, not-yet-built integrations per the
- * migration plan, not something skipped for this page specifically.
+ * Chat/Call/Video (same visibility flags as web) are handled by the shared
+ * `AppointmentDetailSheet` below - Chat opens the real SignalR chat room, Call/
+ * Video push the real Daily.co `VideoCall` screen, same as every other list
+ * that reuses this sheet (Dashboard, Appointments, Treatment Plan detail).
  */
 export default function DoctorManageAppointmentsPage() {
   const dockInset = useDockInset();

@@ -147,3 +147,74 @@ export const getPatientProfileValidationSchema = (isUpdate = false) =>
     gender: Yup.string().required('Please select a gender'),
     profileImage: isUpdate ? Yup.mixed().notRequired() : Yup.mixed().required('Profile image is required'),
   });
+
+// ── Doctor profile (port of getDoctorProfileValidationSchema in AllyDocReactApp's ValidationSchema.js) ──
+// Shared by the Doctor and Nurse "Create / Update Profile" forms; `isNurse` drops the
+// DEA/NADEA/NPI/licence-registration-address fields the Nurse role doesn't have.
+export const getDoctorProfileValidationSchema = (isUpdate = false, isNurse = false) =>
+  Yup.object().shape({
+    firstName: Yup.string().transform(trimToString).max(35, maxChars(35)).required('First name is required'),
+    middleName: Yup.string().transform(trimToString).max(35, maxChars(35)),
+    lastName: Yup.string().transform(trimToString).max(35, maxChars(35)).required('Last name is required'),
+    gender: Yup.string().required('Gender is required'),
+    PhoneNo: Yup.string()
+      .transform(trimToDigitsOnly)
+      .matches(/^\d+$/, 'Phone number must contain only digits')
+      .max(25, maxChars(25))
+      .required('Phone number is required'),
+    primaryPhoneType: Yup.string()
+      .transform((value) => (value === null || value === undefined || value === '' ? '' : String(value)))
+      .oneOf(PRIMARY_PHONE_TYPES, 'Select a valid primary phone type')
+      .required('Primary phone type is required'),
+    primaryFax: Yup.string().transform(trimToString).max(25, maxChars(25)).required('Primary fax is required'),
+    dateOfBirth: Yup.date().typeError('Date of Birth is required').required('Date of Birth is required').max(new Date(), 'Date of Birth cannot be in the future'),
+    specializationName: Yup.string().required('Specialization name is required'),
+    licenceNumber: Yup.string().required('Licence number is required'),
+    address: Yup.string().transform(trimToString).max(35, maxChars(35)).required('Address is required'),
+    state: Yup.string().transform(trimToString).max(20, maxChars(20)).required('State is required'),
+    city: Yup.string().transform(trimToString).max(35, maxChars(35)).required('City is required'),
+    zipCode: Yup.string().transform(trimToDigitsOnly).matches(/^\d+$/, 'Zip code must contain only digits').max(10, maxChars(10)).required('Zip code is required'),
+    profileImage: isUpdate ? Yup.mixed().notRequired() : Yup.mixed().required('Profile image is required'),
+    licenceFile: isUpdate ? Yup.mixed().notRequired() : Yup.mixed().required('Licence file is required'),
+    Qualifications: isUpdate
+      ? Yup.array()
+      : Yup.array().min(1, 'At least 1 qualification file is required'),
+    npiNumber: Yup.string()
+      .transform(trimToDigitsOnly)
+      .matches(/^\d+$/, 'NPI number must contain only digits')
+      .max(35, maxChars(35))
+      .when([], { is: () => !isNurse, then: (schema) => schema.required('NPI number is required'), otherwise: (schema) => schema.notRequired() }),
+    deaNumber: Yup.string()
+      .transform(trimToString)
+      .max(9, maxChars(9))
+      .matches(/^[a-zA-Z0-9]{9}$/, 'DEA Number must be exactly 9 alphanumeric characters')
+      .when([], { is: () => !isNurse, then: (schema) => schema.required('DEA Number is required'), otherwise: (schema) => schema.notRequired() }),
+    nadeaNumber: Yup.string().transform(trimToString).max(35, maxChars(35)),
+    nadeaState: Yup.string().transform(trimToString).max(20, maxChars(20)),
+    isClinicianAddress: Yup.boolean(),
+    deaAddressLine1: Yup.string().when('isClinicianAddress', {
+      is: (v) => v === false && !isNurse,
+      then: (schema) => schema.transform(trimToString).max(35, maxChars(35)).required('DEA Address Line 1 is required'),
+      otherwise: (schema) => schema.notRequired(),
+    }),
+    deaAddressLine2: Yup.string().when('isClinicianAddress', {
+      is: (v) => v === false && !isNurse,
+      then: (schema) => schema.transform(trimToString).max(35, maxChars(35)),
+      otherwise: (schema) => schema.notRequired(),
+    }),
+    deaCity: Yup.string().when('isClinicianAddress', {
+      is: (v) => v === false && !isNurse,
+      then: (schema) => schema.required('DEA City is required'),
+      otherwise: (schema) => schema.notRequired(),
+    }),
+    deaState: Yup.string().when('isClinicianAddress', {
+      is: (v) => v === false && !isNurse,
+      then: (schema) => schema.required('DEA State is required'),
+      otherwise: (schema) => schema.notRequired(),
+    }),
+    deaZipCode: Yup.string().when('isClinicianAddress', {
+      is: (v) => v === false && !isNurse,
+      then: (schema) => schema.transform(trimToDigitsOnly).matches(/^\d+$/, 'DEA zip code must contain only digits').max(10, maxChars(10)).required('DEA Zip Code is required'),
+      otherwise: (schema) => schema.notRequired(),
+    }),
+  });

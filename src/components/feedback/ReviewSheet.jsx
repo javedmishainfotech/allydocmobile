@@ -13,7 +13,7 @@ import {
 import { ActivityIndicator } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { addFeedback, updateFeedback } from '../../services/patientAppointmentsService';
+import { usePatientAppointments } from '../../hooks/usePatientAppointments';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
@@ -29,6 +29,7 @@ const STAR_COUNT = 5;
  */
 export default function ReviewSheet({ visible, appointment, isEdit = false, initialRating, initialComment, onClose, onSaved }) {
   const insets = useSafeAreaInsets();
+  const { saveFeedback } = usePatientAppointments();
   const [rating, setRating] = useState(0);
   const [comments, setComments] = useState('');
   const [showError, setShowError] = useState(false);
@@ -50,16 +51,16 @@ export default function ReviewSheet({ visible, appointment, isEdit = false, init
       return;
     }
     setSaving(true);
-    const save = isEdit ? updateFeedback : addFeedback;
-    const result = await save({ appointmentId, rating, comments });
-    setSaving(false);
-    if (!result.success) {
-      toast.error(result.message || 'Unable to save your feedback.');
-      return;
+    try {
+      const result = await saveFeedback(appointmentId, rating, comments, isEdit);
+      toast.success(result.message || 'Thank you for your feedback.');
+      onSaved?.();
+      onClose();
+    } catch (message) {
+      toast.error(message || 'Unable to save your feedback.');
+    } finally {
+      setSaving(false);
     }
-    toast.success(result.message || 'Thank you for your feedback.');
-    onSaved?.();
-    onClose();
   };
 
   return (

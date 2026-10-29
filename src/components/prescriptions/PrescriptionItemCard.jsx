@@ -23,7 +23,7 @@ export const rxNameOf = (rx) => rxField(rx, 'DisplayName', 'displayName', 'medic
 export const rxTypeOf = (rx) => String(rxField(rx, 'Type', 'type', 'prescriptionType') || 'Coded');
 
 /** One "Items to prescribe" card (web AddPrescription step 2 right column). */
-export default function PrescriptionItemCard({ rx, selectable, selected, onToggle, canModify, busy, onEdit, onDelete }) {
+export default function PrescriptionItemCard({ rx, selectable, selected, onToggle, canModify, busy, onEdit, onDelete, onBenefits }) {
   const status = rxField(rx, 'Status', 'status');
   const tone = TONES[getPrescriptionStatusTone(status)] || TONES.neutral;
   const type = rxTypeOf(rx);
@@ -81,6 +81,12 @@ export default function PrescriptionItemCard({ rx, selectable, selected, onToggl
           </View>
         ) : null}
         <View style={styles.flex1} />
+        {isCoded && onBenefits ? (
+          <Pressable style={styles.benefitsButton} onPress={onBenefits} hitSlop={6}>
+            <Feather name="shield" size={13} color={adTokens.infoDark} />
+            <Text style={styles.benefitsText}>Benefits</Text>
+          </Pressable>
+        ) : null}
         {canModify && onEdit ? (
           <Pressable style={styles.editButton} onPress={onEdit} hitSlop={6}>
             <Feather name="edit-2" size={14} color={adTokens.primaryDark} />
@@ -112,4 +118,6 @@ const styles = StyleSheet.create({
   apptText: { fontSize: 11, fontWeight: '700', color: adTokens.primaryDark },
   editButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 5, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: adTokens.primary },
   editText: { fontSize: 12, fontWeight: '700', color: adTokens.primaryDark },
+  benefitsButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 5, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: adTokens.infoDark },
+  benefitsText: { fontSize: 12, fontWeight: '700', color: adTokens.infoDark },
 });

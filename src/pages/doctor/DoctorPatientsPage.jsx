@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, RefreshControl, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, RefreshControl, Modal, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import { getFreelancerPatients, getClinicPatients } from '../../services/patientsService';
+import { usePatients } from '../../hooks/usePatients';
 import { useAuth } from '../../hooks/useAuth';
 import {
   normalizeFreelancerPatient,
@@ -12,6 +12,7 @@ import {
 } from '../../utils/patientListUtils';
 import PatientFilterModal, { EMPTY_FREELANCER_PATIENT_FILTER } from '../../components/patients/PatientFilterModal';
 import PatientDetailModal from '../../components/patients/PatientDetailModal';
+import MergePatientTab from '../../components/settings/MergePatientTab';
 import { adTokens } from '../../theme/colors';
 import { useDockInset } from '../../navigation/DockInsetContext';
 
@@ -83,6 +84,7 @@ function PatientRow({ patient, onOpen, onOpenAppointmentHistory }) {
 export default function DoctorPatientsPage() {
   const dockInset = useDockInset();
   const { profile } = useAuth();
+  const { getFreelancerPatients, getClinicPatients } = usePatients();
   // Same routing as the web's DoctorPatientsRoute.jsx: only a freelancer "doctor" uses
   // /FreelancerDoctorPatients; every clinic/hospital role (doctor sub, doctor admin, clinic
   // doctors) uses /GetListOfPatients.
@@ -98,18 +100,30 @@ export default function DoctorPatientsPage() {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [detailInitialTab, setDetailInitialTab] = useState('personal');
+  const [mergePatientVisible, setMergePatientVisible] = useState(false);
+  // Web's canShowMergePatientLink(): hidden for doctor admin and nurse.
+  const roleNameLower = String(profile?.roleName || '').toLowerCase().trim();
+  const canShowMergePatientLink = roleNameLower !== 'doctor admin' && roleNameLower !== 'nurse';
 
-  const loadPatients = useCallback(async (pageNumber, activeFilter) => {
-    setIsLoading(true);
-    const fetchPage = isFreelancerDoctor ? getFreelancerPatients : getClinicPatients;
-    const response = await fetchPage({ pageNumber, pageSize: PAGE_SIZE, filters: activeFilter });
-    const parsed = parsePagedListResponse(response, pageNumber, PAGE_SIZE);
-    const normalize = isFreelancerDoctor ? normalizeFreelancerPatient : normalizeClinicPatient;
-    setPatients(parsed.list.map(normalize));
-    setTotalPages(parsed.totalPages || 1);
-    setTotalRecords(parsed.totalRecords);
-    setIsLoading(false);
-  }, [isFreelancerDoctor]);
+  const loadPatients = useCallback(
+    async (pageNumber, activeFilter) => {
+      setIsLoading(true);
+      const fetchPage = isFreelancerDoctor ? getFreelancerPatients : getClinicPatients;
+      let parsed;
+      try {
+        const data = await fetchPage({ pageNumber, pageSize: PAGE_SIZE, filters: activeFilter });
+        parsed = parsePagedListResponse({ success: true, data }, pageNumber, PAGE_SIZE);
+      } catch {
+        parsed = parsePagedListResponse({ success: false }, pageNumber, PAGE_SIZE);
+      }
+      const normalize = isFreelancerDoctor ? normalizeFreelancerPatient : normalizeClinicPatient;
+      setPatients(parsed.list.map(normalize));
+      setTotalPages(parsed.totalPages || 1);
+      setTotalRecords(parsed.totalRecords);
+      setIsLoading(false);
+    },
+    [isFreelancerDoctor, getFreelancerPatients, getClinicPatients],
+  );
 
   useEffect(() => {
     loadPatients(page, filter);
@@ -138,10 +152,18 @@ export default function DoctorPatientsPage() {
             <Text style={styles.pageTitle}>Patients</Text>
             <Text style={styles.pageSubtitle}>{totalRecords} patient{totalRecords === 1 ? '' : 's'}</Text>
           </View>
-          <Pressable style={[styles.filterButton, hasActiveFilter && styles.filterButtonActive]} onPress={() => setFilterModalVisible(true)}>
-            <MaterialCommunityIcons name="filter-variant" size={16} color={hasActiveFilter ? '#FFFFFF' : adTokens.primaryDark} />
-            <Text style={[styles.filterButtonText, hasActiveFilter && styles.filterButtonTextActive]}>Filter</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            {canShowMergePatientLink ? (
+              <Pressable style={styles.mergeButton} onPress={() => setMergePatientVisible(true)}>
+                <MaterialCommunityIcons name="account-multiple-plus-outline" size={16} color={adTokens.primaryDark} />
+                <Text style={styles.mergeButtonText}>Merge Patient</Text>
+              </Pressable>
+            ) : null}
+            <Pressable style={[styles.filterButton, hasActiveFilter && styles.filterButtonActive]} onPress={() => setFilterModalVisible(true)}>
+              <MaterialCommunityIcons name="filter-variant" size={16} color={hasActiveFilter ? '#FFFFFF' : adTokens.primaryDark} />
+              <Text style={[styles.filterButtonText, hasActiveFilter && styles.filterButtonTextActive]}>Filter</Text>
+            </Pressable>
+          </View>
         </View>
 
         {isLoading ? (
@@ -208,6 +230,23 @@ export default function DoctorPatientsPage() {
         initialTab={detailInitialTab}
         onClose={() => setSelectedPatient(null)}
       />
+
+      <Modal visible={mergePatientVisible} animationType="slide" onRequestClose={() => setMergePatientVisible(false)}>
+        <View style={styles.flex1}>
+          <View style={styles.mergeModalHeader}>
+            <Pressable onPress={() => setMergePatientVisible(false)} hitSlop={8}>
+              <Feather name="chevron-left" size={22} color={adTokens.textPrimary} />
+            </Pressable>
+            <View>
+              <Text style={styles.mergeModalTitle}>Merge Patient</Text>
+              <Text style={styles.mergeModalSubtitle}>Search and merge duplicate patient records</Text>
+            </View>
+          </View>
+          <ScrollView contentContainerStyle={styles.mergeModalBody}>
+            <MergePatientTab />
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -218,6 +257,30 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 },
   pageTitle: { fontSize: 19, fontWeight: '700', color: adTokens.textPrimary },
   pageSubtitle: { fontSize: 12.5, color: adTokens.textSecondary, marginTop: 3 },
+  headerActions: { flexDirection: 'row', gap: 8 },
+  mergeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: adTokens.primary,
+  },
+  mergeButtonText: { fontSize: 12, fontWeight: '600', color: adTokens.primaryDark },
+  mergeModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    paddingTop: 48,
+    borderBottomWidth: 1,
+    borderBottomColor: adTokens.border,
+  },
+  mergeModalTitle: { fontSize: 16, fontWeight: '700', color: adTokens.textPrimary },
+  mergeModalSubtitle: { fontSize: 12, color: adTokens.textSecondary, marginTop: 2 },
+  mergeModalBody: { padding: 16 },
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',

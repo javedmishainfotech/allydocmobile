@@ -1,11 +1,12 @@
 import React from 'react';
-import DashboardPage from '../pages/dashboard/DashboardPage';
 import DoctorDashboardPage from '../pages/doctor/DoctorDashboardPage';
 import DoctorManageAppointmentsPage from '../pages/doctor/DoctorManageAppointmentsPage';
 import DoctorAppointmentsPage from '../pages/doctor/DoctorAppointmentsPage';
 import DoctorSettingsPage from '../pages/doctor/DoctorSettingsPage';
 import DoctorPatientsPage from '../pages/doctor/DoctorPatientsPage';
 import DoctorTreatmentPlanPage from '../pages/doctor/DoctorTreatmentPlanPage';
+import DoctorsListPage from '../pages/doctor/DoctorsListPage';
+import FavoritesPage from '../pages/doctor/FavoritesPage';
 import PatientDashboardPage from '../pages/patient/PatientDashboardPage';
 import PatientAppointmentsPage from '../pages/patient/PatientAppointmentsPage';
 import PatientTreatmentPlanPage from '../pages/patient/PatientTreatmentPlanPage';
@@ -16,8 +17,20 @@ import ChatRoomsPage from '../pages/chat/ChatRoomsPage';
 import DoctorSupportPage from '../pages/doctor/DoctorSupportPage';
 import DoctorIdentityProofingPage from '../pages/doctor/DoctorIdentityProofingPage';
 import DoctorNotificationPage from '../pages/doctor/DoctorNotificationPage';
+import DoctorRequestsPage from '../pages/doctor/DoctorRequestsPage';
+import NurseDashboardPage from '../pages/nurse/NurseDashboardPage';
+import NursePendingAppointmentsPage from '../pages/nurse/NursePendingAppointmentsPage';
 import PlaceholderScreen from '../components/PlaceholderScreen';
 import { requiresIdpGate, withIdpGate } from './IdpGate';
+
+// Stable component identities (an inline arrow passed as a navigator `component` would remount
+// its screen on every render) for the two Favorites scopes - clinician-wide vs clinic-wide.
+function ClinicianFavoritesPage() {
+  return <FavoritesPage scope="clinician" />;
+}
+function ClinicFavoritesPage() {
+  return <FavoritesPage scope="clinic" />;
+}
 
 /**
  * Menu/page inventory per role. The real sidebar of the web app
@@ -42,14 +55,20 @@ import { requiresIdpGate, withIdpGate } from './IdpGate';
 export const DOCTOR_MENU_ITEMS = [
   { key: 'DoctorDashboard', title: 'Dashboard', icon: 'view-dashboard-outline', component: DoctorDashboardPage, pathKeywords: ['dashboard'] },
   { key: 'ManageAppointments', title: 'Manage Appointments', icon: 'calendar-edit', component: DoctorManageAppointmentsPage, pathKeywords: ['manageappointment'] },
+  // Web's /doctor/pending-appointments uses the exact same PendingAppointments component as Nurse's
+  // (module/Nurse/PendingAppointments/index.jsx) - same reuse here. Keyword ordered before the more
+  // general 'appointment' below.
+  { key: 'DoctorPendingAppointments', title: 'Pending Appointments', icon: 'calendar-clock-outline', component: NursePendingAppointmentsPage, pathKeywords: ['pending-appointment'] },
   { key: 'DoctorAppointments', title: 'Appointments', icon: 'calendar-month-outline', component: DoctorAppointmentsPage, pathKeywords: ['appointment'] },
   { key: 'DoctorPatients', title: 'Patients', icon: 'account-multiple-outline', component: DoctorPatientsPage, pathKeywords: ['patient'] },
   { key: 'DoctorTreatmentPlan', title: 'Treatment Plan', icon: 'clipboard-text-outline', component: DoctorTreatmentPlanPage, pathKeywords: ['treatment-plan', 'treatmentplan'] },
+  { key: 'DoctorsList', title: 'Doctors', icon: 'doctor', component: DoctorsListPage, pathKeywords: ['doctors'] },
   { key: 'PharmacyRequests', title: 'Pharmacy Requests', icon: 'pill', component: null, pathKeywords: ['pharmacy-request', 'pharmacyrequest', 'rxrequest', 'rx-request'] },
-  { key: 'Favorites', title: 'Favorites', icon: 'star-outline', component: null, pathKeywords: ['favorite'] },
+  { key: 'ClinicFavorites', title: 'Clinic Favorites', icon: 'star-check-outline', component: ClinicFavoritesPage, pathKeywords: ['clinic-favorite', 'clinicfavorite'] },
+  { key: 'Favorites', title: 'Favorites', icon: 'star-outline', component: ClinicianFavoritesPage, pathKeywords: ['favorite'] },
   { key: 'DoctorMessage', title: 'Messages', icon: 'message-text-outline', component: ChatRoomsPage, pathKeywords: ['message'] },
   { key: 'DoctorPayments', title: 'Payments', icon: 'credit-card-outline', component: null, pathKeywords: ['payment'] },
-  { key: 'DoctorRequests', title: 'Requests', icon: 'inbox-arrow-down-outline', component: null, pathKeywords: ['request'] },
+  { key: 'DoctorRequests', title: 'Requests', icon: 'inbox-arrow-down-outline', component: DoctorRequestsPage, pathKeywords: ['request'] },
   { key: 'DoctorNotification', title: 'Notifications', icon: 'bell-outline', component: DoctorNotificationPage, pathKeywords: ['notification'] },
   { key: 'DoctorFeedback', title: 'Feedback', icon: 'comment-text-outline', component: null, pathKeywords: ['feedback'] },
   // Not in the old sidebar - added for the "More" grid (not built yet, so they render PlaceholderScreen).
@@ -62,25 +81,22 @@ export const DOCTOR_MENU_ITEMS = [
   { key: 'DoctorSupport', title: 'Support', icon: 'lifebuoy', component: DoctorSupportPage, pathKeywords: ['support'] },
 ];
 
-// Stable component identities (an inline arrow passed as a navigator `component` would
-// remount its screen on every render).
-function NurseDashboardPlaceholder() {
-  return <DashboardPage roleLabel="Nurse" />;
-}
-
 // ── Nurse (roleName: Nurse) - web: module/Nurse/*, portal /nurse/* ──
 // Settings reuses the doctor Settings screen, which hides the tabs a nurse doesn't get
 // (as the web's Settings/index.jsx does). Notifications are the same API for every role.
 export const NURSE_MENU_ITEMS = [
-  { key: 'NurseDashboard', title: 'Home', icon: 'view-dashboard-outline', component: NurseDashboardPlaceholder, pathKeywords: ['dashboard'] },
-  { key: 'NursePendingAppointments', title: 'Pending Appointments', icon: 'calendar-clock-outline', component: null, pathKeywords: ['pending-appointment'] },
-  { key: 'NurseAppointments', title: 'Appointments', icon: 'calendar-month-outline', component: null, pathKeywords: ['appointment'] },
-  { key: 'NurseDoctors', title: 'Doctors', icon: 'doctor', component: null, pathKeywords: ['doctor'] },
-  { key: 'NursePatients', title: 'Patients', icon: 'account-multiple-outline', component: null, pathKeywords: ['patient'] },
+  { key: 'NurseDashboard', title: 'Home', icon: 'view-dashboard-outline', component: NurseDashboardPage, pathKeywords: ['dashboard'] },
+  { key: 'NursePendingAppointments', title: 'Pending Appointments', icon: 'calendar-clock-outline', component: NursePendingAppointmentsPage, pathKeywords: ['pending-appointment'] },
+  // Web's NurseAppointments/NursePatients/NurseTreatmentPlan are literal re-exports of the Doctor
+  // component (no nurse-specific code) - same here.
+  { key: 'NurseAppointments', title: 'Appointments', icon: 'calendar-month-outline', component: DoctorAppointmentsPage, pathKeywords: ['appointment'] },
+  { key: 'NurseDoctors', title: 'Doctors', icon: 'doctor', component: DoctorsListPage, pathKeywords: ['doctor'] },
+  { key: 'NursePatients', title: 'Patients', icon: 'account-multiple-outline', component: DoctorPatientsPage, pathKeywords: ['patient'] },
   { key: 'NurseMessage', title: 'Messages', icon: 'message-text-outline', component: ChatRoomsPage, pathKeywords: ['message'] },
-  { key: 'NurseTreatmentPlan', title: 'Treatment Plan', icon: 'clipboard-text-outline', component: null, pathKeywords: ['treatment-plan', 'treatmentplan'] },
+  { key: 'NurseTreatmentPlan', title: 'Treatment Plan', icon: 'clipboard-text-outline', component: DoctorTreatmentPlanPage, pathKeywords: ['treatment-plan', 'treatmentplan'] },
   { key: 'NursePayments', title: 'Payments', icon: 'credit-card-outline', component: null, pathKeywords: ['payment'] },
-  { key: 'NurseFavorites', title: 'Favorites', icon: 'star-outline', component: null, pathKeywords: ['favorite'] },
+  { key: 'NurseClinicFavorites', title: 'Clinic Favorites', icon: 'star-check-outline', component: ClinicFavoritesPage, pathKeywords: ['clinic-favorite', 'clinicfavorite'] },
+  { key: 'NurseFavorites', title: 'Favorites', icon: 'star-outline', component: ClinicianFavoritesPage, pathKeywords: ['favorite'] },
   { key: 'NurseNotification', title: 'Notifications', icon: 'bell-outline', component: DoctorNotificationPage, pathKeywords: ['notification'] },
   { key: 'NurseSettings', title: 'Settings', icon: 'cog-outline', component: DoctorSettingsPage, pathKeywords: ['setting'] },
   { key: 'NurseSupport', title: 'Support', icon: 'lifebuoy', component: DoctorSupportPage, pathKeywords: ['support'] },

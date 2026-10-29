@@ -3,13 +3,13 @@ import { callApi } from '../utils/apiResponse';
 
 /**
  * "Core flow" of AllyDocReactApp's Prescriptions module (module/Doctor/Pages/Patients/Prescriptions,
- * module/Doctor/Pages/Patients/action.js): add a standard (non-controlled) prescription, send it, and
- * delete it. Deliberately NOT ported here (out of scope for this pass, see docs/PROGRESS.md):
- * EPCS / controlled-substance e-signing, compound medications, custom supply, benefits check, print
- * preview, prescription favorites, and the separate `/AppointmentPrescriptions/UpdateStatus` sync
- * call web fires after each action (a secondary status mirror; the Treatment Plan detail screen
- * already re-fetches `GetTreatmentPlanDetails` after every action here, which is enough to keep its
- * own Prescriptions card correct).
+ * module/Doctor/Pages/Patients/action.js): add/edit/send/delete a standard prescription, plus (further
+ * down this file) compound medications, custom supply, the live benefits check, favorites CRUD, and
+ * EPCS controlled-substance signing. Deliberately NOT ported (out of scope, see docs/PROGRESS.md):
+ * print preview, and the separate `/AppointmentPrescriptions/UpdateStatus` sync call web fires after
+ * each action (a secondary status mirror; the Treatment Plan detail screen already re-fetches
+ * `GetTreatmentPlanDetails` after every action here, which is enough to keep its own Prescriptions
+ * card correct).
  */
 
 /** Mirrors AddCodedPrescriptionAction: `POST /api/Prescriptions/AddCodedPrescription/{doseSpotPatientId}`. */
@@ -116,6 +116,40 @@ export function editSupplyFreeTextPrescription(doseSpotPatientId, prescriptionId
   );
 }
 
+/** Mirrors the live-prescribing CompoundModal's submit (AllyDocReactApp's
+ * Patients/Prescriptions/modals/CompoundModal.jsx) - "Add Custom Compound" on the prescribe
+ * screen. Sent immediately (status "1"), no separate review/send/PIN step, unlike coded
+ * medications. Distinct from the Compound FAVORITE endpoints (createCompoundFavorite/
+ * updateCompoundFavorite below), which create a reusable template instead of a live
+ * prescription. */
+export function addCompiledCompoundPrescription(doseSpotPatientId, payload, appointmentId) {
+  return callApi(() =>
+    apiClient.post(`/api/Prescriptions/AddCompiledCompoundPrescription/${doseSpotPatientId}`, { ...payload, appointmentId }),
+  );
+}
+
+/** Mirrors EditCompiledCompoundPrescriptionAction. */
+export function editCompiledCompoundPrescription(doseSpotPatientId, prescriptionId, payload, appointmentId) {
+  return callApi(() =>
+    apiClient.put(`/api/Prescriptions/EditCompiledCompoundPrescription/${doseSpotPatientId}/${prescriptionId}`, {
+      ...payload,
+      appointmentId,
+    }),
+  );
+}
+
+/** Mirrors the "Prescription Benefits" live eligibility/formulary check
+ * (AllyDocReactApp's PrescriptionBenefitsModal.jsx). `RealTimeFormularyRequestStatus` 1/2
+ * (Queued/Processing) means the caller should poll again - see the component for the exact
+ * retry loop (3s interval, 10 attempts). */
+export function getPrescriptionBenefits({ patientId, patientEligibilityId, ndc, pharmacyId, quantity = '30', daysSupply = 30, dispenseUnitTypeId = 1 }) {
+  return callApi(() =>
+    apiClient.get(`/api/Supply/patients/${patientId}/prescriptionbenefits`, {
+      params: { patientEligibilityId, ndc, pharmacyId, quantity, daysSupply, dispenseUnitTypeId },
+    }),
+  );
+}
+
 /** Web FavoritesTab: `GET /api/ClinicianFavorites/{clinicianId}/prescriptionFavorites`
  * (`favoriteType`: 0 all, 1 medications, 2 supplies, 3 compounds). */
 export function getClinicianFavorites(clinicianId, { pageNumber = 1, pageSize = 20, searchName = '', favoriteType = 0 } = {}) {
@@ -140,6 +174,47 @@ export function createCodedFavorite(payload) {
   return callApi(() => apiClient.post('/api/ClinicianFavorites/prescriptionFavorites/coded', payload));
 }
 
+/** Favorites management module (AllyDocReactApp's Doctor/Pages/Favorites, clinician-wide, and
+ * Doctor/Pages/Clinics/ClinicFavorites, clinic-wide) - full create/update CRUD for the three
+ * favorite categories. No delete endpoint exists on web for any of these (confirmed: its
+ * delete buttons only show a "coming soon" toast), so none is built here either. */
+export const FAVORITE_TYPE = { MEDICATIONS: 1, SUPPLIES: 2, COMPOUNDS: 3 };
+
+function favoritesBasePath(scope, id) {
+  return scope === 'clinic' ? `/api/ClinicFavorites/${id}` : '/api/ClinicianFavorites';
+}
+
+export function updateCodedFavorite(scope, id, favoriteId, payload) {
+  return callApi(() => apiClient.put(`${favoritesBasePath(scope, id)}/prescriptionFavorites/coded/${favoriteId}`, payload));
+}
+
+export function createSupplyFavorite(scope, id, payload) {
+  return callApi(() => apiClient.post(`${favoritesBasePath(scope, id)}/prescriptionFavorites/supply`, payload));
+}
+
+export function updateSupplyFavorite(scope, id, favoriteId, payload) {
+  return callApi(() => apiClient.put(`${favoritesBasePath(scope, id)}/prescriptionFavorites/supply/${favoriteId}`, payload));
+}
+
+// Web's clinic-scope compound path capitalizes "Compound" (compiledCompound); the clinician-scope
+// path doesn't (compiledcompound) - a literal backend inconsistency, not a typo to "fix".
+export function createCompoundFavorite(scope, id, payload) {
+  const segment = scope === 'clinic' ? 'compiledCompound' : 'compiledcompound';
+  return callApi(() => apiClient.post(`${favoritesBasePath(scope, id)}/prescriptionFavorites/${segment}`, payload));
+}
+
+export function updateCompoundFavorite(scope, id, favoriteId, payload) {
+  const segment = scope === 'clinic' ? 'compiledCompound' : 'compiledcompound';
+  return callApi(() => apiClient.put(`${favoritesBasePath(scope, id)}/prescriptionFavorites/${segment}/${favoriteId}`, payload));
+}
+
+// The clinic-scope coded-favorite CREATE endpoint needs the clinic id in its path (unlike the
+// clinician-scope one above, which is id-less); kept separate instead of overloading
+// `createCodedFavorite` so its existing prescribe-flow callers are untouched.
+export function createClinicCodedFavorite(clinicId, payload) {
+  return callApi(() => apiClient.post(`/api/ClinicFavorites/${clinicId}/prescriptionFavorites/coded`, payload));
+}
+
 /** Mirrors GetPatientPrescriptionsAction (patient profile's Prescriptions tab) - the same endpoint as
  * getPatientPrescriptionsByStatus, called with no status filter so the backend returns every status,
  * 20 per page. */
@@ -150,4 +225,54 @@ export function getPatientPrescriptions(doseSpotPatientId, pageNumber = 1) {
 /** Mirrors GetPrescriptionLogAction: `GET /api/Prescriptions/patients/{doseSpotPatientId}/prescriptions/{prescriptionId}/log`. */
 export function getPrescriptionLog(doseSpotPatientId, prescriptionId) {
   return callApi(() => apiClient.get(`/api/Prescriptions/patients/${doseSpotPatientId}/prescriptions/${prescriptionId}/log`));
+}
+
+// ---- EPCS signing (controlled-substance e-prescribing) ----
+// Port of AllyDocReactApp's EpcsWorkflowModal.jsx / EpcsWorkflowStepper.jsx 4-step flow:
+// DEA suggestion lookup -> readyToSign -> PIN+OTP sign/send, all against an already-created
+// prescription (added earlier via the normal addCodedPrescription flow once TFA+PIN are set).
+
+/** Mirrors GetEpcsSuggestionsAction - the suggested DEA number(s) to use when signing one
+ * controlled prescription. */
+export function getEpcsSuggestions(doseSpotPatientId, prescriptionId) {
+  return callApi(() =>
+    apiClient.get(`/api/Prescriptions/patients/${doseSpotPatientId}/prescriptions/${prescriptionId}/epcsSuggestions`),
+  );
+}
+
+/** Mirrors PostReadyToSignAction - a batched "prepare to sign" call for every selected
+ * controlled prescription, each with its own (possibly overridden) DEA number. */
+export function postReadyToSign(doseSpotPatientId, { prescriptions, appointmentId }) {
+  return callApi(() =>
+    apiClient.post(`/api/Prescriptions/patients/${doseSpotPatientId}/prescriptions/readyToSign`, {
+      prescriptions,
+      appointmentId,
+    }),
+  );
+}
+
+/** Mirrors SendEpcsAction - PIN + DUO passcode together, signs AND transmits in one call
+ * (no separate token/send step). */
+export function sendEpcs(doseSpotPatientId, { pin, otp, prescriptionIds, appointmentId }) {
+  return callApi(() =>
+    apiClient.post(`/api/Prescriptions/patients/${doseSpotPatientId}/prescriptions/sendEpcs`, {
+      pin,
+      otp,
+      prescriptionIds,
+      appointmentId,
+    }),
+  );
+}
+
+/** Mirrors SetPrintedPrescriptionsAction - marks the selected prescriptions "printed" before the
+ * Print/Download PDF flow actually renders (web's ReviewAndSave.jsx requestFinalizeAction). `pin`
+ * is omitted (undefined) when the prescriber has no PIN on file, same as web. */
+export function setPrintedPrescriptions(doseSpotPatientId, { pin, prescriptionIds, appointmentId }) {
+  return callApi(() =>
+    apiClient.post(`/api/Prescriptions/patients/${doseSpotPatientId}/prescriptions/setPrinted`, {
+      pin,
+      prescriptionIds,
+      appointmentId,
+    }),
+  );
 }

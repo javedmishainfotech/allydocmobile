@@ -26,20 +26,24 @@ function RequestRow({ item, onOpen }) {
 }
 
 /** Port of AllyDocReactApp's RefillPendingRequestsTab.jsx, backed by the
- * detailed endpoint directly (same approach as RxChangeTab). */
-export default function RefillsTab({ doseSpotPatientId }) {
+ * detailed endpoint directly (same approach as RxChangeTab).
+ * `requestScope="clinic"` (used by the Doctor Requests page) omits `patientId`
+ * entirely, same as web's `attachPatientIdToPendingParamsIfPatientScope`. */
+export default function RefillsTab({ doseSpotPatientId, requestScope = 'patient' }) {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState(null);
 
   const loadRequests = useCallback(async () => {
-    if (!doseSpotPatientId) return;
+    if (requestScope === 'patient' && !doseSpotPatientId) return;
     setIsLoading(true);
-    const response = await getPendingRefillRequestsDetailed({ patientId: doseSpotPatientId });
+    const response = await getPendingRefillRequestsDetailed(
+      requestScope === 'clinic' ? {} : { patientId: doseSpotPatientId },
+    );
     const items = response.data?.Items;
     setRequests(response.success && Array.isArray(items) ? items : []);
     setIsLoading(false);
-  }, [doseSpotPatientId]);
+  }, [doseSpotPatientId, requestScope]);
 
   useEffect(() => {
     loadRequests();

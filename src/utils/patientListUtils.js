@@ -77,6 +77,35 @@ export function normalizeFreelancerPatient(row) {
   };
 }
 
+/** Port of the row shape rendered by AllyDocReactApp's Doctors/index.jsx list
+ * (GET /GetListOfDoctors) - a clinic/hospital admin's sub-doctors. */
+export function normalizeDoctor(row) {
+  const firstName = String(getRowValue(row, ['FirstName', 'firstName'], '')).trim();
+  const lastName = String(getRowValue(row, ['LastName', 'lastName'], '')).trim();
+  const fullName = `${firstName} ${lastName}`.trim() || getRowValue(row, ['FullName', 'fullName'], 'N/A');
+  const roleNameRaw = getRowValue(row, ['roleName', 'RoleName'], '');
+  const roleLabel = String(roleNameRaw).toLowerCase().trim() === 'doctor admin' ? 'Clinic Admin' : roleNameRaw || 'Doctor';
+
+  return {
+    userId: getRowValue(row, ['userId', 'UserId', 'id', 'Id'], ''),
+    fullName,
+    email: getRowValue(row, ['email', 'Email'], 'N/A'),
+    phoneNumber: getRowValue(row, ['phoneNumber', 'PhoneNumber', 'phoneNo', 'PhoneNo'], 'N/A'),
+    profilePicture: getRowValue(row, ['profilePicture', 'ProfilePicture', 'profileImage', 'ProfileImage'], ''),
+    gender: formatListGender(getRowValue(row, ['gender', 'Gender'], '')),
+    dob: formatListDob(
+      getRowValue(row, ['DateOfBirth', 'dateOfBirth', 'Dob', 'dob', 'DOB', 'BirthDate', 'birthDate'], ''),
+    ),
+    specializationName: getRowValue(row, ['specializationName', 'SpecializationName', 'specialization'], ''),
+    roleLabel,
+    doseSpotRefrenceId: getRowValue(
+      row,
+      ['doseSpotRefrenceId', 'DoseSpotRefrenceId', 'doseSpotReferenceId', 'DoseSpotReferenceId'],
+      'N/A',
+    ),
+  };
+}
+
 export function formatProfileStatus(patient) {
   const profileStatusLabel = patient.profileStatusLabel?.toLowerCase().trim();
   return profileStatusLabel === 'profile created' ? 'Registered' : 'Not registered';

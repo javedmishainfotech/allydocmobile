@@ -3,7 +3,7 @@ import { View, Text, FlatList, Pressable, RefreshControl, StyleSheet } from 'rea
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
-import { getPatientAppointmentsList } from '../../services/patientAppointmentsService';
+import { usePatientAppointments } from '../../hooks/usePatientAppointments';
 import { extractAppointmentList } from '../../utils/appointmentListApi';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import Avatar from '../../components/Avatar';
@@ -96,6 +96,7 @@ function FeedbackCard({ appointment, onReview }) {
 export default function PatientFeedbackPage() {
   const dockInset = useDockInset();
   const { profile } = useAuth();
+  const { getPatientAppointmentsList } = usePatientAppointments();
   const patientId = profile?.userId;
 
   const [appointments, setAppointments] = useState([]);
@@ -110,16 +111,17 @@ export default function PatientFeedbackPage() {
     const requestId = (requestCounter.current += 1);
     setIsLoading(true);
     setLoadError(null);
-    const result = await getPatientAppointmentsList(patientId, COMPLETED_ONLY);
-    if (requestId !== requestCounter.current) return;
-    if (!result.success) {
+    try {
+      const raw = await getPatientAppointmentsList(patientId, COMPLETED_ONLY);
+      if (requestId !== requestCounter.current) return;
+      setAppointments(extractAppointmentList(raw));
+    } catch (message) {
+      if (requestId !== requestCounter.current) return;
       setAppointments([]);
-      setLoadError(result.message || 'Unable to load your appointments.');
-    } else {
-      setAppointments(extractAppointmentList(result.raw));
+      setLoadError(message || 'Unable to load your appointments.');
     }
     setIsLoading(false);
-  }, [patientId]);
+  }, [patientId, getPatientAppointmentsList]);
 
   useEffect(() => {
     load();

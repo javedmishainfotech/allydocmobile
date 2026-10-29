@@ -15,7 +15,7 @@ import {
   getAppointmentNotes,
   saveAppointmentNotes,
 } from '../../services/manageAppointmentsService';
-import { getPatientPharmacies } from '../../services/patientsService';
+import { usePatients } from '../../hooks/usePatients';
 import { openExternalLink } from '../../utils/openExternalLink';
 import { createChatRoom } from '../../services/chatService';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
@@ -255,6 +255,7 @@ export default function TreatmentPlanDetailPage() {
   const navigation = useNavigation();
   const route = useRoute();
   const { profile } = useAuth();
+  const { getPatientPharmacies } = usePatients();
   const appointmentId = route.params?.appointmentId;
   const roleName = String(profile?.roleName || '').toLowerCase().trim();
   const isPatient = roleName === 'patient';
@@ -368,12 +369,18 @@ export default function TreatmentPlanDetailPage() {
   useEffect(() => {
     if (isPatient || !doseSpotPatientId) return;
     setIsPharmacyLoading(true);
-    getPatientPharmacies(doseSpotPatientId).then((result) => {
-      const items = Array.isArray(result.data?.Items) ? result.data.Items : Array.isArray(result.data) ? result.data : [];
-      setPatientPharmacies(items);
-      setDefaultPharmacy(items.find((p) => p.isDefault || p.IsDefault === true) || null);
-      setIsPharmacyLoading(false);
-    });
+    getPatientPharmacies(doseSpotPatientId)
+      .then((data) => {
+        const items = Array.isArray(data?.Items) ? data.Items : Array.isArray(data) ? data : [];
+        setPatientPharmacies(items);
+        setDefaultPharmacy(items.find((p) => p.isDefault || p.IsDefault === true) || null);
+      })
+      .catch(() => {
+        setPatientPharmacies([]);
+        setDefaultPharmacy(null);
+      })
+      .finally(() => setIsPharmacyLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPatient, doseSpotPatientId, pharmacyReload]);
 
   // Notes load the first time the tab opens (web: activeDetailTab === "notes" && !noteLoaded).

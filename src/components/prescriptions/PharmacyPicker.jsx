@@ -4,7 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import { getPatientPharmacies } from '../../services/patientsService';
+import { usePatients } from '../../hooks/usePatients';
 import { searchPharmaciesAdvanced, addPatientPharmacy, deletePatientPharmacy } from '../../services/prescriptionService';
 import { getStates, getCitiesByStateId } from '../../services/identityProofingService';
 import { openExternalLink } from '../../utils/openExternalLink';
@@ -128,6 +128,7 @@ function PharmacyCard({ pharmacy, selected, isDefault, isPreferred, dark, onPres
  * Manage mode adds "Add as Preferred" / "Remove as Preferred" (with a confirmation) on non-default cards.
  */
 export default function PharmacyPicker({ doseSpotPatientId, mode = 'select', selectedPharmacy, onSelect, onLoaded, reloadKey = 0 }) {
+  const { getPatientPharmacies } = usePatients();
   const [patientPharmacies, setPatientPharmacies] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState(EMPTY_SEARCH);
@@ -147,12 +148,17 @@ export default function PharmacyPicker({ doseSpotPatientId, mode = 'select', sel
   const loadPatientPharmacies = useCallback(async () => {
     if (!doseSpotPatientId) return;
     setIsLoading(true);
-    const result = await getPatientPharmacies(doseSpotPatientId);
-    const items = Array.isArray(result.data?.Items) ? result.data.Items : Array.isArray(result.data) ? result.data : [];
-    setPatientPharmacies(items);
-    setIsLoading(false);
-    onLoaded?.(items);
-  }, [doseSpotPatientId, onLoaded]);
+    try {
+      const data = await getPatientPharmacies(doseSpotPatientId);
+      const items = Array.isArray(data?.Items) ? data.Items : Array.isArray(data) ? data : [];
+      setPatientPharmacies(items);
+      onLoaded?.(items);
+    } catch {
+      setPatientPharmacies([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [doseSpotPatientId, onLoaded, getPatientPharmacies]);
 
   useEffect(() => {
     loadPatientPharmacies();

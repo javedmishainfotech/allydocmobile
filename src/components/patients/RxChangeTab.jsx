@@ -24,20 +24,24 @@ function RequestRow({ item, onOpen }) {
 
 /** Port of AllyDocReactApp's RxChangePendingRequestsTab.jsx + its detailed
  * endpoint (used directly here so tapping a row has full detail without a
- * second round trip, same data the web app's "list" call produces). */
-export default function RxChangeTab({ doseSpotPatientId }) {
+ * second round trip, same data the web app's "list" call produces).
+ * `requestScope="clinic"` (used by the Doctor Requests page) omits `patientId`
+ * entirely, same as web's `attachPatientIdToPendingParamsIfPatientScope`. */
+export default function RxChangeTab({ doseSpotPatientId, requestScope = 'patient' }) {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState(null);
 
   const loadRequests = useCallback(async () => {
-    if (!doseSpotPatientId) return;
+    if (requestScope === 'patient' && !doseSpotPatientId) return;
     setIsLoading(true);
-    const response = await getPendingRxChangeRequestsDetailed({ patientId: doseSpotPatientId });
+    const response = await getPendingRxChangeRequestsDetailed(
+      requestScope === 'clinic' ? {} : { patientId: doseSpotPatientId },
+    );
     const items = response.data?.Items;
     setRequests(response.success && Array.isArray(items) ? items : []);
     setIsLoading(false);
-  }, [doseSpotPatientId]);
+  }, [doseSpotPatientId, requestScope]);
 
   useEffect(() => {
     loadRequests();

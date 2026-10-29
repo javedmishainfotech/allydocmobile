@@ -22,6 +22,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["@react-native-community/datetimepicker", "./plugins/withDailyCo.js"]
+    "plugins": ["@react-native-community/datetimepicker", "./plugins/withDailyCo.js", "expo-sharing"]
   }
 }

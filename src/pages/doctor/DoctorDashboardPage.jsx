@@ -12,6 +12,7 @@ import { IN_APP_LEGAL_PAGES } from '../../constants/legalLinks';
 import { colors, adTokens } from '../../theme/colors';
 import AppointmentInfoButton from '../../components/AppointmentInfoButton';
 import PendingRequestDetailsModal from '../../components/PendingRequestDetailsModal';
+import DoctorProfileModal from '../../components/settings/DoctorProfileModal';
 import { useDockInset } from '../../navigation/DockInsetContext';
 
 // Web reads these with `??` dual-casing fallbacks (see ScheduledAppointmentsTable.jsx)
@@ -266,12 +267,15 @@ export default function DoctorDashboardPage() {
   } = useDoctorDashboard();
   const [tfaStatus, setTfaStatus] = useState('');
   const [detailsAppointmentId, setDetailsAppointmentId] = useState(null);
+  // Web: `isFirstVisit == "true"` opens the blocking Create Profile form on the dashboard.
+  const [createProfileOpen, setCreateProfileOpen] = useState(false);
 
   const doctorId = profile?.userId;
 
   useEffect(() => {
     if (doctorId) refresh(doctorId);
     getItem('tfaStatus').then((value) => setTfaStatus((value || '').toLowerCase()));
+    getItem('isFirstVisit').then((value) => setCreateProfileOpen(value === 'true'));
   }, [doctorId, refresh]);
 
   const nextAppointment = useMemo(() => {
@@ -490,6 +494,8 @@ export default function DoctorDashboardPage() {
         isAccepting={acceptingAppointmentId === detailsAppointmentId}
         acceptDisabled={acceptingAppointmentId != null}
       />
+
+      <DoctorProfileModal visible={createProfileOpen} onClose={() => setCreateProfileOpen(false)} />
     </ScrollView>
   );
 }

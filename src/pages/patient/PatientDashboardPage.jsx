@@ -4,11 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
-import {
-  getPatientAppointmentHistory,
-  getPendingBookingAttempt,
-  getUserActiveSubscription,
-} from '../../services/patientDashboardService';
+import { usePatientDashboard } from '../../hooks/usePatientDashboard';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import { getInfoButtonProps } from '../../utils/appointmentFields';
 import StatusBadge from '../../components/StatusBadge';
@@ -17,6 +13,7 @@ import { useDoctorMenu } from '../../navigation/DoctorMenuContext';
 import PatientProfileModal from '../../components/settings/PatientProfileModal';
 import { getItem } from '../../utils/storage';
 import { useDockInset } from '../../navigation/DockInsetContext';
+import { IN_APP_LEGAL_PAGES } from '../../constants/legalLinks';
 import { adTokens } from '../../theme/colors';
 
 // Same as the web dashboard.
@@ -29,12 +26,6 @@ const getGreeting = () => {
   if (hour < 12) return 'Good Morning,';
   if (hour < 18) return 'Good Afternoon,';
   return 'Good Evening,';
-};
-
-const getSubscriptionList = (value) => {
-  if (Array.isArray(value)) return value;
-  if (Array.isArray(value?.data)) return value.data;
-  return value ? [value] : [];
 };
 
 const formatDate = (value) => {
@@ -157,12 +148,24 @@ export default function PatientDashboardPage() {
     String(profile?.roleName || '').toLowerCase().trim() === 'patient' &&
     String(profile?.userType || '').toLowerCase() === 'freelancer';
 
-  const [appointments, setAppointments] = useState([]);
-  const [appointmentsLoading, setAppointmentsLoading] = useState(true);
-  const [appointmentsError, setAppointmentsError] = useState(null);
-  const [subscription, setSubscription] = useState(null);
-  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
-  const [pendingPayment, setPendingPayment] = useState(null);
+  const {
+    appointments,
+    appointmentsStatus,
+    appointmentsError,
+    subscription,
+    subscriptionStatus,
+    pendingPayment: pendingAttempt,
+    loadAppointments: dispatchLoadAppointments,
+    loadSubscription,
+    loadPendingPayment,
+  } = usePatientDashboard();
+  const appointmentsLoading = appointmentsStatus === 'idle' || appointmentsStatus === 'loading';
+  const subscriptionLoading = subscriptionStatus === 'idle' || subscriptionStatus === 'loading';
+  // Only a staff-initiated attempt sitting at the payment step is worth a "Pay now" banner here.
+  const pendingPayment =
+    pendingAttempt?.attemptId && pendingAttempt?.isStaffInitiated && pendingAttempt?.currentStep === 'DateTime'
+      ? pendingAttempt
+      : null;
   const [refreshing, setRefreshing] = useState(false);
   // Web: `isFirstVisit == "true"` opens the blocking Create Profile form on the dashboard.
   const [createProfileOpen, setCreateProfileOpen] = useState(false);
@@ -183,52 +186,31 @@ export default function PatientDashboardPage() {
   const loadAppointments = useCallback(
     async ({ silent = false } = {}) => {
       if (!patientId) return;
-      if (!silent) setAppointmentsLoading(true);
-      const result = await getPatientAppointmentHistory(patientId);
-      if (result.success && Array.isArray(result.data)) {
-        setAppointments(result.data);
-        setAppointmentsError(null);
-      } else if (!silent) {
-        // A silent background refresh that fails keeps what is already on screen.
-        setAppointmentsError(result.success ? null : result.message || 'Unable to load appointments.');
-      }
-      if (!silent) setAppointmentsLoading(false);
+      await dispatchLoadAppointments(patientId, { silent });
       hasLoadedOnce.current = true;
     },
-    [patientId],
+    [patientId, dispatchLoadAppointments],
   );
 
-  const loadSubscription = useCallback(async () => {
-    setSubscriptionLoading(true);
-    const result = await getUserActiveSubscription();
-    setSubscription(result.success ? getSubscriptionList(result.data).find(Boolean) || null : null);
-    setSubscriptionLoading(false);
-  }, []);
-
-  const loadPendingPayment = useCallback(async () => {
+  const loadPendingPaymentForPatient = useCallback(async () => {
     if (!patientId) return;
-    const result = await getPendingBookingAttempt(patientId);
-    const attempt = result.success ? result.data : null;
-    // Only a staff-initiated attempt that is sitting at the payment step.
-    setPendingPayment(
-      attempt?.attemptId && attempt?.isStaffInitiated && attempt?.currentStep === 'DateTime' ? attempt : null,
-    );
-  }, [patientId]);
+    await loadPendingPayment(patientId).catch(() => {});
+  }, [patientId, loadPendingPayment]);
 
   // Load everything on focus and poll the appointments while the screen is focused.
   useFocusEffect(
     useCallback(() => {
       loadAppointments({ silent: hasLoadedOnce.current });
       loadSubscription();
-      loadPendingPayment();
+      loadPendingPaymentForPatient();
       const timer = setInterval(() => loadAppointments({ silent: true }), REFRESH_INTERVAL_MS);
       return () => clearInterval(timer);
-    }, [loadAppointments, loadSubscription, loadPendingPayment]),
+    }, [loadAppointments, loadSubscription, loadPendingPaymentForPatient]),
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadAppointments({ silent: true }), loadSubscription(), loadPendingPayment()]);
+    await Promise.all([loadAppointments({ silent: true }), loadSubscription(), loadPendingPaymentForPatient()]);
     setRefreshing(false);
   };
 
@@ -478,7 +460,10 @@ export default function PatientDashboardPage() {
 
       <Text style={styles.hipaa}>
         Your health information is protected under HIPAA regulations. All data is encrypted and transmitted
-        securely.
+        securely.{' '}
+        <Text style={styles.hipaaLink} onPress={() => navigation.navigate('LegalWebView', IN_APP_LEGAL_PAGES.privacyPolicy)}>
+          Privacy Policy
+        </Text>
       </Text>
     </ScrollView>
   );
@@ -649,4 +634,5 @@ const styles = StyleSheet.create({
   manageText: { fontSize: 14, fontWeight: '700', color: adTokens.primary },
 
   hipaa: { fontSize: 11.5, color: adTokens.textMuted, textAlign: 'center', lineHeight: 16 },
+  hipaaLink: { color: adTokens.primaryDark, fontWeight: '600' },
 });

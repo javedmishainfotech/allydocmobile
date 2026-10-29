@@ -17,12 +17,11 @@ happens; this file is the point-in-time audit that produced the corrections belo
 
 ## 1. Corrections to `docs/PROGRESS.md`
 
-- **Support is NOT complete** — it is currently marked `[x]`. Web's Support page is a full ticket
-  system (list, create with attachments, reply, close, attachment preview/download — backed by
-  `GET/POST /api/Support/Tickets`, `POST /Tickets/{id}/Replies`, `POST /Tickets/{id}/Close`,
-  `GET /Attachments/{id}`). Android's `DoctorSupportPage.jsx` (shared by every role) is a 17-line stub
-  showing only static legal links. None of the ticket system exists. **This is the single largest
-  previously-undocumented gap found in this audit.**
+- ~~**Support is NOT complete**~~ — **RESOLVED 2026-10-29.** Was wrongly marked `[x]`; Android's
+  `DoctorSupportPage.jsx` was a 17-line stub. Built the full ticket system to match web: list with
+  stat chips/filter/search, New Ticket with attachments, a ticket detail screen (lifecycle bar, full
+  conversation timeline, reply composer, close with remarks). See `docs/PROGRESS.md` §1 for the file
+  list. This was the single largest previously-undocumented gap found in this audit.
 
 ---
 
@@ -42,12 +41,11 @@ Android has **none of this** — FCM isn't wired at all. The existing `VideoCall
 the app" experience. Several smaller items (logout cleanup, TFA push, notification bell) also depend
 on FCM existing.
 
-### 2.2 Manage Appointments' Chat/Call/Video say "Coming soon" — but the features now exist
-`DoctorManageAppointmentsPage.jsx`'s own code comment says Chat/Call/Video are "separate,
-not-yet-built integrations." That's now **false** — Daily.co calls and chat were built elsewhere in
-this app this session (`AppointmentDetailSheet`, `TreatmentPlanDetailPage`, `VideoCallPage`,
-`ChatWindowPage`). This page's inline quick-actions were never updated to call the real features.
-**Low-effort fix, high inconsistency cost.**
+### 2.2 ~~Manage Appointments' Chat/Call/Video say "Coming soon"~~ — RESOLVED 2026-10-29
+Turned out to be a stale comment, not stale code: `DoctorManageAppointmentsPage.jsx` already reuses
+the shared `AppointmentDetailSheet` for its detail panel, and that sheet's Chat/Call/Video were already
+wired to the real features earlier this session. Only the page's own doc comment (claiming they were
+"separate, not-yet-built integrations") was wrong - fixed to describe reality.
 
 ### 2.3 Manage Appointments has no Reschedule, for anyone
 Android's comment says Reschedule is "intentionally not built" because web hides it for freelancer
@@ -82,7 +80,7 @@ Notifications, Settings → Subscription Plans / Profile / My Pharmacy / Change 
 
 | Area | Gap |
 |---|---|
-| Dashboard | **Doctor "Create Profile" (first-visit onboarding) is entirely missing.** Web blocks first-time doctors with a modal (`CreateProfileDoctorModal` → `CreateProfile.jsx`, 1,757 lines): personal info, DEA number + DEA registration address, NADEA number, NPI number, state/city dropdowns, document upload (`AddDocumentsModal`). Patient side has the equivalent flow; doctor side has nothing. |
+| Dashboard | ~~**Doctor "Create Profile" (first-visit onboarding) is entirely missing.**~~ **RESOLVED 2026-10-29.** Built `DoctorProfileModal.jsx` (ported 1:1 from `CreateProfile.jsx`'s field set/order/validation) and wired it into `DoctorDashboardPage.jsx` via the same `isFirstVisit` check used by Patient. Covers personal info, state/city cascading dropdowns, NPI, DEA number + DEA registration address (isClinicianAddress toggle), NADEA number/state, licence file, qualifications upload; shares the schema with Nurse (`isNurse` hides DEA/NPI fields) for when the Nurse dashboard is built. Height/Weight/Blood Group and Certificates upload deliberately omitted — both are dead/unreachable on web itself (`hideDoctorFields = true`, `{false && !edit && (...)}`). |
 | Manage Appointments | See §2.2 and §2.3 |
 | Appointments list/detail | Matches web (eye-icon → Treatment Plan, fixed earlier this session). Web's own standalone `AppointmentDetails.jsx` is **dead code on web** (redirects to Treatment Plan) — Android correctly has no separate port. |
 | AppointmentInfoButton | Exact field match (rescheduleReason, cancelReason, remarks, feedbackRating, feedbackComment); web uses hover tooltip, Android uses tap→Alert — appropriate platform substitution, not a gap. |
@@ -195,11 +193,11 @@ already claims these complete and nothing found here contradicts it.
 
 **Highest impact, cross-cutting:**
 1. FCM push + incoming-call ring/accept/decline UI (§2.1) — unlocks several smaller items too.
-2. Support ticket system (§1) — affects every role, currently mislabeled complete.
-3. Manage Appointments' Chat/Call/Video wiring fix (§2.2) — tiny effort, fixes a real inconsistency.
+2. ~~Support ticket system (§1)~~ — done 2026-10-29.
+3. ~~Manage Appointments' Chat/Call/Video wiring fix (§2.2)~~ — done 2026-10-29 (was just a stale comment).
 
 **Doctor:**
-4. Doctor "Create Profile" first-visit onboarding (§4).
+4. ~~Doctor "Create Profile" first-visit onboarding (§4)~~ — done 2026-10-29.
 5. Requests (Refill/Rx Change) — smaller than expected, mostly reuse (§5.4).
 6. Settings → Assign Disease, Merge Patient (small-medium, self-contained).
 7. Settings → Clinic Available Hours (medium, real scheduling form).

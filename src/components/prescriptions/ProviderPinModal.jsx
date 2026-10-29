@@ -4,7 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import { adTokens, colors } from '../../theme/colors';
 
 /** Port of web's ProviderPinModal (send flow): the prescriber's 4-digit PIN authorizes sending the selected prescriptions. */
-export default function ProviderPinModal({ visible, loading, onConfirm, onClose }) {
+export default function ProviderPinModal({ visible, loading, onConfirm, onClose, actionLabel = 'Authorize & Send' }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
 
@@ -54,7 +54,7 @@ export default function ProviderPinModal({ visible, loading, onConfirm, onClose 
               <Text style={styles.secondaryText}>Cancel</Text>
             </Pressable>
             <Pressable style={[styles.primary, (loading || !pin.trim()) && styles.disabled]} onPress={submit} disabled={loading || !pin.trim()}>
-              <Text style={styles.primaryText}>Authorize & Send</Text>
+              <Text style={styles.primaryText}>{actionLabel}</Text>
               {loading ? <ActivityIndicator size="small" color={colors.white} style={styles.buttonSpinner} /> : null}
             </Pressable>
           </View>

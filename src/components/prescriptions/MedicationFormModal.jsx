@@ -3,6 +3,7 @@ import { Modal, View, Text, TextInput, Pressable, ScrollView, Switch, StyleSheet
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import OptionPicker from './OptionPicker';
+import SubstitutionConfirmationModal from './SubstitutionConfirmationModal';
 import DatePickerSheet from '../DatePickerSheet';
 import { DISPENSE_UNIT_OPTIONS } from '../../utils/dispenseUnits';
 import {
@@ -126,6 +127,7 @@ export function SheetFooter({ saving, submitLabel, onCancel, onSubmit }) {
  */
 export default function MedicationFormModal({ visible, drugName, pharmacyName, form, errors, triedSubmit, isEdit, saving, onChange, onSubmit, onClose }) {
   const [showDate, setShowDate] = useState(false);
+  const [substitutionConfirmOpen, setSubstitutionConfirmOpen] = useState(false);
   if (!form) return null;
   const err = (key) => (triedSubmit ? errors[key] : undefined);
 
@@ -201,8 +203,21 @@ export default function MedicationFormModal({ visible, drugName, pharmacyName, f
 
       <View style={styles.switchRow}>
         <Text style={styles.switchLabel}>No substitutions (dispense as written)</Text>
-        <Switch value={form.noSubstitutions} onValueChange={(v) => onChange('noSubstitutions', v)} />
+        <Switch
+          value={form.noSubstitutions}
+          onValueChange={(v) => (v ? setSubstitutionConfirmOpen(true) : onChange('noSubstitutions', false))}
+        />
       </View>
+
+      <SubstitutionConfirmationModal
+        visible={substitutionConfirmOpen}
+        itemName={drugName}
+        onCancel={() => setSubstitutionConfirmOpen(false)}
+        onConfirm={() => {
+          onChange('noSubstitutions', true);
+          setSubstitutionConfirmOpen(false);
+        }}
+      />
       <View style={styles.switchRow}>
         <Text style={styles.switchLabel}>Urgent</Text>
         <Switch value={form.urgent} onValueChange={(v) => onChange('urgent', v)} />

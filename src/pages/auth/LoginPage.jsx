@@ -12,6 +12,13 @@ import AuthLayout from '../../components/AuthLayout';
 import RoleCard from '../../components/RoleCard';
 import FormField from '../../components/FormField';
 import AuthButton from '../../components/AuthButton';
+import { EXTERNAL_INFO_PAGES } from '../../constants/legalLinks';
+import { openExternalLink } from '../../utils/openExternalLink';
+
+const EMAIL_MAX_LENGTH = 80;
+const EMAIL_MAX_LENGTH_MSG = 'Email must be at most 80 characters';
+const PASSWORD_MAX_LENGTH = 25;
+const PASSWORD_MAX_LENGTH_MSG = 'Password must be at most 25 characters';
 
 // Port of ROLE_INFO in AllyDocReactApp/src/components/SignIn/SignInNew.jsx
 const ROLE_INFO = {
@@ -33,6 +40,8 @@ export default function LoginPage({ navigation }) {
   const { status, error, accountDisabledMessage, login, dismissAccountDisabled } = useAuth();
   const { orgName, clearOrg } = useOrg();
   const [activeTab, setActiveTab] = useState('patient');
+  const [emailLengthError, setEmailLengthError] = useState('');
+  const [passwordLengthError, setPasswordLengthError] = useState('');
 
   // Mirrors the web app's `preferredLoginTab` (set in Header.jsx after a
   // successful login, read in SignInNew.jsx) - without this, every fresh
@@ -137,6 +146,12 @@ export default function LoginPage({ navigation }) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.disabledTitle}>Account disabled</Text>
                 <Text style={styles.disabledMessage}>{accountDisabledMessage}</Text>
+                <Text style={styles.disabledSupport}>
+                  Please contact support for assistance with restoring your access.{' '}
+                  <Text style={styles.disabledSupportLink} onPress={() => openExternalLink(EXTERNAL_INFO_PAGES.contactUs.url)}>
+                    Contact Support
+                  </Text>
+                </Text>
               </View>
             </View>
           ) : null}
@@ -147,12 +162,16 @@ export default function LoginPage({ navigation }) {
             icon="mail"
             autoCapitalize="none"
             keyboardType="email-address"
-            maxLength={80}
+            maxLength={EMAIL_MAX_LENGTH}
             placeholder="Enter your email"
             value={formik.values.email}
-            onChangeText={formik.handleChange('email')}
+            onChangeText={(text) => {
+              if (text.length >= EMAIL_MAX_LENGTH) setEmailLengthError(EMAIL_MAX_LENGTH_MSG);
+              else setEmailLengthError('');
+              formik.handleChange('email')(text);
+            }}
             onBlur={formik.handleBlur('email')}
-            error={formik.touched.email ? formik.errors.email : undefined}
+            error={emailLengthError || (formik.touched.email ? formik.errors.email : undefined)}
           />
 
           <FormField
@@ -160,12 +179,16 @@ export default function LoginPage({ navigation }) {
             required
             icon="lock"
             secureToggle
-            maxLength={25}
+            maxLength={PASSWORD_MAX_LENGTH}
             placeholder="Enter your password"
             value={formik.values.password}
-            onChangeText={formik.handleChange('password')}
+            onChangeText={(text) => {
+              if (text.length >= PASSWORD_MAX_LENGTH) setPasswordLengthError(PASSWORD_MAX_LENGTH_MSG);
+              else setPasswordLengthError('');
+              formik.handleChange('password')(text);
+            }}
             onBlur={formik.handleBlur('password')}
-            error={formik.touched.password ? formik.errors.password : undefined}
+            error={passwordLengthError || (formik.touched.password ? formik.errors.password : undefined)}
           />
 
           <View style={styles.forgotRow}>
@@ -276,6 +299,8 @@ const styles = StyleSheet.create({
   },
   disabledTitle: { fontSize: 14, fontWeight: '700', color: colors.dangerTitle, marginBottom: 2 },
   disabledMessage: { fontSize: 13, color: colors.hintText },
+  disabledSupport: { fontSize: 12.5, color: colors.hintText, marginTop: 6 },
+  disabledSupportLink: { color: colors.primary, fontWeight: '700' },
   forgotRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

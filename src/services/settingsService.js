@@ -6,6 +6,55 @@ export function getUserDetails(userId) {
   return callApi(() => apiClient.get(`/UserDetails?userid=${userId}`));
 }
 
+/** Mirrors GetAssignedDiseasesAction/AssignDiseasesAction in
+ * AllyDocReactApp/.../Settings/action.js (Clinic Admin "Assign Disease" tab). */
+export function getAssignedDiseases(clinicCode) {
+  return callApi(() => apiClient.get(`/GetAssignedDiseases?code=${encodeURIComponent(clinicCode)}`));
+}
+
+export function assignDiseases({ code, diseaseIds }) {
+  return callApi(() => apiClient.post('/AssignDiseases', { code, diseaseIds }));
+}
+
+/** Mirrors SearchPatientsAction in AllyDocReactApp/.../Patients/action.js (Clinic Admin's
+ * "Merge Patient" search). */
+export function searchPatients(params) {
+  return callApi(() => apiClient.get('/api/Patients/SearchPatients', { params: { pageNumber: 1, ...params } }));
+}
+
+/** Mirrors MergePatientsAction - transfers all medications from fromPatientId to toPatientId. */
+export function mergePatients({ fromPatientId, toPatientId }) {
+  const body = new URLSearchParams();
+  body.append('fromPatientId', String(fromPatientId ?? ''));
+  body.append('toPatientId', String(toPatientId ?? ''));
+  return callApi(() =>
+    apiClient.post('/api/Patients/MergePatients', body.toString(), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    }),
+  );
+}
+
+// ---- Clinic Available Hours (Settings → MyAvailableHours.jsx) ----
+export function getDailyAvailableHours(doctorId) {
+  return callApi(() => apiClient.get(`/DailyAvailableHours?Doctorid=${doctorId}`));
+}
+
+export function getDuration(userId) {
+  return callApi(() => apiClient.get(`/Duration?UserId=${userId}`));
+}
+
+export function getDoctorTimeZone(userId) {
+  return callApi(() => apiClient.get(`/DoctorTimeZone?userId=${userId}`));
+}
+
+export function getTimeZones() {
+  return callApi(() => apiClient.get('/TimeZones'));
+}
+
+export function saveWeeklySchedule(values) {
+  return callApi(() => apiClient.post('/SaveWeeklySchedule', values));
+}
+
 /** Mirrors ChangePasswordActions. */
 export function changePassword({ currentPassword, newPassword, confirmPassword }) {
   return callApi(() => apiClient.post('/ChangePassword', { currentPassword, newPassword, confirmPassword }));

@@ -15,3 +15,8 @@ export function createPatientProfile(formData) {
 export function updatePatientProfile(formData) {
   return callApi(() => apiClient.put('/UpdateProfile', formData, MULTIPART));
 }
+
+// Same two endpoints, used by the Doctor/Nurse "Create Profile" first-visit form - aliased under
+// their own names at the call site for readability, not a different implementation.
+export const createDoctorProfile = createPatientProfile;
+export const updateDoctorProfile = updatePatientProfile;
