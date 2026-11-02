@@ -18,7 +18,7 @@ function getRoleForRecording(roleName) {
 }
 
 // TEMP: on-screen call diagnostics (the APK runs without Metro, so console.log is not visible). Set to false / remove once the call video issue is sorted.
-const SHOW_CALL_DEBUG = true;
+const SHOW_CALL_DEBUG = false;
 
 // readyState / muted / enabled of a MediaStreamTrack. `muted:true` on a "playable" track means no frames are arriving.
 function describeTrack(track) {
@@ -37,7 +37,7 @@ function formatElapsed(seconds) {
  * SDK itself ships for this - instead of hand-rolling react-native-webrtc's RTCView/MediaStream,
  * which also means remote audio is now actually attached/played (the previous hand-rolled tile
  * only ever wired up video tracks, so remote audio never played on Android). */
-function VideoTile({ videoTrack, audioTrack, label, mirrored, cameraOff, muted, renderMode = 0 }) {
+function VideoTile({ videoTrack, audioTrack, label, mirrored, cameraOff, muted }) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   if (cameraOff) {
     return (
@@ -47,23 +47,20 @@ function VideoTile({ videoTrack, audioTrack, label, mirrored, cameraOff, muted, 
       </View>
     );
   }
-  // TEMP renderMode (debug button): 0 = original; 1 = explicit pixel size; 2 = explicit size + higher zOrder;
-  // 3 = explicit size, no zOrder, objectFit contain. Used to find which setup actually draws on this device.
-  const zOrder = renderMode === 2 ? (mirrored ? 2 : 1) : renderMode === 3 ? 0 : mirrored ? 1 : 0;
-  const objectFit = renderMode === 3 ? 'contain' : 'cover';
+  // DailyMediaView (an Android SurfaceView under the hood) stays black when it only gets its size from
+  // `absoluteFill` (confirmed on device: frames arrived, tracks live and unmuted, nothing drawn). Giving it
+  // the tile's measured pixel width/height makes it draw.
   return (
     <View style={styles.tile} onLayout={(e) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
-      {renderMode === 0 ? (
-        <DailyMediaView key={videoTrack?.id || 'no-track'} videoTrack={videoTrack} audioTrack={audioTrack} style={styles.tileVideo} objectFit={objectFit} mirror={mirrored} zOrder={zOrder} />
-      ) : size.w > 0 ? (
+      {size.w > 0 ? (
         <DailyMediaView
-          key={`${renderMode}-${videoTrack?.id || 'no-track'}`}
+          key={videoTrack?.id || 'no-track'}
           videoTrack={videoTrack}
           audioTrack={audioTrack}
           style={{ width: size.w, height: size.h }}
-          objectFit={objectFit}
+          objectFit="contain"
           mirror={mirrored}
-          zOrder={zOrder}
+          zOrder={0}
         />
       ) : null}
       <Text style={styles.tileLabel}>{muted ? `${label} (muted)` : label}</Text>
@@ -120,7 +117,6 @@ export default function VideoCallPage() {
   const [showReconnectModal, setShowReconnectModal] = useState(false);
   const [countdown, setCountdown] = useState(30);
 
-  const [renderMode, setRenderMode] = useState(0);
   const [debugLines, setDebugLines] = useState([]);
   const lastDebugRef = useRef('');
   const pushDebug = (text) => {
@@ -469,19 +465,13 @@ export default function VideoCallPage() {
       </View>
 
       <View style={styles.stage}>
-        <VideoTile videoTrack={remoteVideoTrack} audioTrack={remoteAudioTrack} label={remoteName} cameraOff={remoteCameraOff} muted={remoteMuted} renderMode={renderMode} />
+        <VideoTile videoTrack={remoteVideoTrack} audioTrack={remoteAudioTrack} label={remoteName} cameraOff={remoteCameraOff} muted={remoteMuted} />
         {!isAudio ? (
           <View style={styles.selfTileWrap}>
-            <VideoTile videoTrack={localVideoTrack} audioTrack={null} label="You" mirrored cameraOff={isCameraOff} muted={isMicMuted} renderMode={renderMode} />
+            <VideoTile videoTrack={localVideoTrack} audioTrack={null} label="You" mirrored cameraOff={isCameraOff} muted={isMicMuted} />
           </View>
         ) : null}
       </View>
-
-      {SHOW_CALL_DEBUG ? (
-        <Pressable style={styles.debugModeButton} onPress={() => setRenderMode((m) => (m + 1) % 4)}>
-          <Text style={styles.debugModeText}>Render mode: {renderMode} (tap to change)</Text>
-        </Pressable>
-      ) : null}
 
       {SHOW_CALL_DEBUG && debugLines.length ? (
         <View pointerEvents="none" style={styles.debugBox}>
@@ -586,9 +576,6 @@ const styles = StyleSheet.create({
 
   debugBox: { position: 'absolute', left: 6, right: 6, bottom: 110, padding: 6, borderRadius: 6, backgroundColor: 'rgba(0,0,0,0.72)', zIndex: 20, elevation: 20 },
   debugText: { color: '#A7F3D0', fontSize: 9.5, lineHeight: 12 },
-  debugModeButton: { position: 'absolute', left: 6, bottom: 330, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#F59E0B', zIndex: 30, elevation: 30 },
-  debugModeText: { color: '#111827', fontSize: 12, fontWeight: '800' },
-
   stage: { flex: 1 },
   tile: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#111827' },
   tileEmpty: { gap: 8 },
