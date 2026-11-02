@@ -17,6 +17,9 @@ function getRoleForRecording(roleName) {
   return role;
 }
 
+// TEMP: on-screen call diagnostics (the APK runs without Metro, so console.log is not visible). Set to false / remove once the call video issue is sorted.
+const SHOW_CALL_DEBUG = true;
+
 function formatElapsed(seconds) {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -93,6 +96,15 @@ export default function VideoCallPage() {
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [showReconnectModal, setShowReconnectModal] = useState(false);
   const [countdown, setCountdown] = useState(30);
+
+  const [debugLines, setDebugLines] = useState([]);
+  const lastDebugRef = useRef('');
+  const pushDebug = (text) => {
+    if (!SHOW_CALL_DEBUG || text === lastDebugRef.current) return;
+    lastDebugRef.current = text;
+    const t = new Date().toTimeString().slice(0, 8);
+    setDebugLines((prev) => [...prev.slice(-9), `${t} ${text}`]);
+  };
 
   const callRef = useRef(null);
   const roomNameRef = useRef('');
@@ -212,16 +224,25 @@ export default function VideoCallPage() {
       local?.tracks?.video?.state,
       '| remote video:',
       remote?.tracks?.video?.state,
+      '| remote video subscribed:',
+      remote?.tracks?.video?.subscribed,
       '| remote audio:',
       remote?.tracks?.audio?.state,
       '| count:',
       joinedCount,
     );
 
+    pushDebug(
+      `L vid:${local?.tracks?.video?.state} aud:${local?.tracks?.audio?.state} | R vid:${remote?.tracks?.video?.state} sub:${remote?.tracks?.video?.subscribed} trk:${remote?.tracks?.video?.persistentTrack ? 'y' : 'n'} aud:${remote?.tracks?.audio?.state} | n:${joinedCount}`,
+    );
     setLocalParticipant(local);
     setRemoteParticipant(remote);
     setParticipantCount(joinedCount);
     setIsMicMuted(local?.tracks?.audio?.state !== 'playable' && local?.tracks?.audio?.state !== 'sendable');
+    // Keep the camera button / self tile in step with the real camera (permission denied, OS stopped
+    // it, ...) instead of only what the button last toggled.
+    const localVideoState = local?.tracks?.video?.state;
+    if (localVideoState) setIsCameraOff(localVideoState === 'off' || localVideoState === 'blocked');
   };
 
   useEffect(() => {
@@ -255,8 +276,16 @@ export default function VideoCallPage() {
         tryStartRecordingWhenTwoJoined();
       });
       call.on('participant-updated', refreshParticipants);
-      call.on('track-started', refreshParticipants);
-      call.on('track-stopped', refreshParticipants);
+      call.on('track-started', (e) => {
+        pushDebug(`track-started ${e?.participant?.local ? 'LOCAL' : 'remote'} ${e?.track?.kind}`);
+        refreshParticipants();
+      });
+      call.on('track-stopped', (e) => {
+        pushDebug(`track-stopped ${e?.participant?.local ? 'LOCAL' : 'remote'} ${e?.track?.kind}`);
+        refreshParticipants();
+      });
+      call.on('camera-error', (e) => pushDebug(`CAMERA-ERROR ${e?.errorMsg?.errorMsg || e?.error?.type || ''} ${e?.errorMsg?.audioOk === false ? 'audio-denied' : ''} ${e?.errorMsg?.videoOk === false ? 'video-denied' : ''}`));
+      call.on('nonfatal-error', (e) => pushDebug(`NONFATAL ${e?.type || ''} ${e?.errorMsg || ''}`));
       call.on('participant-left', () => {
         refreshParticipants();
         startCountdown();
@@ -287,11 +316,12 @@ export default function VideoCallPage() {
       });
       call.on('error', (event) => {
         const message = event?.errorMsg || event?.error?.msg || 'Unable to join the call.';
+        pushDebug(`ERROR ${message}`);
         toast.error(message);
       });
 
       try {
-        await call.join({ url: roomUrl, token, videoSource: !isAudio, audioSource: true });
+        await call.join({ url: roomUrl, token, videoSource: isAudio ? false : undefined, audioSource: true });
         setIsLoading(false);
       } catch (error) {
         if (!cancelled) {
@@ -379,7 +409,9 @@ export default function VideoCallPage() {
 
   const remoteVideoTrack = remoteParticipant?.tracks?.video?.persistentTrack || null;
   const remoteAudioTrack = remoteParticipant?.tracks?.audio?.persistentTrack || null;
-  const remoteCameraOff = !remoteVideoTrack;
+  // `persistentTrack` can exist while the video is not actually playable (loading / interrupted / off),
+  // which rendered a black tile - show the avatar unless the track is really playable.
+  const remoteCameraOff = !remoteVideoTrack || remoteParticipant?.tracks?.video?.state !== 'playable';
   const remoteMuted = remoteParticipant?.tracks?.audio?.state !== 'playable' && remoteParticipant?.tracks?.audio?.state !== 'sendable';
   const localVideoTrack = localParticipant?.tracks?.video?.persistentTrack || null;
   const remoteName = remoteParticipant?.user_name || counterpartName || 'Participant';
@@ -419,6 +451,16 @@ export default function VideoCallPage() {
           </View>
         ) : null}
       </View>
+
+      {SHOW_CALL_DEBUG && debugLines.length ? (
+        <View pointerEvents="none" style={styles.debugBox}>
+          {debugLines.map((line, i) => (
+            <Text key={`${i}-${line}`} style={styles.debugText}>
+              {line}
+            </Text>
+          ))}
+        </View>
+      ) : null}
 
       <View style={[styles.controls, { paddingBottom: 20 + insets.bottom }]}>
         <Pressable style={[styles.controlButton, isMicMuted && styles.controlButtonActive]} onPress={toggleMic}>
@@ -510,6 +552,9 @@ const styles = StyleSheet.create({
   recordingStopIcon: { marginLeft: 2 },
   headerPillText: { color: colors.white, fontSize: 11.5, fontWeight: '700' },
   headerIconButton: { marginLeft: 'auto', width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.12)' },
+
+  debugBox: { position: 'absolute', left: 6, right: 6, bottom: 110, padding: 6, borderRadius: 6, backgroundColor: 'rgba(0,0,0,0.72)', zIndex: 20, elevation: 20 },
+  debugText: { color: '#A7F3D0', fontSize: 9.5, lineHeight: 12 },
 
   stage: { flex: 1 },
   tile: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#111827' },
