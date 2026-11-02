@@ -321,7 +321,7 @@ export default function VideoCallPage() {
       });
 
       try {
-        await call.join({ url: roomUrl, token, videoSource: isAudio ? false : undefined, audioSource: true });
+        await call.join({ url: roomUrl, token, videoSource: !isAudio, audioSource: true });
         setIsLoading(false);
       } catch (error) {
         if (!cancelled) {
