@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { createChatRoom } from '../../services/chatService';
 import { toast } from '../../utils/toast';
-import { markAppointmentComplete } from '../../services/manageAppointmentsService';
+import { useManageAppointments } from '../../hooks/useManageAppointments';
 import { getAppointmentDetails } from '../../services/pendingRequestDetailsService';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import { getAppointmentSymptom, STATUS_STYLE } from '../../utils/appointmentFields';
@@ -30,6 +30,7 @@ import { colors, adTokens } from '../../theme/colors';
 export default function AppointmentDetailSheet({ appointmentId, onClose, onChanged }) {
   const visible = appointmentId != null;
   const { profile } = useAuth();
+  const { markAppointmentComplete } = useManageAppointments();
   const roleName = (profile?.roleName || '').toLowerCase().trim();
   const userType = (profile?.userType || '').toLowerCase().trim();
   // Web's showRescheduleButton: excludes a freelancer "doctor" and a clinic "doctor admin" even
@@ -66,17 +67,18 @@ export default function AppointmentDetailSheet({ appointmentId, onClose, onChang
   const handleComplete = async () => {
     if (!appointmentDetails) return;
     setIsSubmitLoader(true);
-    const response = await markAppointmentComplete({
-      appointmentId: appointmentDetails.appointmentId,
-      remarks: completeRemarks || undefined,
-    });
-    setIsSubmitLoader(false);
-    if (response.success) {
+    try {
+      await markAppointmentComplete(appointmentDetails.appointmentId, completeRemarks || undefined);
       setIsConfirmationModalOpen(false);
       setCompleteRemarks('');
       setAppointmentDetails(null);
       onClose();
       onChanged?.();
+    } catch {
+      // handled below by re-enabling the button; a toast isn't shown here because the web
+      // confirmation modal itself doesn't surface one either - it just stays open to retry.
+    } finally {
+      setIsSubmitLoader(false);
     }
   };
 

@@ -5,13 +5,17 @@ import ChangePasswordTab from '../../components/settings/ChangePasswordTab';
 import MyPharmacyTab from '../../components/settings/MyPharmacyTab';
 import SubscriptionPlansTab from '../../components/settings/SubscriptionPlansTab';
 import SettingsTabsLayout from '../../components/settings/SettingsTabsLayout';
+import LegalSupportLinks from '../../components/LegalSupportLinks';
 
-// Same tabs, in the same order, as AllyDocReactApp's module/Patient/Pages/Setting/index.jsx.
+// Same tabs, in the same order, as AllyDocReactApp's module/Patient/Pages/Setting/index.jsx,
+// plus a mobile-only "Legal & Support" tab - see DoctorSettingsPage.jsx for why these links
+// live here instead of on the Support page.
 const TABS = [
   { key: 'profile', label: 'My Profile', icon: 'account-outline' },
   { key: 'security', label: 'Change Password', icon: 'lock-outline' },
   { key: 'pharmacy', label: 'My Pharmacy', icon: 'store-outline' },
   { key: 'subscription-plans', label: 'Subscription Plans', icon: 'credit-card-outline' },
+  { key: 'legal', label: 'Legal & Support', icon: 'file-document-outline' },
 ];
 
 /** Patient "Settings" - port of the web's Patient Setting page: the shared tab frame with the
@@ -28,6 +32,7 @@ export default function PatientSettingsPage() {
         if (tab === 'security') return <ChangePasswordTab />;
         if (tab === 'pharmacy') return <MyPharmacyTab />;
         if (tab === 'subscription-plans') return <SubscriptionPlansTab />;
+        if (tab === 'legal') return <LegalSupportLinks showHeading={false} />;
         return null;
       }}
     />

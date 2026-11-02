@@ -10,6 +10,7 @@ import userManagementReducer from './slices/userManagementSlice';
 import patientDashboardReducer from './slices/patientDashboardSlice';
 import patientsReducer from './slices/patientsSlice';
 import patientAppointmentsReducer from './slices/patientAppointmentsSlice';
+import manageAppointmentsReducer from './slices/manageAppointmentsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -24,5 +25,6 @@ export const store = configureStore({
     patientDashboard: patientDashboardReducer,
     patients: patientsReducer,
     patientAppointments: patientAppointmentsReducer,
+    manageAppointments: manageAppointmentsReducer,
   },
 });

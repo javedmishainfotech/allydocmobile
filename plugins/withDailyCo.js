@@ -30,6 +30,9 @@ const withDailyAndroidManifest = (config) => {
       'android.permission.FOREGROUND_SERVICE',
       'android.permission.FOREGROUND_SERVICE_CAMERA',
       'android.permission.FOREGROUND_SERVICE_MICROPHONE',
+      // In the RN SDK's own installation guide's permission list, alongside the ones above -
+      // harmless to declare even though scoped storage makes it a no-op on modern Android.
+      'android.permission.WRITE_EXTERNAL_STORAGE',
     ]);
 
     if (!manifest['uses-feature']) manifest['uses-feature'] = [];

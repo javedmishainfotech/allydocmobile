@@ -8,13 +8,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { getTreatmentPlanDetails, saveTranscriptData } from '../../services/treatmentPlanService';
 import { getPharmacyById, selectMedication } from '../../services/doseSpotClinicalService';
 import { getAppointmentDetails as getAppointmentActionMeta } from '../../services/pendingRequestDetailsService';
-import {
-  markAppointmentComplete,
-  cancelAppointment,
-  getAppointmentRecordingLink,
-  getAppointmentNotes,
-  saveAppointmentNotes,
-} from '../../services/manageAppointmentsService';
+import { useManageAppointments } from '../../hooks/useManageAppointments';
 import { usePatients } from '../../hooks/usePatients';
 import { openExternalLink } from '../../utils/openExternalLink';
 import { createChatRoom } from '../../services/chatService';
@@ -256,6 +250,13 @@ export default function TreatmentPlanDetailPage() {
   const route = useRoute();
   const { profile } = useAuth();
   const { getPatientPharmacies } = usePatients();
+  const {
+    markAppointmentComplete,
+    cancelAppointment,
+    getAppointmentRecordingLink,
+    getAppointmentNotes,
+    saveAppointmentNotes,
+  } = useManageAppointments();
   const appointmentId = route.params?.appointmentId;
   const roleName = String(profile?.roleName || '').toLowerCase().trim();
   const isPatient = roleName === 'patient';
@@ -347,11 +348,16 @@ export default function TreatmentPlanDetailPage() {
   const loadRecording = useCallback(
     async (forceSync = false) => {
       setIsRecordingLoading(true);
-      const result = await getAppointmentRecordingLink(appointmentId, forceSync);
-      if (result.success) setRecordingLink(result.data?.link || null);
-      setIsRecordingLoading(false);
+      try {
+        const data = await getAppointmentRecordingLink(appointmentId, forceSync);
+        setRecordingLink(data?.link || null);
+      } catch {
+        // keep whatever was already shown on failure, same as the old callApi-failure no-op
+      } finally {
+        setIsRecordingLoading(false);
+      }
     },
-    [appointmentId],
+    [appointmentId, getAppointmentRecordingLink],
   );
 
   useEffect(() => {
@@ -388,19 +394,24 @@ export default function TreatmentPlanDetailPage() {
     if (activeTab !== 'notes' || isPatient || noteLoaded.current) return;
     noteLoaded.current = true;
     setNoteLoading(true);
-    getAppointmentNotes(appointmentId).then((result) => {
-      if (result.success) setNoteText(result.data?.notes || '');
-      setNoteLoading(false);
-    });
+    getAppointmentNotes(appointmentId)
+      .then((data) => setNoteText(data?.notes || ''))
+      .catch(() => {})
+      .finally(() => setNoteLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isPatient, appointmentId]);
 
   const saveNote = async () => {
     if (!noteText) return;
     setNoteSaving(true);
-    const result = await saveAppointmentNotes({ appointmentId, userId: profile?.userId, notes: noteText });
-    setNoteSaving(false);
-    if (result.success) toast.success(result.message || 'Note saved.');
-    else toast.error(result.message || 'Unable to save the note.');
+    try {
+      const result = await saveAppointmentNotes(appointmentId, profile?.userId, noteText);
+      toast.success(result.message || 'Note saved.');
+    } catch (message) {
+      toast.error(message || 'Unable to save the note.');
+    } finally {
+      setNoteSaving(false);
+    }
   };
 
   // Keeps the SOAP editor in sync with the server's own values on every (re)load - including right
@@ -423,30 +434,32 @@ export default function TreatmentPlanDetailPage() {
 
   const handleMarkComplete = async () => {
     setIsConfirmSubmitting(true);
-    const result = await markAppointmentComplete({ appointmentId, remarks: completeRemarks || undefined });
-    setIsConfirmSubmitting(false);
-    if (!result.success) {
-      toast.error(result.message || 'Unable to mark this appointment complete.');
-      return;
+    try {
+      const result = await markAppointmentComplete(appointmentId, completeRemarks || undefined);
+      setConfirmType(null);
+      setCompleteRemarks('');
+      toast.success(result.message || 'Appointment marked as complete.');
+      load();
+    } catch (message) {
+      toast.error(message || 'Unable to mark this appointment complete.');
+    } finally {
+      setIsConfirmSubmitting(false);
     }
-    setConfirmType(null);
-    setCompleteRemarks('');
-    toast.success(result.message || 'Appointment marked as complete.');
-    load();
   };
 
   const handleCancel = async () => {
     setIsConfirmSubmitting(true);
-    const result = await cancelAppointment({ appointmentId, cancelReason });
-    setIsConfirmSubmitting(false);
-    if (!result.success) {
-      toast.error(result.message || 'Unable to cancel this appointment.');
-      return;
+    try {
+      const result = await cancelAppointment(appointmentId, cancelReason);
+      setConfirmType(null);
+      setCancelReason('');
+      toast.success(result.message || 'Appointment cancelled.');
+      load();
+    } catch (message) {
+      toast.error(message || 'Unable to cancel this appointment.');
+    } finally {
+      setIsConfirmSubmitting(false);
     }
-    setConfirmType(null);
-    setCancelReason('');
-    toast.success(result.message || 'Appointment cancelled.');
-    load();
   };
 
   const handleRescheduled = () => {

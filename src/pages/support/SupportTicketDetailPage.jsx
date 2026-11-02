@@ -19,15 +19,25 @@ function LifecycleBar({ status }) {
   return (
     <View style={styles.lifecycle}>
       {LIFECYCLE_STEPS.map((step, index) => {
-        const reached = index <= currentIndex;
+        // Three distinct states, not two: a completed step (before the current one) only ever
+        // shows a neutral checkmark: it is current-ness, not "reached-ness", that should stand
+        // out, so the active step gets its own filled/ringed treatment instead of sharing the
+        // same green fill as completed steps (which made the active step hard to spot).
+        const isDone = index < currentIndex;
         const isCurrent = index === currentIndex;
         return (
           <React.Fragment key={step}>
             <View style={styles.lifecycleStep}>
-              <View style={[styles.lifecycleDot, reached && styles.lifecycleDotReached, isCurrent && styles.lifecycleDotCurrent]}>
-                {reached && !isCurrent ? <Feather name="check" size={11} color={colors.white} /> : null}
+              <View style={[styles.lifecycleDot, isDone && styles.lifecycleDotDone, isCurrent && styles.lifecycleDotCurrent]}>
+                {isDone ? (
+                  <Feather name="check" size={12} color={colors.white} />
+                ) : isCurrent ? (
+                  <View style={styles.lifecycleDotCurrentInner} />
+                ) : null}
               </View>
-              <Text style={[styles.lifecycleLabel, reached && styles.lifecycleLabelReached]}>{step}</Text>
+              <Text style={[styles.lifecycleLabel, isDone && styles.lifecycleLabelDone, isCurrent && styles.lifecycleLabelCurrent]}>
+                {step}
+              </Text>
             </View>
             {index < LIFECYCLE_STEPS.length - 1 ? <View style={[styles.lifecycleLine, index < currentIndex && styles.lifecycleLineReached]} /> : null}
           </React.Fragment>
@@ -330,12 +340,23 @@ const styles = StyleSheet.create({
 
   lifecycle: { flexDirection: 'row', alignItems: 'flex-start' },
   lifecycleStep: { alignItems: 'center', gap: 5, width: 70 },
-  lifecycleDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: adTokens.gray100, alignItems: 'center', justifyContent: 'center' },
-  lifecycleDotReached: { backgroundColor: adTokens.successDark },
-  lifecycleDotCurrent: { backgroundColor: adTokens.primary },
+  lifecycleDot: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: adTokens.gray100,
+    borderWidth: 2,
+    borderColor: adTokens.gray200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lifecycleDotDone: { backgroundColor: adTokens.successDark, borderColor: adTokens.successDark },
+  lifecycleDotCurrent: { backgroundColor: adTokens.white, borderColor: adTokens.primary, borderWidth: 3 },
+  lifecycleDotCurrentInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: adTokens.primary },
   lifecycleLabel: { fontSize: 10.5, fontWeight: '600', color: adTokens.textSecondary, textAlign: 'center' },
-  lifecycleLabelReached: { color: adTokens.textPrimary, fontWeight: '700' },
-  lifecycleLine: { flex: 1, height: 2, marginTop: 11, backgroundColor: adTokens.border },
+  lifecycleLabelDone: { color: adTokens.textPrimary, fontWeight: '700' },
+  lifecycleLabelCurrent: { color: adTokens.primaryDark, fontWeight: '800' },
+  lifecycleLine: { flex: 1, height: 2, marginTop: 12, backgroundColor: adTokens.border },
   lifecycleLineReached: { backgroundColor: adTokens.successDark },
 
   timeline: { gap: 14 },

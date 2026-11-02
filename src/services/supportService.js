@@ -87,23 +87,32 @@ export function closeTicket(id, remarks) {
   return callApi(() => apiClient.post(`/api/Support/Tickets/${encodeURIComponent(id)}/Close`, { remarks: remarks || null }));
 }
 
-/** Downloads one of my attachments (auth'd) to a temp file, then opens the native share/open sheet -
- * the mobile equivalent of web's "open in a new tab" (files are only served to their owner). */
-export async function openAttachment(attachment) {
+/** Downloads one of my attachments (auth'd) to a cache file and returns its local `file://` uri -
+ * the mobile equivalent of web's "open in a new tab" (files are only served to their owner), but
+ * as a local file an in-app preview (Image / WebView) can render directly, rather than always
+ * handing off to the OS share sheet. */
+export async function downloadAttachmentToCache(attachment) {
+  const token = await getItem('auth_token');
+  const baseUrl = Constants.expoConfig?.extra?.apiBaseUrl || '';
+  const fileUri = `${FileSystem.cacheDirectory}${attachment.fileName || attachment.name || `attachment-${attachment.id}`}`;
+  const result = await FileSystem.downloadAsync(`${baseUrl}/api/Support/Attachments/${encodeURIComponent(attachment.id)}`, fileUri, {
+    headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' },
+  });
+  if (result.status !== 200) throw new Error(`Download failed (${result.status})`);
+  return result.uri;
+}
+
+/** Explicit "share / save a copy" action (the OS share sheet) - no longer what tapping an
+ * attachment does by itself; now only reached via a deliberate "Share" button in the preview. */
+export async function shareAttachment(attachment, localUri) {
   try {
-    const token = await getItem('auth_token');
-    const baseUrl = Constants.expoConfig?.extra?.apiBaseUrl || '';
-    const fileUri = `${FileSystem.cacheDirectory}${attachment.fileName || attachment.name || `attachment-${attachment.id}`}`;
-    const result = await FileSystem.downloadAsync(`${baseUrl}/api/Support/Attachments/${encodeURIComponent(attachment.id)}`, fileUri, {
-      headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' },
-    });
-    if (result.status !== 200) throw new Error(`Download failed (${result.status})`);
+    const uri = localUri || (await downloadAttachmentToCache(attachment));
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(result.uri, { mimeType: attachment.contentType || attachment.type });
+      await Sharing.shareAsync(uri, { mimeType: attachment.contentType || attachment.type });
     }
     return true;
   } catch (_error) {
-    toast.error(`Could not open "${attachment.fileName || attachment.name || 'attachment'}".`);
+    toast.error(`Could not share "${attachment.fileName || attachment.name || 'attachment'}".`);
     return false;
   }
 }

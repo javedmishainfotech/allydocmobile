@@ -8,9 +8,12 @@ import AccountSettingsTab from '../../components/settings/AccountSettingsTab';
 import AssignDiseaseTab from '../../components/settings/AssignDiseaseTab';
 import ClinicAvailableHoursTab from '../../components/settings/ClinicAvailableHoursTab';
 import SettingsTabsLayout from '../../components/settings/SettingsTabsLayout';
+import LegalSupportLinks from '../../components/LegalSupportLinks';
 
 // Exact tab set/order for the Freelancer Doctor variant (AllyDocReactApp's Settings/index.jsx
-// tabs array).
+// tabs array), plus a mobile-only "Legal & Support" tab (Terms/Privacy/Contact/FAQ/Refund) -
+// web has no equivalent settings tab for these; they live here instead of on the Support page
+// since that page is a pure support-ticket flow on web with no legal links of its own.
 const ALL_TABS = [
   { key: 'profile', label: 'My Profile', icon: 'account-outline' },
   { key: 'security', label: 'Change Password', icon: 'lock-outline' },
@@ -18,6 +21,7 @@ const ALL_TABS = [
   { key: 'account', label: 'Account Settings', icon: 'cog-outline' },
   { key: 'hours', label: 'Clinic Available Hours', icon: 'clock-outline' },
   { key: 'assign-disease', label: 'Assign Disease', icon: 'heart-pulse' },
+  { key: 'legal', label: 'Legal & Support', icon: 'file-document-outline' },
 ];
 
 /** Which of ALL_TABS a role gets - the same rules as the web's Settings/index.jsx:
@@ -65,6 +69,7 @@ export default function DoctorSettingsPage() {
         if (tab === 'account') return <AccountSettingsTab userId={profile?.userId} />;
         if (tab === 'hours') return <ClinicAvailableHoursTab />;
         if (tab === 'assign-disease') return <AssignDiseaseTab />;
+        if (tab === 'legal') return <LegalSupportLinks showHeading={false} />;
         return null;
       }}
     />

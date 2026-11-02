@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather } from '@expo/vector-icons';
-import { getAppointmentNotes, saveAppointmentNotes } from '../services/manageAppointmentsService';
+import { useManageAppointments } from '../hooks/useManageAppointments';
 import { useAuth } from '../hooks/useAuth';
 import { colors, adTokens } from '../theme/colors';
 
 /** Port of AllyDocReactApp/.../DoctorAppointments/NotesModal.jsx. */
 export default function NotesModal({ visible, appointmentId, isEditable, onClose, onSaved }) {
   const { profile } = useAuth();
+  const { getAppointmentNotes, saveAppointmentNotes } = useManageAppointments();
   const [noteText, setNoteText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -16,24 +17,24 @@ export default function NotesModal({ visible, appointmentId, isEditable, onClose
   useEffect(() => {
     if (!visible || !appointmentId) return;
     setIsLoading(true);
-    getAppointmentNotes(appointmentId).then((response) => {
-      setIsLoading(false);
-      if (response.success) setNoteText(response.data?.notes || '');
-    });
+    getAppointmentNotes(appointmentId)
+      .then((data) => setNoteText(data?.notes || ''))
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, appointmentId]);
 
   const handleSave = async () => {
     if (!noteText) return;
     setIsSaving(true);
-    const response = await saveAppointmentNotes({
-      appointmentId,
-      userId: profile?.userId,
-      notes: noteText,
-    });
-    setIsSaving(false);
-    if (response.success) {
+    try {
+      await saveAppointmentNotes(appointmentId, profile?.userId, noteText);
       setNoteText('');
       onSaved?.();
+    } catch {
+      // no toast on web's own failure path either - it just leaves the modal open to retry.
+    } finally {
+      setIsSaving(false);
     }
   };
 

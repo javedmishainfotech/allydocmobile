@@ -9,7 +9,9 @@
  */
 export const WEB_APP_BASE_URL = 'https://allydoc-app-dev.digitalnoticeboard.biz';
 
-// Opened in-app via WebView (src/pages/legal/LegalWebViewScreen.jsx).
+// Opened in-app via WebView (src/pages/legal/LegalWebViewScreen.jsx) - every page in this
+// list, including Contact Us/FAQ/Refund Policy, stays inside the app rather than handing off
+// to the device browser.
 export const IN_APP_LEGAL_PAGES = {
   termsAndConditions: {
     title: 'Terms & Conditions',
@@ -19,10 +21,6 @@ export const IN_APP_LEGAL_PAGES = {
     title: 'Privacy Policy',
     url: `${WEB_APP_BASE_URL}/privacy-policy`,
   },
-};
-
-// Opened externally via expo-web-browser (src/utils/openExternalLink.js).
-export const EXTERNAL_INFO_PAGES = {
   contactUs: {
     title: 'Contact Us',
     url: `${WEB_APP_BASE_URL}/Contact-us`, // exact casing from routes.jsx

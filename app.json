@@ -7,10 +7,19 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.allydoc.healthcare",
+      "supportsTablet": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      },
+      "entitlements": {
+        "aps-environment": "development"
+      }
     },
     "android": {
-      "package": "com.anonymous.AllyDocMobile",
+      "package": "com.allydoc.healthcare",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -22,6 +31,19 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["@react-native-community/datetimepicker", "./plugins/withDailyCo.js", "expo-sharing"]
+    "plugins": [
+      "@react-native-community/datetimepicker",
+      "./plugins/withDailyCo.js",
+      "expo-sharing",
+      "expo-audio",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-foreground.png",
+          "color": "#3B82F6",
+          "enableBackgroundRemoteNotifications": true
+        }
+      ]
+    ]
   }
 }

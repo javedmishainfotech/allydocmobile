@@ -1,16 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, BackHandler } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, BackHandler, Modal, ScrollView } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Daily from '@daily-co/react-native-daily-js';
-import { RTCView, MediaStream } from '@daily-co/react-native-webrtc';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Daily, { DailyMediaView } from '@daily-co/react-native-daily-js';
 import { useAuth } from '../../hooks/useAuth';
 import { startAppointmentCall, startCallRecording, stopCallRecording, pickCallSessionId } from '../../services/callService';
 import { toast } from '../../utils/toast';
 import { adTokens, colors } from '../../theme/colors';
-
-const DOCTOR_ENDED_REASONS = new Set(['doctor_left', 'doctor_cancelled']);
 
 function getRoleForRecording(roleName) {
   const role = String(roleName || '').toLowerCase().trim();
@@ -19,19 +17,19 @@ function getRoleForRecording(roleName) {
   return role;
 }
 
-function VideoTile({ track, label, mirrored, muted }) {
-  // RTCView renders a MediaStream (via its .toURL()), not a bare MediaStreamTrack - wrap the
-  // persistentTrack Daily hands back before handing it to react-native-webrtc.
-  const streamUrl = useMemo(() => {
-    if (!track) return null;
-    try {
-      return new MediaStream([track]).toURL();
-    } catch (error) {
-      return null;
-    }
-  }, [track]);
+function formatElapsed(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
 
-  if (!streamUrl) {
+/** Renders one participant's video (+ audio, for the remote tile only - a local tile never
+ * plays back its own mic to avoid echo). Uses Daily's own `DailyMediaView` - the component the
+ * SDK itself ships for this - instead of hand-rolling react-native-webrtc's RTCView/MediaStream,
+ * which also means remote audio is now actually attached/played (the previous hand-rolled tile
+ * only ever wired up video tracks, so remote audio never played on Android). */
+function VideoTile({ videoTrack, audioTrack, label, mirrored, cameraOff, muted }) {
+  if (cameraOff) {
     return (
       <View style={[styles.tile, styles.tileEmpty]}>
         <MaterialCommunityIcons name="account-circle" size={56} color="rgba(255,255,255,0.5)" />
@@ -41,35 +39,58 @@ function VideoTile({ track, label, mirrored, muted }) {
   }
   return (
     <View style={styles.tile}>
-      <RTCView streamURL={streamUrl} style={styles.tileVideo} objectFit="cover" mirror={mirrored} zOrder={mirrored ? 1 : 0} />
+      <DailyMediaView videoTrack={videoTrack} audioTrack={audioTrack} style={styles.tileVideo} objectFit="cover" mirror={mirrored} zOrder={mirrored ? 1 : 0} />
       <Text style={styles.tileLabel}>{muted ? `${label} (muted)` : label}</Text>
     </View>
   );
 }
 
+function ParticipantRow({ participant, isSelf }) {
+  const micOn = participant?.tracks?.audio?.state === 'playable' || participant?.tracks?.audio?.state === 'sendable';
+  const videoOn = participant?.tracks?.video?.state === 'playable' || participant?.tracks?.video?.state === 'sendable';
+  return (
+    <View style={styles.peopleRow}>
+      <View style={styles.peopleAvatar}>
+        <MaterialCommunityIcons name="account" size={20} color={adTokens.primaryDark} />
+      </View>
+      <Text style={styles.peopleName} numberOfLines={1}>
+        {isSelf ? 'You' : participant?.user_name || 'Participant'}
+      </Text>
+      <Feather name={micOn ? 'mic' : 'mic-off'} size={15} color={micOn ? 'rgba(255,255,255,0.85)' : adTokens.danger} />
+      <Feather name={videoOn ? 'video' : 'video-off'} size={15} color={videoOn ? 'rgba(255,255,255,0.85)' : adTokens.danger} />
+    </View>
+  );
+}
+
 /**
- * Port of AllyDocReactApp's Daily_Co/VideoCallModal + VideoCall (web wraps Daily's embeddable
- * iframe; React Native has no Prebuilt UI, so this builds its own minimal tiles with
- * react-native-webrtc's RTCView around the same headless call object -
- * https://docs.daily.co/docs/react-native explicitly says Prebuilt "is not supported in
- * react-native-daily-js"). Same backend calls (`StartAppointmentCall`, start/stop-recording),
- * same doctor-only auto-recording+transcription once two participants are joined, and the same
- * 30s "participant left" reconnect countdown before ending the call.
+ * Port of AllyDocReactApp's Daily_Co/VideoCallModal + VideoCall. Web uses Daily's Prebuilt
+ * iframe UI wholesale (`DailyIframe.createFrame(..., { showLeaveButton: true })` - no app-owned
+ * button JSX at all); react-native-daily-js explicitly doesn't support Prebuilt
+ * (https://docs.daily.co/docs/react-native), so this screen reimplements Prebuilt's default
+ * feature set by hand on top of the same headless call object: mic/camera toggle, camera flip,
+ * a people panel, a participant-count + recording indicator header, and leave - plus the app's
+ * own logic that sits on top of Prebuilt on web: the 30s "participant left" reconnect countdown,
+ * doctor-only auto-recording+transcription once two participants are joined, and the same
+ * `StartAppointmentCall`/start-stop-recording backend calls.
  */
 export default function VideoCallPage() {
   const navigation = useNavigation();
   const route = useRoute();
+  const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const { appointmentId, isAudio = false, counterpartName } = route.params || {};
   const shouldControlRecording = getRoleForRecording(profile?.roleName) === 'doctor';
 
   const [isLoading, setIsLoading] = useState(true);
   const [joinError, setJoinError] = useState('');
-  const [localTrack, setLocalTrack] = useState(null);
-  const [remoteTrack, setRemoteTrack] = useState(null);
-  const [remoteName, setRemoteName] = useState(counterpartName || 'Participant');
+  const [localParticipant, setLocalParticipant] = useState(null);
+  const [remoteParticipant, setRemoteParticipant] = useState(null);
+  const [participantCount, setParticipantCount] = useState(1);
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(isAudio);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [peopleOpen, setPeopleOpen] = useState(false);
   const [showReconnectModal, setShowReconnectModal] = useState(false);
   const [countdown, setCountdown] = useState(30);
 
@@ -81,12 +102,23 @@ export default function VideoCallPage() {
   const didTriggerStopRef = useRef(false);
   const didLeaveRef = useRef(false);
   const timerRef = useRef(null);
+  const recordingTimerRef = useRef(null);
 
   const triggerStopRecordingOnce = () => {
     if (!shouldControlRecording || didTriggerStopRef.current) return;
     if (!roomNameRef.current || !appointmentId) return;
     didTriggerStopRef.current = true;
     stopCallRecording(roomNameRef.current, appointmentId);
+  };
+
+  const startRecordingTimer = () => {
+    setRecordingSeconds(0);
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    recordingTimerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+  };
+
+  const stopRecordingTimer = () => {
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
   };
 
   const tryStartRecordingWhenTwoJoined = () => {
@@ -114,10 +146,23 @@ export default function VideoCallPage() {
     }
   };
 
+  // Mirrors Daily Prebuilt's own default "Stop" recording tray control, which web's doctor can
+  // already use even though the app never wires a manual *start* - only a manual stop.
+  const stopRecordingManually = async () => {
+    const call = callRef.current;
+    if (!call || !recordingStartedRef.current) return;
+    try {
+      await call.stopRecording();
+    } catch (error) {
+      // best-effort
+    }
+  };
+
   const leaveCall = async () => {
     if (didLeaveRef.current) return;
     didLeaveRef.current = true;
     if (timerRef.current) clearInterval(timerRef.current);
+    stopRecordingTimer();
     triggerStopRecordingOnce();
     const call = callRef.current;
     if (call) {
@@ -154,21 +199,29 @@ export default function VideoCallPage() {
     setShowReconnectModal(false);
   };
 
-  const refreshTracks = () => {
+  const refreshParticipants = () => {
     const call = callRef.current;
     if (!call) return;
     const participants = call.participants() || {};
-    const local = participants.local;
-    setLocalTrack(local?.tracks?.video?.persistentTrack || null);
-    setIsMicMuted(local?.tracks?.audio?.state !== 'playable' && local?.tracks?.audio?.state !== 'sendable');
+    const local = participants.local || null;
+    const remote = Object.values(participants).find((p) => !p.local) || null;
+    const joinedCount = Object.values(participants).filter((p) => p.local || p.session_id).length;
 
-    const remote = Object.values(participants).find((p) => !p.local);
-    if (remote) {
-      setRemoteTrack(remote.tracks?.video?.persistentTrack || null);
-      setRemoteName(remote.user_name || counterpartName || 'Participant');
-    } else {
-      setRemoteTrack(null);
-    }
+    console.log(
+      '[call] refreshParticipants - local video:',
+      local?.tracks?.video?.state,
+      '| remote video:',
+      remote?.tracks?.video?.state,
+      '| remote audio:',
+      remote?.tracks?.audio?.state,
+      '| count:',
+      joinedCount,
+    );
+
+    setLocalParticipant(local);
+    setRemoteParticipant(remote);
+    setParticipantCount(joinedCount);
+    setIsMicMuted(local?.tracks?.audio?.state !== 'playable' && local?.tracks?.audio?.state !== 'sendable');
   };
 
   useEffect(() => {
@@ -193,27 +246,38 @@ export default function VideoCallPage() {
       callRef.current = call;
 
       call.on('joined-meeting', () => {
-        refreshTracks();
+        refreshParticipants();
         tryStartRecordingWhenTwoJoined();
       });
       call.on('participant-joined', () => {
-        refreshTracks();
+        refreshParticipants();
         cancelCountdown();
         tryStartRecordingWhenTwoJoined();
       });
-      call.on('participant-updated', refreshTracks);
+      call.on('participant-updated', refreshParticipants);
+      call.on('track-started', refreshParticipants);
+      call.on('track-stopped', refreshParticipants);
       call.on('participant-left', () => {
-        refreshTracks();
+        refreshParticipants();
         startCountdown();
       });
       call.on('left-meeting', () => {
         triggerStopRecordingOnce();
       });
+      call.on('recording-started', () => {
+        recordingStartedRef.current = true;
+        setIsRecording(true);
+        startRecordingTimer();
+      });
       call.on('recording-stopped', () => {
         recordingStartedRef.current = false;
+        setIsRecording(false);
+        stopRecordingTimer();
       });
       call.on('recording-error', () => {
         recordingStartedRef.current = false;
+        setIsRecording(false);
+        stopRecordingTimer();
       });
       call.on('transcription-stopped', () => {
         transcriptionStartedRef.current = false;
@@ -251,6 +315,7 @@ export default function VideoCallPage() {
         }
       }
       if (timerRef.current) clearInterval(timerRef.current);
+      stopRecordingTimer();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appointmentId, isAudio]);
@@ -281,6 +346,16 @@ export default function VideoCallPage() {
     setIsCameraOff(next);
   };
 
+  const flipCamera = async () => {
+    const call = callRef.current;
+    if (!call) return;
+    try {
+      await call.cycleCamera();
+    } catch (error) {
+      toast.error('Could not switch camera.');
+    }
+  };
+
   if (joinError) {
     return (
       <View style={styles.center}>
@@ -302,30 +377,84 @@ export default function VideoCallPage() {
     );
   }
 
+  const remoteVideoTrack = remoteParticipant?.tracks?.video?.persistentTrack || null;
+  const remoteAudioTrack = remoteParticipant?.tracks?.audio?.persistentTrack || null;
+  const remoteCameraOff = !remoteVideoTrack;
+  const remoteMuted = remoteParticipant?.tracks?.audio?.state !== 'playable' && remoteParticipant?.tracks?.audio?.state !== 'sendable';
+  const localVideoTrack = localParticipant?.tracks?.video?.persistentTrack || null;
+  const remoteName = remoteParticipant?.user_name || counterpartName || 'Participant';
+
   return (
     <View style={styles.screen}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <View style={styles.headerPill}>
+          <Feather name="users" size={13} color={colors.white} />
+          <Text style={styles.headerPillText} numberOfLines={1}>
+            {participantCount} in call
+          </Text>
+        </View>
+        {isRecording ? (
+          <Pressable
+            style={styles.recordingPill}
+            onPress={shouldControlRecording ? stopRecordingManually : undefined}
+            disabled={!shouldControlRecording}
+          >
+            <View style={styles.recordingDot} />
+            <Text style={styles.headerPillText} numberOfLines={1}>
+              Rec {formatElapsed(recordingSeconds)}
+            </Text>
+            {shouldControlRecording ? <Feather name="square" size={11} color={colors.white} style={styles.recordingStopIcon} /> : null}
+          </Pressable>
+        ) : null}
+        <Pressable style={styles.headerIconButton} onPress={() => setPeopleOpen(true)}>
+          <Feather name="users" size={16} color={colors.white} />
+        </Pressable>
+      </View>
+
       <View style={styles.stage}>
-        <VideoTile track={remoteTrack} label={remoteName} />
+        <VideoTile videoTrack={remoteVideoTrack} audioTrack={remoteAudioTrack} label={remoteName} cameraOff={remoteCameraOff} muted={remoteMuted} />
         {!isAudio ? (
           <View style={styles.selfTileWrap}>
-            <VideoTile track={isCameraOff ? null : localTrack} label="You" mirrored muted={isMicMuted} />
+            <VideoTile videoTrack={localVideoTrack} audioTrack={null} label="You" mirrored cameraOff={isCameraOff} muted={isMicMuted} />
           </View>
         ) : null}
       </View>
 
-      <View style={styles.controls}>
+      <View style={[styles.controls, { paddingBottom: 20 + insets.bottom }]}>
         <Pressable style={[styles.controlButton, isMicMuted && styles.controlButtonActive]} onPress={toggleMic}>
           <Feather name={isMicMuted ? 'mic-off' : 'mic'} size={20} color={colors.white} />
         </Pressable>
         {!isAudio ? (
-          <Pressable style={[styles.controlButton, isCameraOff && styles.controlButtonActive]} onPress={toggleCamera}>
-            <Feather name={isCameraOff ? 'video-off' : 'video'} size={20} color={colors.white} />
-          </Pressable>
+          <>
+            <Pressable style={[styles.controlButton, isCameraOff && styles.controlButtonActive]} onPress={toggleCamera}>
+              <Feather name={isCameraOff ? 'video-off' : 'video'} size={20} color={colors.white} />
+            </Pressable>
+            <Pressable style={styles.controlButton} onPress={flipCamera} disabled={isCameraOff}>
+              <MaterialCommunityIcons name="camera-flip-outline" size={21} color={isCameraOff ? 'rgba(255,255,255,0.35)' : colors.white} />
+            </Pressable>
+          </>
         ) : null}
         <Pressable style={styles.endButton} onPress={leaveCall}>
           <Feather name="phone-off" size={20} color={colors.white} />
         </Pressable>
       </View>
+
+      <Modal visible={peopleOpen} transparent animationType="fade" onRequestClose={() => setPeopleOpen(false)}>
+        <Pressable style={styles.peopleOverlay} onPress={() => setPeopleOpen(false)}>
+          <Pressable style={styles.peopleSheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.peopleHeader}>
+              <Text style={styles.peopleTitle}>People ({participantCount})</Text>
+              <Pressable onPress={() => setPeopleOpen(false)} hitSlop={8}>
+                <Feather name="x" size={20} color={colors.white} />
+              </Pressable>
+            </View>
+            <ScrollView style={styles.peopleList}>
+              {localParticipant ? <ParticipantRow participant={localParticipant} isSelf /> : null}
+              {remoteParticipant ? <ParticipantRow participant={remoteParticipant} /> : null}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {showReconnectModal ? (
         <View style={styles.reconnectOverlay}>
@@ -350,6 +479,38 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24, backgroundColor: '#0B0F19' },
   loadingText: { color: colors.white, fontSize: 13.5 },
   errorText: { color: colors.white, fontSize: 14, textAlign: 'center' },
+
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(11,15,25,0.9)',
+  },
+  headerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  recordingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(239,68,68,0.25)',
+  },
+  recordingDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: adTokens.danger },
+  recordingStopIcon: { marginLeft: 2 },
+  headerPillText: { color: colors.white, fontSize: 11.5, fontWeight: '700' },
+  headerIconButton: { marginLeft: 'auto', width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.12)' },
+
   stage: { flex: 1 },
   tile: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#111827' },
   tileEmpty: { gap: 8 },
@@ -381,27 +542,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 18,
+    gap: 16,
     paddingVertical: 20,
     backgroundColor: '#0B0F19',
   },
   controlButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.15)',
   },
   controlButtonActive: { backgroundColor: adTokens.dangerDark },
   endButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: adTokens.danger,
   },
+
+  peopleOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  peopleSheet: { backgroundColor: '#111827', borderTopLeftRadius: 18, borderTopRightRadius: 18, maxHeight: '60%', paddingBottom: 20 },
+  peopleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
+  peopleTitle: { color: colors.white, fontSize: 15, fontWeight: '700' },
+  peopleList: { paddingHorizontal: 16 },
+  peopleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
+  peopleAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
+  peopleName: { flex: 1, color: colors.white, fontSize: 13.5, fontWeight: '600' },
+
   reconnectOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.6)',

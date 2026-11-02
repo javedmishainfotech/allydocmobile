@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { navigationRef } from './navigationRef';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../hooks/useAuth';
 import OnboardingPage from '../pages/auth/OnboardingPage';
@@ -65,7 +66,7 @@ export default function RootNavigator() {
 
   return (
     <View style={{ flex: 1 }} {...responderProps}>
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {!isAuthenticated ? (
         // Onboarding is the logged-out landing page, like the web app's "/" LandingPage: it is
         // what every signed-out visitor starts on (fresh launch and after logout) - no

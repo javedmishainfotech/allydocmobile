@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from 'r
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
-import { getAppointmentsBasedOnDate, getDoctorAppointments } from '../../services/manageAppointmentsService';
+import { useManageAppointments } from '../../hooks/useManageAppointments';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import { formatDateLabel } from '../../utils/dateOnly';
 import StatusBadge from '../../components/StatusBadge';
@@ -101,6 +101,7 @@ function SectionListCard({ title, subtitle, loading, emptyText, items, selectedI
 export default function DoctorManageAppointmentsPage() {
   const dockInset = useDockInset();
   const { profile } = useAuth();
+  const { getAppointmentsBasedOnDate, getDoctorAppointments } = useManageAppointments();
   const doctorId = profile?.userId;
 
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -113,21 +114,34 @@ export default function DoctorManageAppointmentsPage() {
   // Which appointment's detail sheet is open (null = closed). The sheet loads and owns the rest.
   const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
 
-  const fetchDateAppointments = useCallback(async (date) => {
-    setDateLoading(true);
-    const response = await getAppointmentsBasedOnDate(date);
-    setDateAppointments(response.success && Array.isArray(response.data) ? response.data : []);
-    setDateLoading(false);
-  }, []);
+  const fetchDateAppointments = useCallback(
+    async (date) => {
+      setDateLoading(true);
+      try {
+        const data = await getAppointmentsBasedOnDate(date);
+        setDateAppointments(Array.isArray(data) ? data : []);
+      } catch {
+        setDateAppointments([]);
+      } finally {
+        setDateLoading(false);
+      }
+    },
+    [getAppointmentsBasedOnDate],
+  );
 
   const fetchPendingAppointments = useCallback(async () => {
     if (!doctorId) return;
     setPendingLoading(true);
-    const response = await getDoctorAppointments(doctorId, 'pending');
-    const list = response.data?.data || response.data;
-    setPendingAppointments(response.success && Array.isArray(list) ? list : []);
-    setPendingLoading(false);
-  }, [doctorId]);
+    try {
+      const data = await getDoctorAppointments(doctorId, 'pending');
+      const list = data?.data || data;
+      setPendingAppointments(Array.isArray(list) ? list : []);
+    } catch {
+      setPendingAppointments([]);
+    } finally {
+      setPendingLoading(false);
+    }
+  }, [doctorId, getDoctorAppointments]);
 
   useEffect(() => {
     fetchDateAppointments(selectedDate);

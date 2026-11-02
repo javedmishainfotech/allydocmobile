@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
-import { getDoctorAppointments } from '../../services/manageAppointmentsService';
+import { useManageAppointments } from '../../hooks/useManageAppointments';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import StatusBadge from '../StatusBadge';
 import AppointmentInfoButton from '../AppointmentInfoButton';
@@ -20,6 +20,7 @@ const STATUS_FILTERS = [
  * DoctorAppointmentList.jsx (same data, same `DoctorAppointmentsAction`) - display only,
  * no row action in this embedded context. */
 export default function DoctorAppointmentsTab({ doctorId }) {
+  const { getDoctorAppointments } = useManageAppointments();
   const [status, setStatus] = useState('all');
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,11 +28,16 @@ export default function DoctorAppointmentsTab({ doctorId }) {
   const load = useCallback(async () => {
     if (!doctorId) return;
     setLoading(true);
-    const res = await getDoctorAppointments(doctorId, status);
-    const list = Array.isArray(res.data) ? res.data : res.data?.Items || [];
-    setAppointments(res.success ? list : []);
-    setLoading(false);
-  }, [doctorId, status]);
+    try {
+      const data = await getDoctorAppointments(doctorId, status);
+      const list = Array.isArray(data) ? data : data?.Items || [];
+      setAppointments(list);
+    } catch {
+      setAppointments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [doctorId, status, getDoctorAppointments]);
 
   useEffect(() => {
     load();

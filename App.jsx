@@ -8,6 +8,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { store } from './src/store';
 import RootNavigator from './src/navigation/RootNavigator';
+import { IncomingCallProvider } from './src/contexts/IncomingCallContext';
+import IncomingCallModal from './src/components/calls/IncomingCallModal';
 
 export default function App() {
   return (
@@ -15,7 +17,10 @@ export default function App() {
       <SafeAreaProvider>
         <ReduxProvider store={store}>
           <PaperProvider>
-            <RootNavigator />
+            <IncomingCallProvider>
+              <RootNavigator />
+              <IncomingCallModal />
+            </IncomingCallProvider>
             <StatusBar style="auto" />
             {/* Mobile equivalent of the web app's react-toastify <ToastContainer /> */}
             <Toast />

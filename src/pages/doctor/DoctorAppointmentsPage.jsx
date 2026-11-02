@@ -4,7 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
-import { getDoctorAppointmentsList } from '../../services/manageAppointmentsService';
+import { useManageAppointments } from '../../hooks/useManageAppointments';
 import {
   applyRescheduledClientFilter,
   formatStatusFilterLabel,
@@ -77,6 +77,7 @@ function AppointmentListRow({ appointment, onOpen }) {
 export default function DoctorAppointmentsPage() {
   const dockInset = useDockInset();
   const { profile } = useAuth();
+  const { getDoctorAppointmentsList } = useManageAppointments();
   const doctorId = profile?.userId;
   const userType = String(profile?.userType || '').toLowerCase();
   const roleName = String(profile?.roleName || '').toLowerCase().trim();
@@ -105,22 +106,22 @@ export default function DoctorAppointmentsPage() {
     setIsLoading(true);
     setLoadError(null);
 
-    const result = await getDoctorAppointmentsList(doctorId, { ...filter, page, pageSize: PAGE_SIZE });
-    if (requestId !== requestCounter.current) return;
-
-    if (!result.success) {
-      setAppointments([]);
-      setTotalPages(0);
-      setLoadError(result.message || 'Unable to load appointments.');
-    } else {
-      const parsed = parseAppointmentListResponse(result.raw, page, PAGE_SIZE);
+    try {
+      const raw = await getDoctorAppointmentsList(doctorId, { ...filter, page, pageSize: PAGE_SIZE });
+      if (requestId !== requestCounter.current) return;
+      const parsed = parseAppointmentListResponse(raw, page, PAGE_SIZE);
       setAppointments(applyRescheduledClientFilter(parsed.list, filter.status));
       setTotalPages(parsed.totalPages);
       // The server may clamp an out-of-range page; follow it, as the web does.
       if (parsed.page !== page && Number.isFinite(parsed.page) && parsed.page >= 1) setPage(parsed.page);
+    } catch (message) {
+      if (requestId !== requestCounter.current) return;
+      setAppointments([]);
+      setTotalPages(0);
+      setLoadError(message || 'Unable to load appointments.');
     }
     setIsLoading(false);
-  }, [doctorId, filter, page]);
+  }, [doctorId, filter, page, getDoctorAppointmentsList]);
 
   useEffect(() => {
     load();

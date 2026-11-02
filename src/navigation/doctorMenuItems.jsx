@@ -18,6 +18,7 @@ import DoctorSupportPage from '../pages/doctor/DoctorSupportPage';
 import DoctorIdentityProofingPage from '../pages/doctor/DoctorIdentityProofingPage';
 import DoctorNotificationPage from '../pages/doctor/DoctorNotificationPage';
 import DoctorRequestsPage from '../pages/doctor/DoctorRequestsPage';
+import DoctorFeedbackPage from '../pages/doctor/DoctorFeedbackPage';
 import NurseDashboardPage from '../pages/nurse/NurseDashboardPage';
 import NursePendingAppointmentsPage from '../pages/nurse/NursePendingAppointmentsPage';
 import PlaceholderScreen from '../components/PlaceholderScreen';
@@ -63,14 +64,15 @@ export const DOCTOR_MENU_ITEMS = [
   { key: 'DoctorPatients', title: 'Patients', icon: 'account-multiple-outline', component: DoctorPatientsPage, pathKeywords: ['patient'] },
   { key: 'DoctorTreatmentPlan', title: 'Treatment Plan', icon: 'clipboard-text-outline', component: DoctorTreatmentPlanPage, pathKeywords: ['treatment-plan', 'treatmentplan'] },
   { key: 'DoctorsList', title: 'Doctors', icon: 'doctor', component: DoctorsListPage, pathKeywords: ['doctors'] },
-  { key: 'PharmacyRequests', title: 'Pharmacy Requests', icon: 'pill', component: null, pathKeywords: ['pharmacy-request', 'pharmacyrequest', 'rxrequest', 'rx-request'] },
   { key: 'ClinicFavorites', title: 'Clinic Favorites', icon: 'star-check-outline', component: ClinicFavoritesPage, pathKeywords: ['clinic-favorite', 'clinicfavorite'] },
   { key: 'Favorites', title: 'Favorites', icon: 'star-outline', component: ClinicianFavoritesPage, pathKeywords: ['favorite'] },
   { key: 'DoctorMessage', title: 'Messages', icon: 'message-text-outline', component: ChatRoomsPage, pathKeywords: ['message'] },
   { key: 'DoctorPayments', title: 'Payments', icon: 'credit-card-outline', component: null, pathKeywords: ['payment'] },
-  { key: 'DoctorRequests', title: 'Requests', icon: 'inbox-arrow-down-outline', component: DoctorRequestsPage, pathKeywords: ['request'] },
+  // Web's sidebar labels this single route "Pharmacy Requests" (sidebarBlueprint.js); it's the
+  // same Refill/Rx-Change tabs as the per-patient Requests page, just clinic-wide in scope.
+  { key: 'DoctorRequests', title: 'Pharmacy Requests', icon: 'pill', component: DoctorRequestsPage, pathKeywords: ['pharmacy-request', 'pharmacyrequest', 'rxrequest', 'rx-request', 'request'] },
   { key: 'DoctorNotification', title: 'Notifications', icon: 'bell-outline', component: DoctorNotificationPage, pathKeywords: ['notification'] },
-  { key: 'DoctorFeedback', title: 'Feedback', icon: 'comment-text-outline', component: null, pathKeywords: ['feedback'] },
+  { key: 'DoctorFeedback', title: 'Feedback', icon: 'comment-text-outline', component: DoctorFeedbackPage, pathKeywords: ['feedback'] },
   // Not in the old sidebar - added for the "More" grid (not built yet, so they render PlaceholderScreen).
   { key: 'DoctorScanDocument', title: 'Scan Document', icon: 'scan-helper', component: null, pathKeywords: ['scan-document', 'scandocument'] },
   { key: 'DoctorPrescriptions', title: 'Prescriptions', icon: 'prescription', component: null, pathKeywords: ['prescription'] },

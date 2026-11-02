@@ -4,7 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import InlineCalendar from '../InlineCalendar';
 import { getScheduleList } from '../../services/bookingService';
-import { updateAppointment } from '../../services/manageAppointmentsService';
+import { useManageAppointments } from '../../hooks/useManageAppointments';
 import { getSlotRangeLabel, getSlotValue } from '../../utils/slotLabel';
 import { localDateOnlyToApiString } from '../../utils/dateOnly';
 import { toast } from '../../utils/toast';
@@ -17,6 +17,7 @@ import { colors, adTokens } from '../../theme/colors';
  * (`{ appointmentId, appointmentDate, appointMentTime, rescheduleReason }`) to confirm.
  */
 export default function RescheduleModal({ visible, appointmentId, patientId, initialDate, onClose, onRescheduled }) {
+  const { updateAppointment } = useManageAppointments();
   const [selectedDate, setSelectedDate] = useState(() => initialDate || new Date());
   const [slots, setSlots] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -69,19 +70,20 @@ export default function RescheduleModal({ visible, appointmentId, patientId, ini
     if (!canConfirm) return;
     setSubmitting(true);
     const dateSource = selectedSlot?.clinicLocalDate || selectedDate;
-    const result = await updateAppointment({
-      appointmentId,
-      appointmentDate: localDateOnlyToApiString(dateSource),
-      appointMentTime: getSlotValue(selectedSlot),
-      rescheduleReason: reason.trim(),
-    });
-    setSubmitting(false);
-    if (!result.success) {
-      toast.error(result.message || 'Unable to reschedule this appointment.');
-      return;
+    try {
+      const result = await updateAppointment(
+        appointmentId,
+        localDateOnlyToApiString(dateSource),
+        getSlotValue(selectedSlot),
+        reason.trim(),
+      );
+      toast.success(result.message || 'Appointment rescheduled.');
+      onRescheduled?.();
+    } catch (message) {
+      toast.error(message || 'Unable to reschedule this appointment.');
+    } finally {
+      setSubmitting(false);
     }
-    toast.success(result.message || 'Appointment rescheduled.');
-    onRescheduled?.();
   };
 
   return (
