@@ -20,6 +20,12 @@ function getRoleForRecording(roleName) {
 // TEMP: on-screen call diagnostics (the APK runs without Metro, so console.log is not visible). Set to false / remove once the call video issue is sorted.
 const SHOW_CALL_DEBUG = true;
 
+// readyState / muted / enabled of a MediaStreamTrack. `muted:true` on a "playable" track means no frames are arriving.
+function describeTrack(track) {
+  if (!track) return 'none';
+  return `${track.readyState}/m:${track.muted ? 1 : 0}/e:${track.enabled ? 1 : 0}`;
+}
+
 function formatElapsed(seconds) {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -42,7 +48,7 @@ function VideoTile({ videoTrack, audioTrack, label, mirrored, cameraOff, muted }
   }
   return (
     <View style={styles.tile}>
-      <DailyMediaView videoTrack={videoTrack} audioTrack={audioTrack} style={styles.tileVideo} objectFit="cover" mirror={mirrored} zOrder={mirrored ? 1 : 0} />
+      <DailyMediaView key={videoTrack?.id || 'no-track'} videoTrack={videoTrack} audioTrack={audioTrack} style={styles.tileVideo} objectFit="cover" mirror={mirrored} zOrder={mirrored ? 1 : 0} />
       <Text style={styles.tileLabel}>{muted ? `${label} (muted)` : label}</Text>
     </View>
   );
@@ -233,7 +239,8 @@ export default function VideoCallPage() {
     );
 
     pushDebug(
-      `L vid:${local?.tracks?.video?.state} aud:${local?.tracks?.audio?.state} | R vid:${remote?.tracks?.video?.state} sub:${remote?.tracks?.video?.subscribed} trk:${remote?.tracks?.video?.persistentTrack ? 'y' : 'n'} aud:${remote?.tracks?.audio?.state} | n:${joinedCount}`,
+      `L vid:${local?.tracks?.video?.state} aud:${local?.tracks?.audio?.state} | R vid:${remote?.tracks?.video?.state} sub:${remote?.tracks?.video?.subscribed} trk:${remote?.tracks?.video?.persistentTrack ? 'y' : 'n'} aud:${remote?.tracks?.audio?.state} | n:${joinedCount}` +
+        ` | rT:${describeTrack(remote?.tracks?.video?.persistentTrack)} lT:${describeTrack(local?.tracks?.video?.persistentTrack)}`,
     );
     setLocalParticipant(local);
     setRemoteParticipant(remote);
@@ -578,8 +585,7 @@ const styles = StyleSheet.create({
     right: 16,
     width: 100,
     height: 140,
-    borderRadius: 12,
-    overflow: 'hidden',
+    // No borderRadius / overflow:'hidden' here: clipping an Android SurfaceView (the video) can render it black.
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.4)',
   },
