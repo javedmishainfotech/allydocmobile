@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import InlineCalendar from './InlineCalendar';
 import { adTokens } from '../theme/colors';
 
@@ -14,6 +15,7 @@ export default function DatePickerSheet({ visible, title, value, onSelect, onCle
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>

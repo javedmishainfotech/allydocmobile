@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import DatePickerSheet from '../DatePickerSheet';
 import { formatDateLabel } from '../../utils/dateOnly';
 import { getDefaultPaymentFilter } from '../../utils/paymentFields';
@@ -71,6 +72,7 @@ export default function PaymentsFilterSheet({ visible, filter, onApply, onClose 
   return (
     <>
       <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+        <Toast />
         <View style={styles.backdrop}>
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
           <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>

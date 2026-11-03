@@ -67,17 +67,11 @@ export const DOCTOR_MENU_ITEMS = [
   { key: 'ClinicFavorites', title: 'Clinic Favorites', icon: 'star-check-outline', component: ClinicFavoritesPage, pathKeywords: ['clinic-favorite', 'clinicfavorite'] },
   { key: 'Favorites', title: 'Favorites', icon: 'star-outline', component: ClinicianFavoritesPage, pathKeywords: ['favorite'] },
   { key: 'DoctorMessage', title: 'Messages', icon: 'message-text-outline', component: ChatRoomsPage, pathKeywords: ['message'] },
-  { key: 'DoctorPayments', title: 'Payments', icon: 'credit-card-outline', component: null, pathKeywords: ['payment'] },
   // Web's sidebar labels this single route "Pharmacy Requests" (sidebarBlueprint.js); it's the
   // same Refill/Rx-Change tabs as the per-patient Requests page, just clinic-wide in scope.
   { key: 'DoctorRequests', title: 'Pharmacy Requests', icon: 'pill', component: DoctorRequestsPage, pathKeywords: ['pharmacy-request', 'pharmacyrequest', 'rxrequest', 'rx-request', 'request'] },
   { key: 'DoctorNotification', title: 'Notifications', icon: 'bell-outline', component: DoctorNotificationPage, pathKeywords: ['notification'] },
   { key: 'DoctorFeedback', title: 'Feedback', icon: 'comment-text-outline', component: DoctorFeedbackPage, pathKeywords: ['feedback'] },
-  // Not in the old sidebar - added for the "More" grid (not built yet, so they render PlaceholderScreen).
-  { key: 'DoctorScanDocument', title: 'Scan Document', icon: 'scan-helper', component: null, pathKeywords: ['scan-document', 'scandocument'] },
-  { key: 'DoctorPrescriptions', title: 'Prescriptions', icon: 'prescription', component: null, pathKeywords: ['prescription'] },
-  { key: 'DoctorReports', title: 'Reports', icon: 'chart-bar', component: null, pathKeywords: ['report'] },
-  { key: 'AboutAllyDoc', title: 'About AllyDoc', icon: 'information-outline', component: null, pathKeywords: ['about'] },
   { key: 'IdentityProofing', title: 'Identity Proofing', icon: 'shield-account-outline', component: DoctorIdentityProofingPage, pathKeywords: ['identity-proofing', 'identityproofing'] },
   { key: 'DoctorSettings', title: 'Settings', icon: 'cog-outline', component: DoctorSettingsPage, pathKeywords: ['setting'] },
   { key: 'DoctorSupport', title: 'Support', icon: 'lifebuoy', component: DoctorSupportPage, pathKeywords: ['support'] },
@@ -96,7 +90,6 @@ export const NURSE_MENU_ITEMS = [
   { key: 'NursePatients', title: 'Patients', icon: 'account-multiple-outline', component: DoctorPatientsPage, pathKeywords: ['patient'] },
   { key: 'NurseMessage', title: 'Messages', icon: 'message-text-outline', component: ChatRoomsPage, pathKeywords: ['message'] },
   { key: 'NurseTreatmentPlan', title: 'Treatment Plan', icon: 'clipboard-text-outline', component: DoctorTreatmentPlanPage, pathKeywords: ['treatment-plan', 'treatmentplan'] },
-  { key: 'NursePayments', title: 'Payments', icon: 'credit-card-outline', component: null, pathKeywords: ['payment'] },
   { key: 'NurseClinicFavorites', title: 'Clinic Favorites', icon: 'star-check-outline', component: ClinicFavoritesPage, pathKeywords: ['clinic-favorite', 'clinicfavorite'] },
   { key: 'NurseFavorites', title: 'Favorites', icon: 'star-outline', component: ClinicianFavoritesPage, pathKeywords: ['favorite'] },
   { key: 'NurseNotification', title: 'Notifications', icon: 'bell-outline', component: DoctorNotificationPage, pathKeywords: ['notification'] },

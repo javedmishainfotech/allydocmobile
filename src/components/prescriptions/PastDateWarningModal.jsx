@@ -1,11 +1,13 @@
 import React from 'react';
 import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { adTokens } from '../../theme/colors';
 
 /** Port of web's PastEffectiveDateWarningModal: selected prescriptions whose effective date is in the past must be edited before sending. */
 export default function PastDateWarningModal({ visible, prescriptions, formatDate, onEdit, onClose }) {
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.box}>
           <Text style={styles.title}>Prescriptions with Past Effective Dates</Text>

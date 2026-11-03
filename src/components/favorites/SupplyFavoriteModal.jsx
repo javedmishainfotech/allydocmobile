@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, Switch, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { Feather } from '@expo/vector-icons';
 import { searchSupplies, createSupplyFavorite, updateSupplyFavorite } from '../../services/prescriptionService';
 import OptionPicker from '../prescriptions/OptionPicker';
@@ -8,6 +9,8 @@ import SubstitutionConfirmationModal from '../prescriptions/SubstitutionConfirma
 import { DISPENSE_UNIT_OPTIONS } from '../../utils/dispenseUnits';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DISPENSE_UNIT_NAME_LIST = DISPENSE_UNIT_OPTIONS.map((o) => o.name);
 const DISPENSE_UNIT_ID_BY_NAME = Object.fromEntries(DISPENSE_UNIT_OPTIONS.map((o) => [o.name, o.id]));
@@ -28,6 +31,8 @@ function Field({ label, required, children }) {
 /** Port of AllyDocReactApp's Favorites "Add/Edit Supply" form: search supplies, or fall back
  * to a custom freetext entry when nothing matches. */
 export default function SupplyFavoriteModal({ visible, scope, scopeId, favorite, onClose, onSaved }) {
+  const bottomSafe = useBottomSafeSpacing();
+  const insets = useSafeAreaInsets();
   const isEdit = Boolean(favorite);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -137,7 +142,8 @@ export default function SupplyFavoriteModal({ visible, scope, scopeId, favorite,
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={submitting ? undefined : onClose}>
-      <View style={styles.header}>
+      <Toast />
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.title}>{isEdit ? 'Edit' : 'Add'} Supply Favorite</Text>
         <Pressable onPress={onClose} disabled={submitting} hitSlop={8}>
           <Feather name="x" size={20} color={adTokens.textSecondary} />
@@ -212,7 +218,7 @@ export default function SupplyFavoriteModal({ visible, scope, scopeId, favorite,
           <TextInput style={[styles.input, styles.textarea]} multiline numberOfLines={2} value={pharmacyNotes} onChangeText={setPharmacyNotes} />
         </Field>
       </ScrollView>
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: 16 + bottomSafe }]}>
         <Pressable style={styles.cancelButton} onPress={onClose} disabled={submitting}>
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </Pressable>
@@ -225,7 +231,7 @@ export default function SupplyFavoriteModal({ visible, scope, scopeId, favorite,
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, paddingTop: 48, borderBottomWidth: 1, borderBottomColor: adTokens.border },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: adTokens.border },
   title: { fontSize: 16, fontWeight: '700', color: adTokens.textPrimary },
   body: { padding: 16 },
   field: { marginBottom: 14 },

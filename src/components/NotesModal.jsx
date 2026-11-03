@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { Feather } from '@expo/vector-icons';
 import { useManageAppointments } from '../hooks/useManageAppointments';
 import { useAuth } from '../hooks/useAuth';
 import { colors, adTokens } from '../theme/colors';
+import { useBottomSafeSpacing } from '../hooks/useBottomSafeSpacing';
 
 /** Port of AllyDocReactApp/.../DoctorAppointments/NotesModal.jsx. */
 export default function NotesModal({ visible, appointmentId, isEditable, onClose, onSaved }) {
+  const bottomSafe = useBottomSafeSpacing();
   const { profile } = useAuth();
   const { getAppointmentNotes, saveAppointmentNotes } = useManageAppointments();
   const [noteText, setNoteText] = useState('');
@@ -40,8 +43,9 @@ export default function NotesModal({ visible, appointmentId, isEditable, onClose
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: 18 + bottomSafe }]}>
           <View style={styles.header}>
             <View style={styles.flex1}>
               <Text style={styles.title}>Notes</Text>

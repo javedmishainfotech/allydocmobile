@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useRoute } from '@react-navigation/native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { adTokens } from '../../theme/colors';
 import { useDockInset } from '../../navigation/DockInsetContext';
+import SegmentedTabs from '../ui/SegmentedTabs';
 
 /**
  * The Settings screen frame shared by every role (web: the `.ad-tabs` bar over one scrolling
@@ -29,25 +29,7 @@ export default function SettingsTabsLayout({ tabs, renderTab, subtitle = 'Manage
         <Text style={styles.pageSubtitle}>{subtitle}</Text>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar} contentContainerStyle={styles.tabBarContent}>
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.key;
-          return (
-            <Pressable
-              key={tab.key}
-              style={[styles.tabChip, isActive && styles.tabChipActive]}
-              onPress={() => setActiveTab(tab.key)}
-            >
-              <MaterialCommunityIcons
-                name={tab.icon}
-                size={15}
-                color={isActive ? adTokens.white : adTokens.textSecondary}
-              />
-              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{tab.label}</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      <SegmentedTabs tabs={tabs} activeKey={activeTab} onChange={setActiveTab} scrollable style={styles.tabBar} />
 
       <ScrollView
         style={styles.flex1}
@@ -65,29 +47,10 @@ const styles = StyleSheet.create({
   pageHeader: { paddingHorizontal: 16, paddingTop: 16, flexShrink: 0 },
   pageSubtitle: { fontSize: 13, color: adTokens.textSecondary, marginBottom: 12 },
 
-  // Scrollable chip row, not an underlined text-tab bar - bigger touch target
-  // (full chip, not just the label text) and reads at a glance even mid-scroll,
-  // since the active one carries its own filled background instead of relying
-  // on an underline that can scroll out of view.
-  // flexShrink: 0 is the fix for the chips getting squashed: a ScrollView defaults
-  // to flexShrink: 1, so when a tab's content below was tall (My Profile) the
-  // column gave the chip row's height away and the labels got clipped.
-  tabBar: { flexGrow: 0, flexShrink: 0, marginTop: 14, marginBottom: 2 },
-  tabBarContent: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
-  tabChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: adTokens.border,
-    backgroundColor: adTokens.white,
-  },
-  tabChipActive: { backgroundColor: adTokens.primary, borderColor: adTokens.primary },
-  tabLabel: { fontSize: 12.5, fontWeight: '600', color: adTokens.textSecondary },
-  tabLabelActive: { color: adTokens.white, fontWeight: '700' },
+  // flexShrink: 0 is the fix for the bar getting squashed: a ScrollView defaults to
+  // flexShrink: 1, so when a tab's content below was tall (My Profile) the column gave the
+  // tab bar's height away and its labels got clipped.
+  tabBar: { flexGrow: 0, flexShrink: 0, marginHorizontal: 16, marginTop: 14, marginBottom: 2 },
 
   content: { padding: 16, paddingBottom: 32 },
 });

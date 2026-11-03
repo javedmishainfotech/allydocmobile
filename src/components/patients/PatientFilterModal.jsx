@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { colors, adTokens } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 
 const GENDER_OPTIONS = [
   { value: 'both', label: 'Both' },
@@ -39,6 +41,7 @@ function FilterField({ label, value, onChangeText, keyboardType }) {
  * name, DOB, Email, Gender, DoseSpot ID, Phone number. No client-side search,
  * filtering only (server pagination handled by the caller). */
 export default function PatientFilterModal({ visible, initialFilter, onApply, onClose }) {
+  const bottomSafe = useBottomSafeSpacing();
   const [draft, setDraft] = useState(initialFilter);
 
   useEffect(() => {
@@ -54,8 +57,9 @@ export default function PatientFilterModal({ visible, initialFilter, onApply, on
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: 18 + bottomSafe }]}>
           <Text style={styles.title}>Filter Patients</Text>
           <ScrollView contentContainerStyle={styles.body}>
             <FilterField label="First name" value={draft.firstName} onChangeText={update('firstName')} />

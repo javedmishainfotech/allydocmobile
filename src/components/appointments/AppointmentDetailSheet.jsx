@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
@@ -10,6 +11,7 @@ import { useManageAppointments } from '../../hooks/useManageAppointments';
 import { getAppointmentDetails } from '../../services/pendingRequestDetailsService';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import { getAppointmentSymptom, STATUS_STYLE } from '../../utils/appointmentFields';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 import NotesModal from '../NotesModal';
 import QuestionnaireModal from '../QuestionnaireModal';
 import ConfirmationModal from '../ConfirmationModal';
@@ -28,6 +30,7 @@ import { colors, adTokens } from '../../theme/colors';
  * something the list shows has changed (marking complete), so the parent can refresh.
  */
 export default function AppointmentDetailSheet({ appointmentId, onClose, onChanged }) {
+  const bottomSafe = useBottomSafeSpacing();
   const visible = appointmentId != null;
   const { profile } = useAuth();
   const { markAppointmentComplete } = useManageAppointments();
@@ -133,10 +136,11 @@ export default function AppointmentDetailSheet({ appointmentId, onClose, onChang
   return (
     <>
       <Modal visible={visible} animationType="slide" transparent onRequestClose={() => onClose()}>
+        <Toast />
         <View style={styles.detailBackdrop}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => onClose()} />
           <View style={styles.detailSheet}>
-            <ScrollView contentContainerStyle={styles.detailScroll}>
+            <ScrollView contentContainerStyle={[styles.detailScroll, { paddingBottom: 18 + bottomSafe }]}>
               <View style={styles.detailHandleRow}>
                 <View style={styles.detailHandle} />
                 <Pressable style={styles.detailCloseButton} onPress={() => onClose()} hitSlop={8}>

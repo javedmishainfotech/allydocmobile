@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, FlatList, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import {
   searchAllergens,
   addCodedAllergy,
@@ -10,6 +13,7 @@ import {
 } from '../../services/doseSpotClinicalService';
 import { toast } from '../../utils/toast';
 import { colors, adTokens } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 
 // AllergyReactionType / AllergyStatusType enums, per AllyDocReactApp.
 const REACTION_TYPES = [
@@ -29,12 +33,28 @@ function formatOnsetDate(value) {
   return `${month}/${day}/${year.slice(2)}`;
 }
 
+/** YYYY-MM-DD -> a readable "Jan 15, 2026" for the date field's display text. */
+function displayOnsetDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || '');
+  if (!match) return '';
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function toIsoDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 /** Port of AllyDocReactApp's Add/Edit Allergy modal in AllergiesTab.jsx -
  * search allergens (>=3 chars, explicit Search button, not type-ahead) ->
  * coded path, or "Add as Custom Allergy" -> freetext path. Also supports
  * "No Known Allergy" as a checkbox that replaces the form with a confirm
  * panel, matching web. */
 export default function AllergyModal({ visible, doseSpotPatientId, editing, onClose, onSaved }) {
+  const bottomSafe = useBottomSafeSpacing();
   const [searchText, setSearchText] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -45,6 +65,7 @@ export default function AllergyModal({ visible, doseSpotPatientId, editing, onCl
   const [reactionType, setReactionType] = useState('1');
   const [statusType, setStatusType] = useState('1');
   const [onsetDate, setOnsetDate] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -53,6 +74,7 @@ export default function AllergyModal({ visible, doseSpotPatientId, editing, onCl
     setSearchResults([]);
     setHasSearched(false);
     setNoKnownAllergy(false);
+    setShowDatePicker(false);
     if (editing) {
       setSelectedAllergen({ name: editing.DisplayName, allergenId: editing.AllergenId });
       setReaction(editing.Reaction || '');
@@ -142,8 +164,9 @@ export default function AllergyModal({ visible, doseSpotPatientId, editing, onCl
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: 18 + bottomSafe }]}>
           <Text style={styles.title}>{editing ? 'Edit' : 'Add'} Allergy</Text>
           <ScrollView contentContainerStyle={styles.body}>
             {!editing ? (
@@ -236,8 +259,29 @@ export default function AllergyModal({ visible, doseSpotPatientId, editing, onCl
                   ))}
                 </View>
 
-                <Text style={styles.fieldLabel}>Onset Date (YYYY-MM-DD)</Text>
-                <TextInput style={styles.input} value={onsetDate} onChangeText={setOnsetDate} placeholderTextColor={adTokens.textMuted} />
+                <Text style={styles.fieldLabel}>Onset Date</Text>
+                <Pressable style={styles.dateField} onPress={() => setShowDatePicker(true)}>
+                  <MaterialCommunityIcons name="calendar-outline" size={16} color={adTokens.textMuted} />
+                  <Text style={[styles.dateFieldText, !onsetDate && styles.dateFieldPlaceholder]}>
+                    {onsetDate ? displayOnsetDate(onsetDate) : 'Select date'}
+                  </Text>
+                  {onsetDate ? (
+                    <Pressable hitSlop={8} onPress={() => setOnsetDate('')}>
+                      <MaterialCommunityIcons name="close-circle" size={16} color={adTokens.textMuted} />
+                    </Pressable>
+                  ) : null}
+                </Pressable>
+                {showDatePicker ? (
+                  <DateTimePicker
+                    value={onsetDate ? new Date(`${onsetDate}T00:00:00`) : new Date()}
+                    mode="date"
+                    maximumDate={new Date()}
+                    onChange={(event, date) => {
+                      setShowDatePicker(false);
+                      if (event.type !== 'dismissed' && date) setOnsetDate(toIsoDate(date));
+                    }}
+                  />
+                ) : null}
               </>
             )}
           </ScrollView>
@@ -290,6 +334,19 @@ const styles = StyleSheet.create({
 
   fieldLabel: { fontSize: 12, fontWeight: '600', color: adTokens.textSecondary, marginBottom: 6, marginTop: 4 },
   input: { borderWidth: 1, borderColor: adTokens.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13.5, color: adTokens.textPrimary, marginBottom: 8 },
+  dateField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: adTokens.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  dateFieldText: { flex: 1, fontSize: 13.5, color: adTokens.textPrimary },
+  dateFieldPlaceholder: { color: adTokens.textMuted },
   chipRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   chip: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: adTokens.border },
   chipActive: { backgroundColor: adTokens.primary, borderColor: adTokens.primary },

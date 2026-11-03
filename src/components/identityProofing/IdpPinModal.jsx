@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { IdpButton, IdpTextField } from './IdpUi';
 import { adTokens } from '../../theme/colors';
 
@@ -24,6 +25,7 @@ const onlyPinDigits = (text) => text.replace(/\D/g, '').slice(0, 4);
 export default function IdpPinModal({ visible, ...formProps }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={formProps.onClose}>
+      <Toast />
       {/* Mounted only while open, so every opening starts with a clean form. */}
       {visible ? <PinForm {...formProps} /> : null}
     </Modal>

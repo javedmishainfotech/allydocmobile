@@ -82,10 +82,14 @@ function CardHeader({ title, right }) {
   );
 }
 
-function GhostIconButton({ icon, onPress }) {
+function GhostIconButton({ icon, onPress, loading }) {
   return (
-    <Pressable style={styles.ghostIconButton} onPress={onPress} hitSlop={8}>
-      <MaterialCommunityIcons name={icon} size={16} color={adTokens.textSecondary} />
+    <Pressable style={styles.ghostIconButton} onPress={onPress} disabled={loading} hitSlop={8}>
+      {loading ? (
+        <ActivityIndicator size={14} color={adTokens.textSecondary} />
+      ) : (
+        <MaterialCommunityIcons name={icon} size={16} color={adTokens.textSecondary} />
+      )}
     </Pressable>
   );
 }
@@ -316,18 +320,26 @@ export default function DoctorDashboardPage() {
       <Text style={styles.subtitle}>Manage your practice, patients, and appointments securely.</Text>
 
       <View style={styles.badgeRow}>
-        <View style={[styles.idpBadge, isIdpComplete ? styles.idpBadgeSuccess : styles.idpBadgeWarning]}>
+        <Pressable
+          style={[styles.idpBadge, isIdpComplete ? styles.idpBadgeSuccess : styles.idpBadgeWarning]}
+          disabled={isIdpComplete}
+          onPress={() => navigation.navigate('IdentityProofing')}
+        >
           <MaterialCommunityIcons name="shield-check-outline" size={13} color={isIdpComplete ? adTokens.successDark : adTokens.warningDark} />
           <Text style={[styles.idpBadgeText, { color: isIdpComplete ? adTokens.successDark : adTokens.warningDark }]}>
             {isIdpComplete ? 'IDP Verified' : 'IDP Pending'}
           </Text>
-        </View>
-        <View style={[styles.idpBadge, isTfaComplete ? styles.idpBadgeSuccess : styles.idpBadgeWarning]}>
+        </Pressable>
+        <Pressable
+          style={[styles.idpBadge, isTfaComplete ? styles.idpBadgeSuccess : styles.idpBadgeWarning]}
+          disabled={isTfaComplete}
+          onPress={() => navigation.navigate('IdentityProofing')}
+        >
           <MaterialCommunityIcons name="shield-check-outline" size={13} color={isTfaComplete ? adTokens.successDark : adTokens.warningDark} />
           <Text style={[styles.idpBadgeText, { color: isTfaComplete ? adTokens.successDark : adTokens.warningDark }]}>
             {isTfaComplete ? 'TFA Verified' : 'TFA Pending'}
           </Text>
-        </View>
+        </Pressable>
       </View>
 
       <View style={styles.statsGrid}>
@@ -413,12 +425,29 @@ export default function DoctorDashboardPage() {
       </CardShell>
 
       <CardShell>
-        <CardHeader title="Pending Requests" right={<GhostIconButton icon="refresh" onPress={() => refresh(doctorId)} />} />
-        <View style={styles.cardBody}>
-          {scheduledRequestList.length === 0 ? (
+        <CardHeader
+          title="Pending Requests"
+          right={<GhostIconButton icon="refresh" loading={status === 'loading'} onPress={() => refresh(doctorId)} />}
+        />
+        {status === 'loading' ? (
+          <View style={[styles.cardBody, styles.pendingRequestsLoading]}>
+            <ActivityIndicator size="small" color={adTokens.primary} />
+          </View>
+        ) : scheduledRequestList.length === 0 ? (
+          <View style={styles.cardBody}>
             <Text style={styles.emptyText}>No pending appointment requests.</Text>
-          ) : (
-            scheduledRequestList.map((item) => (
+          </View>
+        ) : (
+          // Fixed-height inner scroll, unlike Today's Schedule above - this list can run into
+          // the hundreds (a busy clinic's whole request queue), which would otherwise push the
+          // rest of the dashboard off-screen. nestedScrollEnabled lets Android's nested-scrolling
+          // model hand the gesture to this inner list while the finger is over it.
+          <ScrollView
+            style={[styles.cardBody, styles.pendingRequestsScroll]}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+          >
+            {scheduledRequestList.map((item) => (
               <PendingRequestRow
                 key={item.appointmentId}
                 item={item}
@@ -426,9 +455,9 @@ export default function DoctorDashboardPage() {
                 onAccept={() => acceptRequest(item.appointmentId, doctorId)}
                 onShowDetails={() => setDetailsAppointmentId(item.appointmentId)}
               />
-            ))
-          )}
-        </View>
+            ))}
+          </ScrollView>
+        )}
       </CardShell>
 
       <CardShell>
@@ -551,6 +580,8 @@ const styles = StyleSheet.create({
   },
   cardHeaderTitle: { fontSize: 15.5, fontWeight: '700', color: adTokens.textPrimary },
   cardBody: { padding: 14 },
+  pendingRequestsScroll: { maxHeight: 360 },
+  pendingRequestsLoading: { alignItems: 'center', paddingVertical: 24 },
   ghostIconButton: {
     width: 30,
     height: 30,

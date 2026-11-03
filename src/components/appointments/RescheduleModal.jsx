@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import InlineCalendar from '../InlineCalendar';
 import { getScheduleList } from '../../services/bookingService';
@@ -9,6 +10,7 @@ import { getSlotRangeLabel, getSlotValue } from '../../utils/slotLabel';
 import { localDateOnlyToApiString } from '../../utils/dateOnly';
 import { toast } from '../../utils/toast';
 import { colors, adTokens } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 
 /**
  * Port of DoctorTreatmentDetail.jsx's Reschedule modal (AllyDocReactApp): an inline calendar to pick a
@@ -17,6 +19,7 @@ import { colors, adTokens } from '../../theme/colors';
  * (`{ appointmentId, appointmentDate, appointMentTime, rescheduleReason }`) to confirm.
  */
 export default function RescheduleModal({ visible, appointmentId, patientId, initialDate, onClose, onRescheduled }) {
+  const bottomSafe = useBottomSafeSpacing();
   const { updateAppointment } = useManageAppointments();
   const [selectedDate, setSelectedDate] = useState(() => initialDate || new Date());
   const [slots, setSlots] = useState([]);
@@ -88,8 +91,13 @@ export default function RescheduleModal({ visible, appointmentId, patientId, ini
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+      {/* A Modal renders as its own native window on Android, which sits above the app's root-
+          level Toast. Mounting a Toast instance inside each open Modal gives it priority (see
+          react-native-toast-message's own ref-priority doc comment), so toasts triggered while
+          this modal is open render inside its window instead of disappearing behind it. */}
+      <Toast />
       <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: 18 + bottomSafe }]}>
           <View style={styles.header}>
             <View style={styles.flex1}>
               <Text style={styles.title}>Reschedule Appointment</Text>

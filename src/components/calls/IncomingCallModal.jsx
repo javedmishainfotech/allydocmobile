@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAudioPlayer } from 'expo-audio';
 import Avatar from '../Avatar';
@@ -99,6 +100,7 @@ export default function IncomingCallModal() {
 
   return (
     <Modal visible={isShowing} transparent animationType="fade" statusBarTranslucent>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <Text style={styles.eyebrow}>Incoming Consultation</Text>

@@ -6,6 +6,7 @@ import PharmacyPicker, { getPharmacyId } from '../../components/prescriptions/Ph
 import { addPatientPharmacy } from '../../services/prescriptionService';
 import { toast } from '../../utils/toast';
 import { adTokens, colors } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 
 /**
  * Port of web's Manage Pharmacies page (`patients/:patientId/:doseSpotPatientId/pharmacies`): the same
@@ -14,6 +15,7 @@ import { adTokens, colors } from '../../theme/colors';
  * (`POST /api/Pharmacies/AddPatientPharmacy` with `setAsPrimary: true`).
  */
 export default function ManagePharmaciesPage() {
+  const bottomSafe = useBottomSafeSpacing();
   const navigation = useNavigation();
   const route = useRoute();
   const { doseSpotPatientId } = route.params || {};
@@ -39,7 +41,7 @@ export default function ManagePharmaciesPage() {
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 32 + bottomSafe }]} keyboardShouldPersistTaps="handled">
         <PharmacyPicker
           doseSpotPatientId={doseSpotPatientId}
           mode="manage"
@@ -49,7 +51,7 @@ export default function ManagePharmaciesPage() {
           onLoaded={(items) => setHasDefault(items.some((p) => p.IsDefault === true || p.isDefault === true))}
         />
       </ScrollView>
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: 16 + bottomSafe }]}>
         <View style={styles.footerRow}>
           <Pressable style={styles.secondary} onPress={() => navigation.goBack()}>
             <Text style={styles.secondaryText}>Cancel</Text>

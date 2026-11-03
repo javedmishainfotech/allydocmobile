@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { approveRxChange, denyRxChange } from '../../services/doseSpotClinicalService';
 import { toast } from '../../utils/toast';
 import { colors, adTokens } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 
 const DENIAL_REASONS = [
   { value: 'DeniedPatientUnknown', label: 'Patient Unknown' },
@@ -71,6 +73,7 @@ function buildApprovePayload(request, { comment, priorAuthNumber }) {
  * as proposed ("approve", not "approve with changes" editing of fields) -
  * the full inline edit-before-approve UI is not ported in this pass. */
 export default function RxChangeDetailModal({ visible, request, onClose, onResolved }) {
+  const bottomSafe = useBottomSafeSpacing();
   const [comment, setComment] = useState('');
   const [priorAuthNumber, setPriorAuthNumber] = useState('');
   const [denialReason, setDenialReason] = useState(null);
@@ -115,8 +118,9 @@ export default function RxChangeDetailModal({ visible, request, onClose, onResol
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: 18 + bottomSafe }]}>
           <Text style={styles.title}>RxChange Request</Text>
           <ScrollView contentContainerStyle={styles.body}>
             <View style={styles.infoCard}>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, Switch, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { Feather } from '@expo/vector-icons';
 import { searchMedications, selectMedication } from '../../services/doseSpotClinicalService';
 import { createCodedFavorite, createClinicCodedFavorite, updateCodedFavorite } from '../../services/prescriptionService';
@@ -9,6 +10,8 @@ import SubstitutionConfirmationModal from '../prescriptions/SubstitutionConfirma
 import { DISPENSE_UNIT_OPTIONS } from '../../utils/dispenseUnits';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DISPENSE_UNIT_NAME_LIST = DISPENSE_UNIT_OPTIONS.map((o) => o.name);
 const DISPENSE_UNIT_ID_BY_NAME = Object.fromEntries(DISPENSE_UNIT_OPTIONS.map((o) => [o.name, o.id]));
@@ -33,6 +36,8 @@ function Field({ label, required, children }) {
  * are first-class supported paths on web, Custom Format is just the simpler one to operate.
  */
 export default function MedicationFavoriteModal({ visible, scope, scopeId, favorite, onClose, onSaved }) {
+  const bottomSafe = useBottomSafeSpacing();
+  const insets = useSafeAreaInsets();
   const isEdit = Boolean(favorite);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -140,7 +145,8 @@ export default function MedicationFavoriteModal({ visible, scope, scopeId, favor
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={submitting ? undefined : onClose}>
-      <View style={styles.header}>
+      <Toast />
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.title}>{isEdit ? 'Edit' : 'Add'} Medication Favorite</Text>
         <Pressable onPress={onClose} disabled={submitting} hitSlop={8}>
           <Feather name="x" size={20} color={adTokens.textSecondary} />
@@ -211,7 +217,7 @@ export default function MedicationFavoriteModal({ visible, scope, scopeId, favor
           <TextInput style={[styles.input, styles.textarea]} multiline numberOfLines={2} value={pharmacyNotes} onChangeText={setPharmacyNotes} />
         </Field>
       </ScrollView>
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: 16 + bottomSafe }]}>
         <Pressable style={styles.cancelButton} onPress={onClose} disabled={submitting}>
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </Pressable>
@@ -224,7 +230,7 @@ export default function MedicationFavoriteModal({ visible, scope, scopeId, favor
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, paddingTop: 48, borderBottomWidth: 1, borderBottomColor: adTokens.border },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: adTokens.border },
   title: { fontSize: 16, fontWeight: '700', color: adTokens.textPrimary },
   body: { padding: 16 },
   field: { marginBottom: 14 },

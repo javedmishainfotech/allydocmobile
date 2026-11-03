@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { updateSelfReportedMedicationStatus } from '../../services/doseSpotClinicalService';
 import { toast } from '../../utils/toast';
 import { colors, adTokens } from '../../theme/colors';
@@ -42,6 +43,7 @@ export default function RemoveSelfReportedMedicationModal({ visible, doseSpotPat
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <Text style={styles.title}>Remove Medication</Text>

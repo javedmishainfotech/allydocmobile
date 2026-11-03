@@ -7,7 +7,7 @@ import { getTreatmentPlansList } from '../../services/treatmentPlanService';
 import { formatStatusFilterLabel, hasActiveStatusFilter, parseAppointmentListResponse } from '../../utils/appointmentListApi';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import { getInfoButtonProps } from '../../utils/appointmentFields';
-import StatusBadge from '../StatusBadge';
+import StatusBadge, { statusAccentColor } from '../StatusBadge';
 import AppointmentInfoButton from '../AppointmentInfoButton';
 import AppointmentFilterSheet, { TREATMENT_PLAN_STATUS_OPTIONS } from '../appointments/AppointmentFilterSheet';
 import { useDockInset } from '../../navigation/DockInsetContext';
@@ -51,35 +51,68 @@ function PlanRow({ appointment, onOpen }) {
   const canView = (status === 'completed' || status === 'inprogress') && appointmentId != null;
   const name = appointment?.name || appointment?.doctorName || appointment?.patientName || '—';
   const subLine = [appointment?.specialization, appointment?.hospital].filter(Boolean).join(' · ');
+  const accentColor = statusAccentColor(appointment?.appointmentStatus);
+
+  // Remarks (the doctor's completion note) and patient feedback used to be hidden behind the
+  // info-button's tap-to-alert - shown directly on the card now so they don't need a click to see.
+  const { rescheduleReason, cancelReason, remarks, feedbackRating, feedbackComment } = getInfoButtonProps(appointment);
+  const remarksText = String(remarks ?? '').trim();
+  const feedbackText = String(feedbackComment ?? '').trim();
+  const hasFeedback = Boolean(feedbackRating) || feedbackText.length > 0;
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.row, pressed && canView && styles.rowPressed]}
+      style={({ pressed }) => [styles.row, { borderLeftColor: accentColor }, pressed && canView && styles.rowPressed]}
       disabled={!canView}
       onPress={() => onOpen(appointmentId)}
     >
-      <Avatar name={name} imageUrl={appointment?.profileImage} />
-      <View style={styles.rowBody}>
-        <Text style={styles.name} numberOfLines={1}>
-          {name}
-        </Text>
-        {subLine ? (
-          <Text style={styles.subLine} numberOfLines={1}>
-            {subLine}
-          </Text>
+      <View style={styles.rowTopWrap}>
+        <Avatar name={name} imageUrl={appointment?.profileImage} />
+        <View style={styles.rowBody}>
+          <View style={styles.nameRow}>
+            <Text style={styles.name} numberOfLines={1}>
+              {name}
+            </Text>
+            <StatusBadge status={appointment?.appointmentStatus} />
+          </View>
+          {subLine ? (
+            <Text style={styles.subLine} numberOfLines={1}>
+              {subLine}
+            </Text>
+          ) : null}
+          <View style={styles.metaRow}>
+            <MaterialCommunityIcons name="calendar-outline" size={13} color={adTokens.textMuted} />
+            <Text style={styles.metaText}>{display.date}</Text>
+            <MaterialCommunityIcons name="clock-outline" size={13} color={adTokens.textMuted} style={styles.metaGap} />
+            <Text style={styles.metaText}>{display.timeWithZone}</Text>
+            <AppointmentInfoButton rescheduleReason={rescheduleReason} cancelReason={cancelReason} />
+          </View>
+        </View>
+        {canView ? (
+          <View style={styles.chevronWrap}>
+            <Feather name="chevron-right" size={18} color={adTokens.primaryDark} />
+          </View>
         ) : null}
-        <View style={styles.metaRow}>
-          <MaterialCommunityIcons name="calendar-outline" size={13} color={adTokens.textMuted} />
-          <Text style={styles.metaText}>{display.date}</Text>
-          <MaterialCommunityIcons name="clock-outline" size={13} color={adTokens.textMuted} style={styles.metaGap} />
-          <Text style={styles.metaText}>{display.timeWithZone}</Text>
-        </View>
-        <View style={styles.statusRow}>
-          <StatusBadge status={appointment?.appointmentStatus} />
-          <AppointmentInfoButton {...getInfoButtonProps(appointment)} />
-        </View>
       </View>
-      {canView ? <Feather name="chevron-right" size={18} color={adTokens.textMuted} /> : null}
+
+      {remarksText ? (
+        <View style={styles.remarksBox}>
+          <MaterialCommunityIcons name="comment-text-outline" size={13} color={adTokens.primaryDark} />
+          <Text style={styles.remarksText}>{remarksText}</Text>
+        </View>
+      ) : null}
+
+      {hasFeedback ? (
+        <View style={styles.feedbackBox}>
+          <View style={styles.feedbackHeader}>
+            <MaterialCommunityIcons name="star" size={13} color="#F59E0B" />
+            <Text style={styles.feedbackTitle}>
+              Patient Feedback{feedbackRating ? ` · ${feedbackRating}/5` : ''}
+            </Text>
+          </View>
+          {feedbackText ? <Text style={styles.feedbackText}>{feedbackText}</Text> : null}
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -269,27 +302,54 @@ const styles = StyleSheet.create({
   filterTextActive: { color: adTokens.white },
 
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
+    gap: 10,
+    padding: 14,
+    paddingLeft: 12,
     borderRadius: adTokens.cardBorderRadius,
     borderWidth: 1,
+    borderLeftWidth: 4,
     borderColor: adTokens.border,
     backgroundColor: adTokens.white,
     ...adTokens.cardShadow,
   },
   rowPressed: { backgroundColor: adTokens.gray50 },
+  rowTopWrap: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  remarksBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 7,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: adTokens.primaryLight,
+  },
+  remarksText: { flex: 1, fontSize: 12.5, color: adTokens.primaryDark, lineHeight: 17 },
+  feedbackBox: {
+    gap: 3,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: '#FEF3C7',
+  },
+  feedbackHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  feedbackTitle: { fontSize: 12, fontWeight: '700', color: '#B45309' },
+  feedbackText: { fontSize: 12.5, color: '#92400E', lineHeight: 17 },
   avatar: { width: 52, height: 52, borderRadius: 26 },
   avatarFallback: { backgroundColor: '#279EFF', alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 15, fontWeight: '700', color: adTokens.white },
   rowBody: { flex: 1, gap: 3 },
-  name: { fontSize: 14.5, fontWeight: '700', color: adTokens.textPrimary },
-  subLine: { fontSize: 11.5, color: adTokens.textMuted },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  name: { flex: 1, fontSize: 14.5, fontWeight: '700', color: adTokens.textPrimary },
+  subLine: { fontSize: 11.5, color: adTokens.textMuted, textTransform: 'capitalize' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap', marginTop: 4 },
   metaGap: { marginLeft: 8 },
-  metaText: { fontSize: 12, color: adTokens.textSecondary },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  metaText: { fontSize: 12, color: adTokens.textSecondary, fontWeight: '500' },
+  chevronWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: adTokens.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   state: { alignItems: 'center', justifyContent: 'center', paddingVertical: 56, paddingHorizontal: 24, gap: 8 },
   stateTitle: { fontSize: 15, fontWeight: '700', color: adTokens.textPrimary },

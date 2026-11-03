@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, BackHandler, Modal, ScrollView } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Daily, { DailyMediaView } from '@daily-co/react-native-daily-js';
@@ -503,6 +504,7 @@ export default function VideoCallPage() {
       </View>
 
       <Modal visible={peopleOpen} transparent animationType="fade" onRequestClose={() => setPeopleOpen(false)}>
+        <Toast />
         <Pressable style={styles.peopleOverlay} onPress={() => setPeopleOpen(false)}>
           <Pressable style={styles.peopleSheet} onPress={(e) => e.stopPropagation()}>
             <View style={styles.peopleHeader}>

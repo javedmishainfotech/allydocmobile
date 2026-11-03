@@ -51,10 +51,12 @@ export default function RoleTabsNavigator({ navigation }) {
   const blurTargetRef = useRef(null);
   const hasMore = moreItems.length > 0;
 
-  // Distance from the screen's bottom edge to the dock. Kept small so the dock sits
-  // low; only a fraction of the system-gesture inset is kept (not all of it plus a
-  // margin), which still clears the gesture bar but no longer floats high above it.
-  const dockBottom = Math.max(Math.round(insets.bottom * 0.5), 8);
+  // Distance from the screen's bottom edge to the dock - the full bottom inset, so the
+  // dock clears whatever system bar is there. A gesture-nav device's inset is thin, so
+  // this still sits low; a 3-button-nav device's inset is much taller (the solid nav bar
+  // itself), and halving it (as this used to) left the dock sitting partly underneath
+  // that bar instead of above it.
+  const dockBottom = Math.max(insets.bottom, 8);
   // What pages must keep clear at the bottom so their last item isn't under the dock.
   const dockInset = DOCK_HEIGHT + dockBottom + 16;
 

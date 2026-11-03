@@ -9,6 +9,7 @@ import SupplyFavoriteModal from '../../components/favorites/SupplyFavoriteModal'
 import CompoundFavoriteModal from '../../components/favorites/CompoundFavoriteModal';
 import { adTokens } from '../../theme/colors';
 import { useDockInset } from '../../navigation/DockInsetContext';
+import SegmentedTabs from '../../components/ui/SegmentedTabs';
 
 const CATEGORY_TABS = [
   { key: 'medications', label: 'Medications', type: FAVORITE_TYPE.MEDICATIONS },
@@ -102,13 +103,7 @@ export default function FavoritesPage({ scope = 'clinician' }) {
         <Text style={styles.subtitle}>Manage your saved prescription favorites</Text>
       </View>
 
-      <View style={styles.tabBar}>
-        {CATEGORY_TABS.map((tab) => (
-          <Pressable key={tab.key} style={[styles.tab, activeTab === tab.key && styles.tabActive]} onPress={() => switchTab(tab.key)}>
-            <Text style={[styles.tabLabel, activeTab === tab.key && styles.tabLabelActive]}>{tab.label}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <SegmentedTabs tabs={CATEGORY_TABS} activeKey={activeTab} onChange={switchTab} style={styles.tabBar} />
 
       <View style={styles.toolbarRow}>
         <View style={styles.searchBox}>
@@ -211,11 +206,7 @@ const styles = StyleSheet.create({
   header: { padding: 16, backgroundColor: adTokens.white, borderBottomWidth: 1, borderBottomColor: adTokens.border },
   title: { fontSize: 16, fontWeight: '700', color: adTokens.textPrimary },
   subtitle: { fontSize: 12.5, color: adTokens.textSecondary, marginTop: 2 },
-  tabBar: { flexDirection: 'row', backgroundColor: adTokens.white, borderBottomWidth: 1, borderBottomColor: adTokens.border },
-  tab: { flex: 1, paddingVertical: 11, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabActive: { borderBottomColor: adTokens.primary },
-  tabLabel: { fontSize: 12.5, fontWeight: '600', color: adTokens.textSecondary },
-  tabLabelActive: { color: adTokens.primaryDark },
+  tabBar: { margin: 16, marginBottom: 8 },
   toolbarRow: { flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 8 },
   searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: adTokens.border, borderRadius: 10, paddingHorizontal: 12, backgroundColor: adTokens.white },
   searchInput: { flex: 1, paddingVertical: 9, fontSize: 13, color: adTokens.textPrimary },

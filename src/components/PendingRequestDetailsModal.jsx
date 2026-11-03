@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { getAppointmentDetails, getPatientAllergies } from '../services/pendingRequestDetailsService';
 import { getAppointmentDisplay } from '../utils/formatAppointmentDate';
 import ConsultQuestionnaireItem from './ConsultQuestionnaireItem';
 import { colors, adTokens } from '../theme/colors';
+import { useBottomSafeSpacing } from '../hooks/useBottomSafeSpacing';
 
 const STATUS_COLORS = {
   active: '#15803D',
@@ -27,6 +29,7 @@ export default function PendingRequestDetailsModal({
   isAccepting,
   acceptDisabled,
 }) {
+  const bottomSafe = useBottomSafeSpacing();
   const [isLoading, setIsLoading] = useState(false);
   const [details, setDetails] = useState(null);
   const [questionnaire, setQuestionnaire] = useState([]);
@@ -105,6 +108,7 @@ export default function PendingRequestDetailsModal({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
@@ -241,7 +245,7 @@ export default function PendingRequestDetailsModal({
             </ScrollView>
           )}
 
-          <View style={styles.footer}>
+          <View style={[styles.footer, { paddingBottom: 14 + bottomSafe }]}>
             <Pressable style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeButtonText}>Close</Text>
             </Pressable>

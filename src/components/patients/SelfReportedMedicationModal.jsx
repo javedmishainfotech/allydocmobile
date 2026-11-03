@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, FlatList, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import {
   searchMedications,
   selectMedication,
@@ -13,6 +14,7 @@ import {
 } from '../../services/doseSpotClinicalService';
 import { toast } from '../../utils/toast';
 import { colors, adTokens } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 
 const EMPTY_FORM = {
   directions: '',
@@ -37,6 +39,7 @@ const EMPTY_FORM = {
  * in scope for this pass; the API call shape is otherwise an exact port.
  */
 export default function SelfReportedMedicationModal({ visible, doseSpotPatientId, editing, onClose, onSaved }) {
+  const bottomSafe = useBottomSafeSpacing();
   const [searchText, setSearchText] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -165,7 +168,8 @@ export default function SelfReportedMedicationModal({ visible, doseSpotPatientId
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: 18 + bottomSafe }]}>
+          <Toast />
           <Text style={styles.title}>{editing ? 'Edit' : 'Add'} Self Reported Medication</Text>
           <ScrollView contentContainerStyle={styles.body}>
             {!selectedDrug ? (

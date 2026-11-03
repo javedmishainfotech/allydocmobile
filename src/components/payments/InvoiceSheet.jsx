@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal, View, Text, Pressable, ScrollView, Share, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { formatMoney, formatPaymentDate } from '../../utils/paymentFields';
 import { adTokens } from '../../theme/colors';
 
@@ -65,6 +66,7 @@ export default function InvoiceSheet({ invoice, onClose }) {
 
   return (
     <Modal visible animationType="slide" transparent onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>

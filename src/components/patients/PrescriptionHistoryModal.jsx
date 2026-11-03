@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { getPrescriptionLog } from '../../services/prescriptionService';
 import { getPrescriptionStatusTone } from '../../utils/treatmentPlanFields';
 import { formatPrescriptionLogDateTime, getPrescriptionLogMessage, sortPrescriptionLogs } from '../../utils/prescriptionLog';
 import { adTokens } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 
 const TONE_COLORS = {
   info: adTokens.infoDark,
@@ -18,6 +20,7 @@ const TONE_COLORS = {
 
 /** Port of web's PrescriptionHistoryModal: the prescription's audit trail (`GET /prescriptions/{id}/log`), oldest first. */
 export default function PrescriptionHistoryModal({ visible, doseSpotPatientId, prescriptionId, onClose }) {
+  const bottomSafe = useBottomSafeSpacing();
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,8 +43,9 @@ export default function PrescriptionHistoryModal({ visible, doseSpotPatientId, p
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: 18 + bottomSafe }]}>
           <View style={styles.header}>
             <Text style={styles.title}>Prescription History</Text>
             <Pressable onPress={onClose} hitSlop={8}>

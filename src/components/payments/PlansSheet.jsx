@@ -3,6 +3,7 @@ import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from 'react-nati
 import { ActivityIndicator } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { adTokens } from '../../theme/colors';
 
 export const getPlanId = (plan) =>
@@ -97,6 +98,7 @@ export default function PlansSheet({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={isSubmitting ? undefined : onClose}>
+      <Toast />
       <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={isSubmitting ? undefined : onClose} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>

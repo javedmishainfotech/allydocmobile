@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Toast from 'react-native-toast-message';
 import {
   Modal,
   View,
@@ -65,6 +66,7 @@ export default function ReviewSheet({ visible, appointment, isEdit = false, init
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={saving ? undefined : onClose}>
+      <Toast />
       <KeyboardAvoidingView style={styles.flex1} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.backdrop}>
           <Pressable style={StyleSheet.absoluteFill} onPress={saving ? undefined : onClose} />

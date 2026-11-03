@@ -3,6 +3,7 @@ import { Modal, View, Text, Image, Pressable, StyleSheet, Linking } from 'react-
 import { WebView } from 'react-native-webview';
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { adTokens } from '../theme/colors';
 
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
@@ -32,6 +33,7 @@ export default function DocumentPreviewModal({ visible, fileUrl, fileName, onClo
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>

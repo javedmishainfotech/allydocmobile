@@ -3,6 +3,7 @@ import { Modal, View, Text, TextInput, FlatList, Pressable, ScrollView, StyleShe
 import { ActivityIndicator } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import DatePickerSheet from '../DatePickerSheet';
 import { usePatients } from '../../hooks/usePatients';
 import { localDateOnlyToApiString, formatDateLabel } from '../../utils/dateOnly';
@@ -74,6 +75,7 @@ function PersonPicker({ person, visible, people, loading, error, selectedId, onS
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={[styles.sheet, styles.pickerSheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>
@@ -216,6 +218,7 @@ export default function AppointmentFilterSheet({
   return (
     <>
       <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+        <Toast />
         <View style={styles.backdrop}>
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
           <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>

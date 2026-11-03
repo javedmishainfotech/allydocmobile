@@ -2,12 +2,15 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { getPatientEligibilities, getPharmacyById } from '../../services/doseSpotClinicalService';
 import { getPrescriptionBenefits } from '../../services/prescriptionService';
 import OptionPicker from './OptionPicker';
 import ReplaceMedicationConfirmationModal from './ReplaceMedicationConfirmationModal';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_RETRIES = 10;
@@ -45,6 +48,8 @@ function toggleInSet(set, key) {
  * dead/commented-out pricing display for the current side, ported as-is for parity.
  */
 export default function PrescriptionBenefitsModal({ visible, patientId, ndc, currentPrescription, onClose, onReplace }) {
+  const bottomSafe = useBottomSafeSpacing();
+  const insets = useSafeAreaInsets();
   const [eligibilities, setEligibilities] = useState([]);
   const [selectedEligibilityId, setSelectedEligibilityId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -220,7 +225,8 @@ export default function PrescriptionBenefitsModal({ visible, patientId, ndc, cur
     <>
       <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
         <View style={styles.container}>
-          <View style={styles.header}>
+          <Toast />
+          <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
             <Text style={styles.title}>Prescription Benefits</Text>
             <Pressable onPress={onClose} hitSlop={8}>
               <Feather name="x" size={22} color={adTokens.textSecondary} />
@@ -369,7 +375,7 @@ export default function PrescriptionBenefitsModal({ visible, patientId, ndc, cur
             )}
           </ScrollView>
 
-          <View style={styles.footer}>
+          <View style={[styles.footer, { paddingBottom: 16 + bottomSafe }]}>
             <Pressable style={styles.cancelButton} onPress={onClose}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </Pressable>
@@ -396,7 +402,7 @@ export default function PrescriptionBenefitsModal({ visible, patientId, ndc, cur
 const styles = StyleSheet.create({
   flex1: { flex: 1 },
   container: { flex: 1, backgroundColor: adTokens.white },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, paddingTop: 48, borderBottomWidth: 1, borderBottomColor: adTokens.border },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: adTokens.border },
   title: { fontSize: 16, fontWeight: '700', color: adTokens.textPrimary },
   body: { padding: 16 },
 

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { useIdpStatus } from '../hooks/useIdpStatus';
@@ -102,6 +103,7 @@ export default function DoctorMoreMenu({ visible, onClose, navigation }) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
+      <Toast />
       <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={close} />
         <View style={styles.sheet}>

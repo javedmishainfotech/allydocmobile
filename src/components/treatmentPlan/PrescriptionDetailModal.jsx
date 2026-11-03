@@ -2,9 +2,11 @@ import React from 'react';
 import { Modal, View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { formatDispenseUnit } from '../../utils/dispenseUnits';
 import { getPrescriptionStatusTone, parseCompoundIngredients } from '../../utils/treatmentPlanFields';
 import { adTokens } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 
 const TONES = {
   info: { bg: adTokens.infoLight, color: adTokens.infoDark },
@@ -38,6 +40,7 @@ function Row({ label, value }) {
 
 /** Port of web's PrescriptionDetailModal (`GET /api/Prescriptions/GetPrescriptionById`): every field of one prescription. */
 export default function PrescriptionDetailModal({ visible, loading, data, pharmacy, pharmacyLoading, drugNames, onClose }) {
+  const bottomSafe = useBottomSafeSpacing();
   const status = pick(data, 'Status', 'status');
   const tone = TONES[getPrescriptionStatusTone(status)] || TONES.neutral;
   const schedule = pick(data, 'Schedule', 'schedule');
@@ -47,8 +50,9 @@ export default function PrescriptionDetailModal({ visible, loading, data, pharma
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: 18 + bottomSafe }]}>
           <View style={styles.header}>
             <Text style={styles.title} numberOfLines={2}>
               {loading ? 'Prescription details' : name}
@@ -133,7 +137,17 @@ const styles = StyleSheet.create({
   pill: { alignSelf: 'flex-start', paddingVertical: 3, paddingHorizontal: 12, borderRadius: 999 },
   pillText: { fontSize: 12, fontWeight: '700' },
   section: { marginTop: 8, fontSize: 13, fontWeight: '700', color: adTokens.primaryDark },
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: adTokens.border,
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    backgroundColor: adTokens.gray50,
+  },
   label: { fontSize: 12.5, color: adTokens.textSecondary },
   value: { flexShrink: 1, fontSize: 12.5, fontWeight: '600', color: adTokens.textPrimary, textAlign: 'right' },
 });

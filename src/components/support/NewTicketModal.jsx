@@ -3,14 +3,17 @@ import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 
 import { ActivityIndicator } from 'react-native-paper';
 import * as DocumentPicker from 'expo-document-picker';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import OptionPicker from '../prescriptions/OptionPicker';
 import AttachmentChip from './AttachmentChip';
 import { SUBJECT_OPTIONS, ATTACHMENT_MIME_TYPES, MESSAGE_MAX, checkAttachments, createTicket } from '../../services/supportService';
 import { toast } from '../../utils/toast';
 import { adTokens, colors } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 
 /** Port of web's NewTicketModal: subject + issue description + up to 5 PDF/image attachments. */
 export default function NewTicketModal({ visible, onClose, onCreated }) {
+  const bottomSafe = useBottomSafeSpacing();
   const [subject, setSubject] = useState(SUBJECT_OPTIONS[0]);
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState([]);
@@ -60,6 +63,7 @@ export default function NewTicketModal({ visible, onClose, onCreated }) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={closeModal}>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
@@ -110,7 +114,7 @@ export default function NewTicketModal({ visible, onClose, onCreated }) {
               </View>
             </View>
           </ScrollView>
-          <View style={styles.footer}>
+          <View style={[styles.footer, { paddingBottom: 16 + bottomSafe }]}>
             <Pressable style={styles.secondaryButton} onPress={closeModal} disabled={submitting}>
               <Text style={styles.secondaryButtonText}>Cancel</Text>
             </Pressable>

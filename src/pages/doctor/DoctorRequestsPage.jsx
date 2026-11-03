@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import RefillsTab from '../../components/patients/RefillsTab';
 import RxChangeTab from '../../components/patients/RxChangeTab';
 import { adTokens } from '../../theme/colors';
 import { useDockInset } from '../../navigation/DockInsetContext';
+import SegmentedTabs from '../../components/ui/SegmentedTabs';
 
 const TABS = [
   { key: 'refill', label: 'Refill Change Request' },
@@ -26,17 +27,7 @@ export default function DoctorRequestsPage() {
         <Text style={styles.subtitle}>Review and act on refill and Rx change requests from pharmacies</Text>
       </View>
 
-      <View style={styles.tabBar}>
-        {TABS.map((tab) => (
-          <Pressable
-            key={tab.key}
-            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-            onPress={() => setActiveTab(tab.key)}
-          >
-            <Text style={[styles.tabLabel, activeTab === tab.key && styles.tabLabelActive]}>{tab.label}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <SegmentedTabs tabs={TABS} activeKey={activeTab} onChange={setActiveTab} style={styles.tabBar} />
 
       <ScrollView contentContainerStyle={[styles.body, { paddingBottom: 24 + dockInset }]}>
         {activeTab === 'refill' ? <RefillsTab requestScope="clinic" /> : <RxChangeTab requestScope="clinic" />}
@@ -50,10 +41,6 @@ const styles = StyleSheet.create({
   header: { padding: 16, backgroundColor: adTokens.white, borderBottomWidth: 1, borderBottomColor: adTokens.border },
   title: { fontSize: 16, fontWeight: '700', color: adTokens.textPrimary },
   subtitle: { fontSize: 12.5, color: adTokens.textSecondary, marginTop: 2 },
-  tabBar: { flexDirection: 'row', backgroundColor: adTokens.white, borderBottomWidth: 1, borderBottomColor: adTokens.border },
-  tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabActive: { borderBottomColor: adTokens.primary },
-  tabLabel: { fontSize: 12.5, fontWeight: '600', color: adTokens.textSecondary },
-  tabLabelActive: { color: adTokens.primaryDark },
+  tabBar: { margin: 16, marginBottom: 0 },
   body: { padding: 16 },
 });

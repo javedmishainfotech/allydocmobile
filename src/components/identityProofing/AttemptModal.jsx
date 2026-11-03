@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, View, Text, StyleSheet } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { IdpButton } from './IdpUi';
 import { adTokens } from '../../theme/colors';
 
@@ -9,6 +10,7 @@ export default function AttemptModal({ options, onClose }) {
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <View style={styles.badge}>

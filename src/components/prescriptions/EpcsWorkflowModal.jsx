@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { useAuth } from '../../hooks/useAuth';
 import { getUserDetails } from '../../services/settingsService';
 import { getEpcsSuggestions, postReadyToSign, sendEpcs } from '../../services/prescriptionService';
 import { adTokens, colors } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const STEP_NOTICE = 1;
 const STEP_PREPARING = 2;
@@ -31,6 +34,8 @@ const STEP_LABELS = {
  * enforced server-side; this UI only ever surfaces whatever message the API sends back).
  */
 export default function EpcsWorkflowModal({ visible, doseSpotPatientId, appointmentId, prescriptions, onClose, onSent }) {
+  const bottomSafe = useBottomSafeSpacing();
+  const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const [step, setStep] = useState(STEP_NOTICE);
   const [prescriberDetails, setPrescriberDetails] = useState(null);
@@ -120,7 +125,8 @@ export default function EpcsWorkflowModal({ visible, doseSpotPatientId, appointm
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={sending ? undefined : onClose}>
       <View style={styles.container}>
-        <View style={styles.header}>
+        <Toast />
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
           <View style={styles.flex1}>
             <Text style={styles.stepLabel}>Step {step} of 4</Text>
             <Text style={styles.title}>{STEP_LABELS[step]}</Text>
@@ -222,7 +228,7 @@ export default function EpcsWorkflowModal({ visible, doseSpotPatientId, appointm
           ) : null}
         </ScrollView>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: 16 + bottomSafe }]}>
           {step === STEP_NOTICE ? (
             <>
               <Pressable style={styles.secondaryButton} onPress={onClose}>
@@ -272,7 +278,7 @@ export default function EpcsWorkflowModal({ visible, doseSpotPatientId, appointm
 const styles = StyleSheet.create({
   flex1: { flex: 1 },
   container: { flex: 1, backgroundColor: adTokens.white },
-  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', padding: 16, paddingTop: 48, borderBottomWidth: 1, borderBottomColor: adTokens.border },
+  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: adTokens.border },
   stepLabel: { fontSize: 11, fontWeight: '700', color: adTokens.textMuted, textTransform: 'uppercase' },
   title: { fontSize: 16, fontWeight: '700', color: adTokens.textPrimary, marginTop: 2 },
   body: { padding: 16 },

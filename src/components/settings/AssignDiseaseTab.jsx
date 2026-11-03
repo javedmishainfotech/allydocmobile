@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { getItem } from '../../utils/storage';
 import { getAssignedDiseases, assignDiseases } from '../../services/settingsService';
 import { adTokens } from '../../theme/colors';
+import SegmentedTabs from '../ui/SegmentedTabs';
 
 function normalizeDiseaseOptions(raw) {
   const list = Array.isArray(raw) ? raw : [];
@@ -26,6 +28,7 @@ function normalizeDiseaseOptions(raw) {
  * there for every real user; ported here with the exact same (broken) lookup for parity.
  */
 export default function AssignDiseaseTab() {
+  const navigation = useNavigation();
   const [clinicCode, setClinicCode] = useState('');
   const [options, setOptions] = useState([]);
   const [selected, setSelected] = useState([]);
@@ -162,18 +165,15 @@ export default function AssignDiseaseTab() {
         </View>
       </View>
 
-      <View style={styles.tabBar}>
-        <Pressable style={[styles.tab, isAvailableTab && styles.tabActive]} onPress={() => switchTab('available')}>
-          <Text style={[styles.tabLabel, isAvailableTab && styles.tabLabelActive]}>
-            Available ({availableList.length})
-          </Text>
-        </Pressable>
-        <Pressable style={[styles.tab, !isAvailableTab && styles.tabActive]} onPress={() => switchTab('assigned')}>
-          <Text style={[styles.tabLabel, !isAvailableTab && styles.tabLabelActive]}>
-            Assigned ({assignedList.length})
-          </Text>
-        </Pressable>
-      </View>
+      <SegmentedTabs
+        tabs={[
+          { key: 'available', label: 'Available', count: availableList.length },
+          { key: 'assigned', label: 'Assigned', count: assignedList.length },
+        ]}
+        activeKey={activeTab}
+        onChange={switchTab}
+        style={styles.tabBar}
+      />
 
       {loading ? (
         <ActivityIndicator style={styles.loader} />
@@ -230,17 +230,31 @@ export default function AssignDiseaseTab() {
             {filteredAssigned.map((item) => {
               const checked = !toUnassign.includes(item.value);
               return (
-                <Pressable key={item.value} style={styles.itemRow} onPress={() => toggleAssignedItem(item.value)}>
-                  <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
-                    {checked ? <Feather name="check" size={12} color={adTokens.white} /> : null}
-                  </View>
-                  <Text style={styles.itemLabel}>{item.label}</Text>
+                <View key={item.value} style={styles.itemRow}>
+                  <Pressable style={styles.itemRowMain} onPress={() => toggleAssignedItem(item.value)}>
+                    <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+                      {checked ? <Feather name="check" size={12} color={adTokens.white} /> : null}
+                    </View>
+                    <Text style={styles.itemLabel}>{item.label}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.manageQuestionsBtn}
+                    hitSlop={6}
+                    onPress={() =>
+                      navigation.navigate('DiseaseQuestionnaire', {
+                        diseaseId: Number(item.value),
+                        diseaseName: item.label,
+                      })
+                    }
+                  >
+                    <MaterialCommunityIcons name="clipboard-text-outline" size={16} color={adTokens.primaryDark} />
+                  </Pressable>
                   <View style={[styles.chip, !checked && styles.chipRemove]}>
                     <Text style={[styles.chipText, !checked && styles.chipTextRemove]}>
                       {checked ? 'Assigned' : 'Will unassign'}
                     </Text>
                   </View>
-                </Pressable>
+                </View>
               );
             })}
           </ScrollView>
@@ -299,11 +313,7 @@ const styles = StyleSheet.create({
   statCardGreen: { backgroundColor: adTokens.successTint },
   statLabel: { fontSize: 11, color: adTokens.textSecondary },
   statValue: { fontSize: 18, fontWeight: '700', color: adTokens.textPrimary, marginTop: 2 },
-  tabBar: { flexDirection: 'row', backgroundColor: adTokens.gray50, borderRadius: 10, padding: 3, marginBottom: 12 },
-  tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
-  tabActive: { backgroundColor: adTokens.white, ...adTokens.cardShadow },
-  tabLabel: { fontSize: 12, fontWeight: '600', color: adTokens.textSecondary },
-  tabLabelActive: { color: adTokens.primaryDark },
+  tabBar: { marginBottom: 12 },
   loader: { marginVertical: 24 },
   searchRow: {
     flexDirection: 'row',
@@ -319,6 +329,8 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 13, color: adTokens.textPrimary },
   list: { maxHeight: 320 },
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: adTokens.border },
+  itemRowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  manageQuestionsBtn: { padding: 4, borderRadius: 8, backgroundColor: adTokens.primaryTint },
   checkbox: { width: 18, height: 18, borderRadius: 5, borderWidth: 1.5, borderColor: adTokens.border, alignItems: 'center', justifyContent: 'center' },
   checkboxChecked: { backgroundColor: adTokens.primary, borderColor: adTokens.primary },
   itemLabel: { flex: 1, fontSize: 13, color: adTokens.textPrimary },

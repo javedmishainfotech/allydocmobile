@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { approveRefill, denyRefill } from '../../services/doseSpotClinicalService';
 import { toast } from '../../utils/toast';
 import { colors, adTokens } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 
 // RefillDenialReason, numeric enum on this endpoint (unlike RxChange's
 // string enum) - same small common set of reasons.
@@ -24,6 +26,7 @@ const DENIAL_REASONS = [
  * refills correctly block simple Approve here too, same as web.
  */
 export default function RefillDetailModal({ visible, request, onClose, onResolved }) {
+  const bottomSafe = useBottomSafeSpacing();
   const [refills, setRefills] = useState('0');
   const [effectiveDate, setEffectiveDate] = useState('');
   const [comment, setComment] = useState('');
@@ -80,8 +83,9 @@ export default function RefillDetailModal({ visible, request, onClose, onResolve
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: 18 + bottomSafe }]}>
           <Text style={styles.title}>Refill Request</Text>
           <ScrollView contentContainerStyle={styles.body}>
             <View style={styles.infoCard}>

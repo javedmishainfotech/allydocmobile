@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { adTokens, colors } from '../../theme/colors';
 
 /** Port of web's ProviderPinModal (send flow): the prescriber's 4-digit PIN authorizes sending the selected prescriptions. */
@@ -27,6 +28,7 @@ export default function ProviderPinModal({ visible, loading, onConfirm, onClose,
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.box}>
           <Text style={styles.title}>Enter Prescriber PIN</Text>

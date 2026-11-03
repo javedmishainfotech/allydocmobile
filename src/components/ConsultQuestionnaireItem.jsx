@@ -21,7 +21,7 @@ export default function ConsultQuestionnaireItem({ record, index, isOpen, onTogg
         <Feather
           name={isOpen ? 'chevron-up' : 'chevron-down'}
           size={16}
-          color={adTokens.textSecondary}
+          color={adTokens.white}
         />
       </Pressable>
       {isOpen ? (
@@ -47,18 +47,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     padding: 10,
-    backgroundColor: adTokens.gray50,
+    backgroundColor: '#1E3A5F',
   },
   indexBadge: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: adTokens.primaryTint,
+    backgroundColor: adTokens.primaryDark,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  indexBadgeText: { fontSize: 11, fontWeight: '700', color: adTokens.primaryDark },
-  question: { flex: 1, fontSize: 13, fontWeight: '600', color: adTokens.textPrimary },
+  indexBadgeText: { fontSize: 11, fontWeight: '700', color: adTokens.white },
+  question: { flex: 1, fontSize: 13, fontWeight: '600', color: adTokens.white },
   answerPanel: {
     flexDirection: 'row',
     alignItems: 'flex-start',

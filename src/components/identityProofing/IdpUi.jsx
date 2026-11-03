@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
+import Toast from 'react-native-toast-message';
 import {
   ActivityIndicator,
   FlatList,
@@ -335,6 +336,7 @@ export function IdpSelectField({
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
+        <Toast />
         <Pressable style={styles.sheetBackdrop} onPress={close} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           <View style={styles.sheetHeader}>

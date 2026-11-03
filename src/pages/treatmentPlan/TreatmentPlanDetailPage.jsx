@@ -28,7 +28,7 @@ import {
   normalizePrescriptionRow,
   parseCompoundIngredients,
 } from '../../utils/treatmentPlanFields';
-import StatusBadge from '../../components/StatusBadge';
+import StatusBadge, { statusAccentColor } from '../../components/StatusBadge';
 import AppointmentInfoButton from '../../components/AppointmentInfoButton';
 import ConsultQuestionnaireItem from '../../components/ConsultQuestionnaireItem';
 import ConfirmationModal from '../../components/ConfirmationModal';
@@ -40,6 +40,7 @@ import { CANCELABLE_PRESCRIPTION_STATUSES, CANCELABLE_MEDICATION_STATUSES } from
 import { toast } from '../../utils/toast';
 import { useDockInset } from '../../navigation/DockInsetContext';
 import { adTokens } from '../../theme/colors';
+import SegmentedTabs from '../../components/ui/SegmentedTabs';
 
 const DETAIL_TABS = [
   { key: 'consultation', label: 'Consultation Details', icon: 'file-document-outline' },
@@ -55,6 +56,9 @@ const SOAP_FIELDS = [
   { label: 'Assessment', key: 'assessment' },
   { label: 'Plan', key: 'plan' },
 ];
+
+// Read-only display only - a tone per field so the four sections scan at a glance.
+const SOAP_TONES = { subjective: 'info', objective: 'primary', assessment: 'warning', plan: 'success' };
 
 const TONES = {
   info: { bg: adTokens.infoLight, color: adTokens.infoDark },
@@ -72,31 +76,21 @@ function getInitials(name) {
   return (words[0][0] + words[words.length - 1][0]).toUpperCase();
 }
 
-function InfoCell({ icon, label, value }) {
-  return (
-    <View style={styles.infoCell}>
-      <View style={styles.infoCellIcon}>
-        <MaterialCommunityIcons name={icon} size={16} color={adTokens.primaryDark} />
-      </View>
-      <Text style={styles.infoCellLabel}>{label}</Text>
-      <Text style={styles.infoCellValue} numberOfLines={1}>
-        {value}
-      </Text>
-    </View>
-  );
-}
-
-function Avatar({ name, imageUrl, size = 64 }) {
+function Avatar({ name, imageUrl, size = 64, ringColor }) {
   const [failed, setFailed] = useState(false);
   const shape = { width: size, height: size, borderRadius: size / 2 };
-  if (imageUrl && !failed) {
-    return <Image source={{ uri: imageUrl }} style={shape} onError={() => setFailed(true)} />;
-  }
-  return (
-    <View style={[shape, styles.avatarFallback]}>
-      <Text style={[styles.avatarText, { fontSize: size * 0.3 }]}>{getInitials(name)}</Text>
-    </View>
-  );
+  const ring = ringColor
+    ? { borderWidth: 3, borderColor: ringColor, padding: 2, borderRadius: size / 2 + 3 }
+    : null;
+  const content =
+    imageUrl && !failed ? (
+      <Image source={{ uri: imageUrl }} style={shape} onError={() => setFailed(true)} />
+    ) : (
+      <View style={[shape, styles.avatarFallback]}>
+        <Text style={[styles.avatarText, { fontSize: size * 0.3 }]}>{getInitials(name)}</Text>
+      </View>
+    );
+  return ring ? <View style={ring}>{content}</View> : content;
 }
 
 function Pill({ tone = 'neutral', children }) {
@@ -108,13 +102,20 @@ function Pill({ tone = 'neutral', children }) {
   );
 }
 
-function Card({ title, subtitle, accent, children }) {
+function Card({ title, subtitle, icon, accent, children }) {
   return (
-    <View style={[styles.card, accent && { borderColor: accent }]}>
+    <View style={[styles.card, accent && { borderLeftWidth: 4, borderLeftColor: accent }]}>
       {title ? (
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>{title}</Text>
-          {subtitle ? <Text style={styles.cardSubtitle}>{subtitle}</Text> : null}
+        <View style={styles.cardHeaderRow}>
+          {icon ? (
+            <View style={[styles.cardHeaderIcon, accent && { backgroundColor: `${accent}1F` }]}>
+              <MaterialCommunityIcons name={icon} size={16} color={accent || adTokens.primaryDark} />
+            </View>
+          ) : null}
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>{title}</Text>
+            {subtitle ? <Text style={styles.cardSubtitle}>{subtitle}</Text> : null}
+          </View>
         </View>
       ) : null}
       {children}
@@ -134,9 +135,9 @@ function FieldLine({ label, value }) {
 const pharmacyName = (pharmacy) => pharmacy?.StoreName || pharmacy?.storeName || pharmacy?.Name || 'Unknown Pharmacy';
 
 function PrescriptionCard({ rx, drugNames, pharmacies, actions }) {
-  const [open, setOpen] = useState(false);
   const label = getMedicationLabel(rx, drugNames);
   const status = rx.Status ?? rx.status;
+  const rxToneColor = (TONES[getPrescriptionStatusTone(status)] || TONES.neutral).color;
   const cancellationLabel = getCancellationStatusLabel(status);
   const medStatus = rx.medicationStatus ?? rx.MedicationStatus;
   const renewalLabel = getRenewalPrescriptionLabel(rx);
@@ -157,48 +158,43 @@ function PrescriptionCard({ rx, drugNames, pharmacies, actions }) {
       : '—';
 
   return (
-    <View style={styles.rx}>
-      <Pressable style={styles.rxHeader} onPress={() => setOpen((value) => !value)}>
-        <View style={styles.rxIcon}>
-          <MaterialCommunityIcons name="pill" size={20} color={adTokens.primary} />
+    <View style={[styles.rx, { borderLeftWidth: 3, borderLeftColor: rxToneColor }]}>
+      <View style={styles.rxHeader}>
+        <View style={[styles.rxIcon, { backgroundColor: `${rxToneColor}1F` }]}>
+          <MaterialCommunityIcons name="pill" size={20} color={rxToneColor} />
         </View>
         <View style={styles.rxBody}>
-          <Text style={styles.rxName} numberOfLines={open ? undefined : 2}>
-            {label ?? 'Loading…'}
-          </Text>
+          <Text style={styles.rxName}>{label ?? 'Loading…'}</Text>
           <View style={styles.rxPills}>
             <Pill tone={getPrescriptionStatusTone(status)}>{cancellationLabel || status || 'Unknown'}</Pill>
             {renewalLabel ? <Pill tone={renewalLabel === 'Renewal Approved' ? 'success' : 'info'}>{renewalLabel}</Pill> : null}
           </View>
         </View>
-        <Feather name={open ? 'chevron-up' : 'chevron-down'} size={18} color={adTokens.textSecondary} />
-      </Pressable>
+      </View>
 
-      {open ? (
-        <View style={styles.rxDetails}>
-          <FieldLine label="Written" value={writtenText} />
-          <FieldLine label="Pharmacy" value={pharmacyText} />
-          <FieldLine label="Days supply" value={naText(rx.DaysSupply)} />
-          <FieldLine label="Quantity" value={naText(rx.Quantity)} />
-          <FieldLine label="Refills" value={naText(rx.Refills)} />
-          <FieldLine label="Type" value={naText(rx.prescriptionType ?? rx.Type)} />
-          <FieldLine label="Medication status" value={medStatus ? String(medStatus) : 'N/A'} />
-          {ingredients.length > 0 ? (
-            <View style={styles.ingredients}>
-              <Text style={styles.fieldLabel}>Ingredients</Text>
-              {ingredients.map((ingredient, index) => {
-                const drugId = ingredient?.DispensableDrugId ?? ingredient?.dispensableDrugId;
-                const name = drugId ? drugNames[String(drugId)] || `Drug #${drugId}` : 'N/A';
-                return (
-                  <Text key={`${drugId ?? index}-${index}`} style={styles.ingredient}>
-                    • {name}
-                  </Text>
-                );
-              })}
-            </View>
-          ) : null}
-        </View>
-      ) : null}
+      <View style={styles.rxDetails}>
+        <FieldLine label="Written" value={writtenText} />
+        <FieldLine label="Pharmacy" value={pharmacyText} />
+        <FieldLine label="Days supply" value={naText(rx.DaysSupply)} />
+        <FieldLine label="Quantity" value={naText(rx.Quantity)} />
+        <FieldLine label="Refills" value={naText(rx.Refills)} />
+        <FieldLine label="Type" value={naText(rx.prescriptionType ?? rx.Type)} />
+        <FieldLine label="Medication status" value={medStatus ? String(medStatus) : 'N/A'} />
+        {ingredients.length > 0 ? (
+          <View style={styles.ingredients}>
+            <Text style={styles.fieldLabel}>Ingredients</Text>
+            {ingredients.map((ingredient, index) => {
+              const drugId = ingredient?.DispensableDrugId ?? ingredient?.dispensableDrugId;
+              const name = drugId ? drugNames[String(drugId)] || `Drug #${drugId}` : 'N/A';
+              return (
+                <Text key={`${drugId ?? index}-${index}`} style={styles.ingredient}>
+                  • {name}
+                </Text>
+              );
+            })}
+          </View>
+        ) : null}
+      </View>
       {actions && (actions.canView || actions.canDelete || actions.canCancel) ? (
         <View style={styles.rxActions}>
           {actions.canView ? (
@@ -581,6 +577,17 @@ export default function TreatmentPlanDetailPage() {
     return isPatient ? rows.filter((rx) => isPatientVisiblePrescriptionStatus(rx.Status ?? rx.status)) : rows;
   }, [detail?.prescriptions, isPatient]);
 
+  // Web (DoctorTreatmentDetail.jsx): the "Add/Continue a prescription" CTA only shows for an
+  // InProgress appointment - not Scheduled, Completed, or Cancelled. "Continue" (and skipping
+  // straight to the medication-search step) instead of "Add" is shown when this appointment
+  // already has an Entered/Edited prescription in flight.
+  const isInProgressAppointment = normalizeDoseSpotStatusKey(detail?.appointmentStatus) === 'inprogress';
+  const inProgressPrescription = useMemo(
+    () => prescriptions.find((rx) => ['entered', 'edited'].includes(normalizeDoseSpotStatusKey(rx.Status ?? rx.status))),
+    [prescriptions],
+  );
+  const canContinuePrescription = Boolean(inProgressPrescription);
+
   // Resolve drug names (SelectMedication) and pharmacy records (GetPharmacyById) once per id.
   useEffect(() => {
     const ids = [...new Set(prescriptions.flatMap(getDrugIdsForRow))].filter((id) => !fetchedDrugs.current.has(id));
@@ -659,19 +666,15 @@ export default function TreatmentPlanDetailPage() {
       contentContainerStyle={[styles.content, { paddingBottom: 32 + dockInset }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <View style={styles.card}>
+      <View style={[styles.card, styles.profileCard]}>
         <View style={styles.profileCenter}>
-          <Avatar name={counterpartName} imageUrl={imageUrl} size={76} />
+          <Avatar name={counterpartName} imageUrl={imageUrl} size={76} ringColor={statusAccentColor(detail.appointmentStatus)} />
           <Text style={styles.profileLabel}>{isPatient ? 'Doctor' : 'Patient'}</Text>
-          <Text style={styles.profileName} numberOfLines={2}>
-            {counterpartName || '—'}
-          </Text>
+          <Text style={styles.profileName}>{counterpartName || '—'}</Text>
           {email ? (
             <View style={styles.metaRow}>
               <MaterialCommunityIcons name="email-outline" size={14} color={adTokens.textMuted} />
-              <Text style={styles.metaText} numberOfLines={1}>
-                {email}
-              </Text>
+              <Text style={styles.metaText}>{email}</Text>
             </View>
           ) : null}
           {!isPatient && symptomText ? (
@@ -682,16 +685,16 @@ export default function TreatmentPlanDetailPage() {
           ) : null}
         </View>
 
-        <View style={styles.infoGrid}>
+        <View style={styles.infoList}>
           {!isPatient ? (
             <>
-              <InfoCell icon="calendar-account-outline" label="Age" value={ageText || '—'} />
-              {detail.patientGender ? <InfoCell icon="gender-male-female" label="Gender" value={detail.patientGender} /> : null}
-              {detail.patientPhone ? <InfoCell icon="phone-outline" label="Phone" value={detail.patientPhone} /> : null}
+              <FieldLine label="Age" value={ageText || '—'} />
+              {detail.patientGender ? <FieldLine label="Gender" value={detail.patientGender} /> : null}
+              {detail.patientPhone ? <FieldLine label="Phone" value={detail.patientPhone} /> : null}
             </>
           ) : null}
-          {dateText ? <InfoCell icon="calendar-outline" label="Date" value={dateText} /> : null}
-          {timeText ? <InfoCell icon="clock-outline" label="Time" value={timeText} /> : null}
+          {dateText ? <FieldLine label="Date" value={dateText} /> : null}
+          {timeText ? <FieldLine label="Time" value={timeText} /> : null}
         </View>
 
         <View style={styles.statusRow}>
@@ -825,7 +828,7 @@ export default function TreatmentPlanDetailPage() {
       ) : null}
 
       {isPatient && remarks ? (
-        <Card title="Doctor's Remarks">
+        <Card title="Doctor's Remarks" icon="comment-text-outline" accent={adTokens.primary}>
           <Text style={styles.bodyText}>{remarks}</Text>
         </Card>
       ) : null}
@@ -833,7 +836,8 @@ export default function TreatmentPlanDetailPage() {
       {isPatient && hasFeedback ? (
         <Card
           title={`Patient Feedback${detail.feedbackRating ? ` (${detail.feedbackRating}/5)` : ''}`}
-          accent={adTokens.successLight}
+          icon="star"
+          accent={adTokens.successDark}
         >
           <Text style={styles.bodyText}>{detail.feedbackComment || 'No comment left.'}</Text>
         </Card>
@@ -868,25 +872,15 @@ export default function TreatmentPlanDetailPage() {
       ) : null}
 
       {!isPatient ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabBar}>
-          {DETAIL_TABS.map((tab) => {
-            const active = activeTab === tab.key;
-            return (
-              <Pressable key={tab.key} style={[styles.tabChip, active && styles.tabChipActive]} onPress={() => setActiveTab(tab.key)}>
-                <MaterialCommunityIcons name={tab.icon} size={15} color={active ? adTokens.white : adTokens.textSecondary} />
-                <Text style={[styles.tabChipText, active && styles.tabChipTextActive]}>{tab.label}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <SegmentedTabs tabs={DETAIL_TABS} activeKey={activeTab} onChange={setActiveTab} scrollable style={styles.tabBar} />
       ) : null}
 
       {!isPatient && activeTab === 'consultation' ? (
         <>
           <Card title="Appointment Information">
-            {actionMeta.isMessageVisible || actionMeta.isAudioVisible || actionMeta.isVideoVisible ? (
+            {actionMeta?.isMessageVisible || actionMeta?.isAudioVisible || actionMeta?.isVideoVisible ? (
             <View style={styles.commGrid}>
-              {actionMeta.isMessageVisible ? (
+              {actionMeta?.isMessageVisible ? (
                 <Pressable
                   style={[styles.commButton, isRealtimeDisabled && styles.commButtonDisabled]}
                   disabled={isRealtimeDisabled || isChatLoading}
@@ -900,7 +894,7 @@ export default function TreatmentPlanDetailPage() {
                   <Text style={styles.commButtonText}>Chat</Text>
                 </Pressable>
               ) : null}
-              {!isNurse && actionMeta.isAudioVisible ? (
+              {!isNurse && actionMeta?.isAudioVisible ? (
                 <Pressable
                   style={[styles.commButton, isRealtimeDisabled && styles.commButtonDisabled]}
                   disabled={isRealtimeDisabled}
@@ -910,7 +904,7 @@ export default function TreatmentPlanDetailPage() {
                   <Text style={styles.commButtonText}>Call</Text>
                 </Pressable>
               ) : null}
-              {!isNurse && actionMeta.isVideoVisible ? (
+              {!isNurse && actionMeta?.isVideoVisible ? (
                 <Pressable
                   style={[styles.commButton, isRealtimeDisabled && styles.commButtonDisabled]}
                   disabled={isRealtimeDisabled}
@@ -1009,18 +1003,24 @@ export default function TreatmentPlanDetailPage() {
             </View>
           </>
         ) : soapEmpty ? (
-          <Text style={styles.emptyText}>
-            {isPatient
-              ? 'No SOAP notes have been submitted for you yet.'
-              : 'No SOAP notes have been submitted for this appointment yet.'}
-          </Text>
+          <View style={styles.soapEmptyState}>
+            <MaterialCommunityIcons name="note-text-outline" size={26} color={adTokens.textMuted} />
+            <Text style={styles.emptyText}>
+              {isPatient
+                ? 'No SOAP notes have been submitted for you yet.'
+                : 'No SOAP notes have been submitted for this appointment yet.'}
+            </Text>
+          </View>
         ) : (
-          SOAP_FIELDS.map(({ label, key }) => (
-            <View key={key} style={styles.soapBlock}>
-              <Text style={styles.soapLabel}>{label}</Text>
-              <Text style={styles.bodyText}>{String(detail[key] ?? '').trim() || '—'}</Text>
-            </View>
-          ))
+          SOAP_FIELDS.map(({ label, key }) => {
+            const tone = TONES[SOAP_TONES[key]] || TONES.neutral;
+            return (
+              <View key={key} style={[styles.soapBlockReadOnly, { borderLeftColor: tone.color }]}>
+                <Pill tone={SOAP_TONES[key]}>{label}</Pill>
+                <Text style={styles.bodyText}>{String(detail[key] ?? '').trim() || '—'}</Text>
+              </View>
+            );
+          })
         )}
       </Card>
       ) : null}
@@ -1049,7 +1049,7 @@ export default function TreatmentPlanDetailPage() {
         title={isPatient ? 'Your prescriptions' : 'Prescriptions'}
         subtitle={isPatient ? 'View your prescriptions for this visit' : undefined}
       >
-        {canPrescribe && actionMeta?.doseSpotId ? (
+        {canPrescribe && actionMeta?.doseSpotId && isInProgressAppointment ? (
           <Pressable
             style={styles.addPrescriptionButton}
             onPress={() =>
@@ -1058,11 +1058,16 @@ export default function TreatmentPlanDetailPage() {
                 doseSpotPatientId: actionMeta?.doseSpotId,
                 patientId: actionMeta?.userId,
                 patientName: counterpartName,
+                ...(canContinuePrescription
+                  ? { initialStepIndex: 1, initialPharmacyId: inProgressPrescription?.PharmacyId ?? null }
+                  : null),
               })
             }
           >
-            <Feather name="plus" size={14} color={adTokens.primaryDark} />
-            <Text style={styles.addPrescriptionButtonText}>Add Prescription</Text>
+            <Feather name={canContinuePrescription ? 'arrow-right' : 'plus'} size={14} color={adTokens.primaryDark} />
+            <Text style={styles.addPrescriptionButtonText}>
+              {canContinuePrescription ? 'Continue Prescription' : 'Add Prescription'}
+            </Text>
           </Pressable>
         ) : null}
         {prescriptions.length === 0 ? (
@@ -1194,10 +1199,20 @@ const styles = StyleSheet.create({
     gap: 10,
     ...adTokens.cardShadow,
   },
-  cardHeader: { gap: 2 },
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  cardHeaderIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: adTokens.primaryTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardHeader: { flex: 1, gap: 2 },
   cardTitle: { fontSize: 16, fontWeight: '700', color: adTokens.textPrimary },
   cardSubtitle: { fontSize: 12.5, color: adTokens.textSecondary },
 
+  profileCard: {},
   profileCenter: { alignItems: 'center', gap: 6 },
   profileLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, color: adTokens.primary, textTransform: 'uppercase', marginTop: 8 },
   profileName: { fontSize: 18, fontWeight: '800', color: adTokens.textPrimary, textAlign: 'center' },
@@ -1207,42 +1222,19 @@ const styles = StyleSheet.create({
   avatarFallback: { backgroundColor: '#279EFF', alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontWeight: '700', color: adTokens.white },
 
-  infoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+  infoList: {
     gap: 10,
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: adTokens.border,
   },
-  infoCell: {
-    width: 92,
-    alignItems: 'center',
-    gap: 3,
-    paddingVertical: 12,
-    paddingHorizontal: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: adTokens.border,
-    backgroundColor: adTokens.gray50,
-  },
-  infoCellIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: adTokens.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 2,
-  },
-  infoCellLabel: { fontSize: 10, fontWeight: '700', color: adTokens.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4 },
-  infoCellValue: { fontSize: 13, fontWeight: '700', color: adTokens.textPrimary, textAlign: 'center' },
 
   bodyText: { fontSize: 14, color: adTokens.textPrimary, lineHeight: 20 },
   emptyText: { fontSize: 13.5, color: adTokens.textSecondary, textAlign: 'center', paddingVertical: 10 },
   soapBlock: { gap: 3 },
+  soapBlockReadOnly: { gap: 6, paddingLeft: 10, paddingVertical: 2, borderLeftWidth: 3 },
+  soapEmptyState: { alignItems: 'center', gap: 8, paddingVertical: 12 },
   soapLabel: { fontSize: 13, fontWeight: '700', color: adTokens.primaryDark },
   soapInput: {
     minHeight: 64,
@@ -1322,11 +1314,7 @@ const styles = StyleSheet.create({
     backgroundColor: adTokens.primaryLight,
   },
   addPrescriptionButtonText: { fontSize: 12.5, fontWeight: '700', color: adTokens.primaryDark },
-  tabBar: { gap: 8, paddingVertical: 2 },
-  tabChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: adTokens.border, backgroundColor: adTokens.white },
-  tabChipActive: { backgroundColor: adTokens.primary, borderColor: adTokens.primary },
-  tabChipText: { fontSize: 12.5, fontWeight: '700', color: adTokens.textSecondary },
-  tabChipTextActive: { color: adTokens.white },
+  tabBar: { marginVertical: 2 },
   checkNowButton: { alignSelf: 'flex-start' },
   symptomPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EEF2FF', paddingVertical: 4, paddingHorizontal: 12, borderRadius: 999, marginTop: 2 },
   symptomText: { fontSize: 12.5, fontWeight: '600', color: '#4F46E5' },

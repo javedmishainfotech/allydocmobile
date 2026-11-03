@@ -7,6 +7,7 @@ import { useNotifications } from '../../hooks/useNotifications';
 import { timeAgo, notificationVisual, cleanNotificationMessage } from '../../utils/notificationUtils';
 import { adTokens } from '../../theme/colors';
 import { useDockInset } from '../../navigation/DockInsetContext';
+import SegmentedTabs from '../../components/ui/SegmentedTabs';
 
 const TABS = [
   { key: 'all', label: 'All', icon: 'inbox-outline' },
@@ -135,26 +136,12 @@ export default function DoctorNotificationPage() {
             </Pressable>
           </View>
 
-          <View style={styles.tabBar}>
-            {TABS.map((item) => {
-              const isActive = activeTab === item.key;
-              const count = item.key === 'unread' ? unreadCount : total;
-              return (
-                <Pressable key={item.key} style={styles.tabButton} onPress={() => setActiveTab(item.key)}>
-                  <MaterialCommunityIcons
-                    name={item.icon}
-                    size={15}
-                    color={isActive ? adTokens.primary : adTokens.textSecondary}
-                  />
-                  <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
-                    {item.label}
-                    {item.key === activeTab && count > 0 ? ` (${count})` : ''}
-                  </Text>
-                  {isActive ? <View style={styles.tabUnderline} /> : null}
-                </Pressable>
-              );
-            })}
-          </View>
+          <SegmentedTabs
+            tabs={TABS.map((item) => ({ ...item, count: item.key === 'unread' ? unreadCount : total }))}
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            style={styles.tabBar}
+          />
         </>
       }
       ListEmptyComponent={
@@ -211,27 +198,7 @@ const styles = StyleSheet.create({
   markAllText: { fontSize: 12, fontWeight: '600', color: adTokens.primary },
   markAllTextDisabled: { color: adTokens.textMuted },
 
-  tabBar: {
-    flexDirection: 'row',
-    borderBottomWidth: 2,
-    borderBottomColor: adTokens.gray100,
-    paddingHorizontal: 16,
-    marginTop: 14,
-    marginBottom: 14,
-    gap: 4,
-  },
-  tabButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 10 },
-  tabLabel: { fontSize: 13, fontWeight: '600', color: adTokens.textSecondary },
-  tabLabelActive: { color: adTokens.primary, fontWeight: '700' },
-  tabUnderline: {
-    position: 'absolute',
-    bottom: -2,
-    left: 10,
-    right: 10,
-    height: 2,
-    backgroundColor: adTokens.primary,
-    borderRadius: 1,
-  },
+  tabBar: { marginHorizontal: 16, marginTop: 14, marginBottom: 14 },
 
   content: { paddingBottom: 32 },
   rowGap: { height: 10 },

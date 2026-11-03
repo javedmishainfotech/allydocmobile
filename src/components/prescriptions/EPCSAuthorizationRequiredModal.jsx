@@ -3,6 +3,7 @@ import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { useAuth } from '../../hooks/useAuth';
 import { setItem } from '../../utils/storage';
 import { setPin, updateDoseSpotStatus } from '../../services/settingsService';
@@ -99,6 +100,7 @@ export default function EPCSAuthorizationRequiredModal({ visible, tfaCompleted, 
   return (
     <>
       <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+        <Toast />
         <View style={styles.backdrop}>
           <View style={styles.card}>
             <View style={styles.header}>

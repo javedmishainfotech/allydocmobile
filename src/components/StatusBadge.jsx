@@ -20,6 +20,13 @@ const STATUS_CONFIG = {
   inactive: { bg: adTokens.gray100, color: adTokens.textSecondary, label: 'Inactive' },
 };
 
+/** Same color a status's badge uses, for callers that want to echo it elsewhere on a card
+ * (e.g. a left accent bar) without duplicating this lookup table. */
+export function statusAccentColor(status) {
+  const normalized = String(status || '').toLowerCase().trim();
+  return (STATUS_CONFIG[normalized] || { color: adTokens.border }).color;
+}
+
 export default function StatusBadge({ status, showDot = true }) {
   const normalized = String(status || '').toLowerCase().trim();
   const config = STATUS_CONFIG[normalized] || { bg: adTokens.gray100, color: adTokens.textSecondary, label: status || 'Unknown' };

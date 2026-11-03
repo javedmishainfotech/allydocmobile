@@ -11,7 +11,7 @@ import { callApi } from '../utils/apiResponse';
  */
 
 // ---- Coverage / Eligibilities (read-only on web too) ----
-export function cgetPatientEligibilities(doseSpotPatientId) {
+export function getPatientEligibilities(doseSpotPatientId) {
   return callApi(() => apiClient.get(`/api/Eligibilities/${doseSpotPatientId}/eligibilities`));
 }
 

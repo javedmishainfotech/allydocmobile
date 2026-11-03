@@ -13,7 +13,7 @@ import {
 } from '../../utils/appointmentListApi';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import { getInfoButtonProps } from '../../utils/appointmentFields';
-import StatusBadge from '../../components/StatusBadge';
+import StatusBadge, { statusAccentColor } from '../../components/StatusBadge';
 import AppointmentInfoButton from '../../components/AppointmentInfoButton';
 import AppointmentFilterSheet, { doctorPerson } from '../../components/appointments/AppointmentFilterSheet';
 import ReviewSheet from '../../components/feedback/ReviewSheet';
@@ -78,10 +78,11 @@ function AppointmentCardRow({ appointment, onOpen, onGiveFeedback }) {
   const specialization = [appointment?.specialization, appointment?.hospital].filter(Boolean).join(' · ');
   const showTreatmentPlan = status === 'completed' || status === 'inprogress';
   const showGiveFeedback = status === 'completed' && appointment?.isFeedback == null && appointmentId != null;
+  const accentColor = statusAccentColor(appointment?.appointmentStatus);
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+      style={({ pressed }) => [styles.row, { borderLeftColor: accentColor }, pressed && styles.rowPressed]}
       onPress={() => appointmentId != null && onOpen(appointmentId)}
     >
       <View style={styles.rowTop}>
@@ -102,27 +103,37 @@ function AppointmentCardRow({ appointment, onOpen, onGiveFeedback }) {
             <Text style={styles.metaText}>{display.timeWithZone}</Text>
           </View>
         </View>
+        <StatusBadge status={appointment?.appointmentStatus} />
       </View>
+
+      <View style={styles.divider} />
 
       <View style={styles.rowBottom}>
         <View style={styles.statusRow}>
-          <StatusBadge status={appointment?.appointmentStatus} />
           <AppointmentInfoButton {...getInfoButtonProps(appointment)} />
           <FeedbackSummary appointment={appointment} />
         </View>
         <View style={styles.actions}>
           {showTreatmentPlan ? (
             <Pressable style={styles.actionButton} onPress={() => onOpen(appointmentId)} accessibilityLabel="Treatment plan">
-              <MaterialCommunityIcons name="clipboard-text-outline" size={16} color={adTokens.primaryDark} />
+              <MaterialCommunityIcons name="clipboard-text-outline" size={15} color={adTokens.primaryDark} />
               <Text style={styles.actionText}>Treatment Plan</Text>
             </Pressable>
           ) : null}
           {showGiveFeedback ? (
             <Pressable style={styles.actionButton} onPress={() => onGiveFeedback(appointment)} accessibilityLabel="Give feedback">
-              <MaterialCommunityIcons name="star-outline" size={16} color={adTokens.primaryDark} />
+              <MaterialCommunityIcons name="star-outline" size={15} color={adTokens.primaryDark} />
               <Text style={styles.actionText}>Give Feedback</Text>
             </Pressable>
           ) : null}
+          <Pressable
+            style={[styles.actionButton, styles.actionButtonGhost]}
+            onPress={() => appointmentId != null && onOpen(appointmentId)}
+            accessibilityLabel="View details"
+          >
+            <MaterialCommunityIcons name="eye-outline" size={15} color={adTokens.textSecondary} />
+            <Text style={[styles.actionText, styles.actionTextGhost]}>Details</Text>
+          </Pressable>
         </View>
       </View>
     </Pressable>
@@ -356,25 +367,28 @@ const styles = StyleSheet.create({
 
   rowPressed: { backgroundColor: adTokens.gray50 },
   row: {
-    padding: 12,
+    padding: 14,
+    paddingLeft: 12,
     gap: 10,
     borderRadius: adTokens.cardBorderRadius,
     borderWidth: 1,
+    borderLeftWidth: 4,
     borderColor: adTokens.border,
     backgroundColor: adTokens.white,
     ...adTokens.cardShadow,
   },
-  rowTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   rowBody: { flex: 1, gap: 3 },
-  avatar: { width: 48, height: 48, borderRadius: 24 },
+  avatar: { width: 50, height: 50, borderRadius: 25 },
   avatarFallback: { backgroundColor: '#279EFF', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 14, fontWeight: '700', color: adTokens.white },
-  name: { fontSize: 14.5, fontWeight: '700', color: adTokens.textPrimary },
-  specialization: { fontSize: 12, color: adTokens.textSecondary },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' },
+  avatarText: { fontSize: 15, fontWeight: '700', color: adTokens.white },
+  name: { fontSize: 15, fontWeight: '700', color: adTokens.textPrimary },
+  specialization: { fontSize: 12, color: adTokens.textSecondary, textTransform: 'capitalize' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap', marginTop: 2 },
   metaGap: { marginLeft: 8 },
-  metaText: { fontSize: 12, color: adTokens.textSecondary },
-  rowBottom: { gap: 8 },
+  metaText: { fontSize: 12, color: adTokens.textSecondary, fontWeight: '500' },
+  divider: { height: 1, backgroundColor: adTokens.border },
+  rowBottom: { gap: 10 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   feedbackChip: {
     flexDirection: 'row',
@@ -397,6 +411,8 @@ const styles = StyleSheet.create({
     backgroundColor: adTokens.primaryLight,
   },
   actionText: { fontSize: 12.5, fontWeight: '700', color: adTokens.primaryDark },
+  actionButtonGhost: { backgroundColor: adTokens.gray50, borderWidth: 1, borderColor: adTokens.border },
+  actionTextGhost: { color: adTokens.textSecondary },
 
   state: { alignItems: 'center', justifyContent: 'center', paddingVertical: 56, paddingHorizontal: 24, gap: 8 },
   stateTitle: { fontSize: 15, fontWeight: '700', color: adTokens.textPrimary },

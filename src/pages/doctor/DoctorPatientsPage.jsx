@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, RefreshControl, Modal, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { usePatients } from '../../hooks/usePatients';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -15,6 +16,7 @@ import PatientDetailModal from '../../components/patients/PatientDetailModal';
 import MergePatientTab from '../../components/settings/MergePatientTab';
 import { adTokens } from '../../theme/colors';
 import { useDockInset } from '../../navigation/DockInsetContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const PAGE_SIZE = 10;
 
@@ -83,6 +85,7 @@ function PatientRow({ patient, onOpen, onOpenAppointmentHistory }) {
  */
 export default function DoctorPatientsPage() {
   const dockInset = useDockInset();
+  const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const { getFreelancerPatients, getClinicPatients } = usePatients();
   // Same routing as the web's DoctorPatientsRoute.jsx: only a freelancer "doctor" uses
@@ -233,7 +236,8 @@ export default function DoctorPatientsPage() {
 
       <Modal visible={mergePatientVisible} animationType="slide" onRequestClose={() => setMergePatientVisible(false)}>
         <View style={styles.flex1}>
-          <View style={styles.mergeModalHeader}>
+          <Toast />
+          <View style={[styles.mergeModalHeader, { paddingTop: insets.top + 16 }]}>
             <Pressable onPress={() => setMergePatientVisible(false)} hitSlop={8}>
               <Feather name="chevron-left" size={22} color={adTokens.textPrimary} />
             </Pressable>
@@ -274,7 +278,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 16,
-    paddingTop: 48,
     borderBottomWidth: 1,
     borderBottomColor: adTokens.border,
   },

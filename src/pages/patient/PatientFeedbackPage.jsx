@@ -10,6 +10,7 @@ import Avatar from '../../components/Avatar';
 import ReviewSheet from '../../components/feedback/ReviewSheet';
 import { useDockInset } from '../../navigation/DockInsetContext';
 import { adTokens } from '../../theme/colors';
+import SegmentedTabs from '../../components/ui/SegmentedTabs';
 
 const COMPLETED_ONLY = { status: ['completed'] };
 
@@ -137,25 +138,15 @@ export default function PatientFeedbackPage() {
   const currentList = activeTab === 'pending' ? pending : reviewed;
 
   const tabs = (
-    <View style={styles.tabs}>
-      {[
+    <SegmentedTabs
+      tabs={[
         { key: 'pending', label: 'Pending', icon: 'message-processing-outline', count: pending.length },
         { key: 'reviewed', label: 'Reviewed', icon: 'check-all', count: reviewed.length },
-      ].map((tab) => {
-        const active = activeTab === tab.key;
-        return (
-          <Pressable key={tab.key} style={[styles.tab, active && styles.tabActive]} onPress={() => setActiveTab(tab.key)}>
-            <MaterialCommunityIcons name={tab.icon} size={16} color={active ? adTokens.white : adTokens.textSecondary} />
-            <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
-            {tab.count > 0 ? (
-              <View style={[styles.tabCount, active && styles.tabCountActive]}>
-                <Text style={[styles.tabCountText, active && styles.tabCountTextActive]}>{tab.count}</Text>
-              </View>
-            ) : null}
-          </Pressable>
-        );
-      })}
-    </View>
+      ]}
+      activeKey={activeTab}
+      onChange={setActiveTab}
+      style={styles.tabs}
+    />
   );
 
   return (
@@ -214,15 +205,7 @@ const styles = StyleSheet.create({
 
   header: { gap: 12, marginBottom: 14 },
   subtitle: { fontSize: 13, color: adTokens.textSecondary },
-  tabs: { flexDirection: 'row', gap: 8, padding: 4, borderRadius: 14, backgroundColor: adTokens.gray100 },
-  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 11 },
-  tabActive: { backgroundColor: adTokens.primary },
-  tabText: { fontSize: 13, fontWeight: '700', color: adTokens.textSecondary },
-  tabTextActive: { color: adTokens.white },
-  tabCount: { minWidth: 20, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 999, backgroundColor: adTokens.white, alignItems: 'center' },
-  tabCountActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
-  tabCountText: { fontSize: 11.5, fontWeight: '800', color: adTokens.primaryDark },
-  tabCountTextActive: { color: adTokens.white },
+  tabs: {},
 
   card: {
     padding: 12,

@@ -10,6 +10,7 @@ import QuestionnaireWizard from '../../components/booking/QuestionnaireWizard';
 import { ConsentStep, ConditionStep, MedicalInfoStep, ResumePrompt, SuccessStep } from '../../components/booking/BookingSteps';
 import { DateTimeStep, PaymentStep } from '../../components/booking/BookingPaymentSteps';
 import { adTokens } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 
 export const BOOK_APPOINTMENT_ROUTE = 'BookAppointment';
 
@@ -25,6 +26,7 @@ const RESUME_STEP_INDEX = { Consent: 1, Questionnaire: 3, DateTime: 4 };
  * found on open can be continued exactly where it stopped, or dismissed.
  */
 export default function BookAppointmentPage() {
+  const bottomSafe = useBottomSafeSpacing();
   const navigation = useNavigation();
   const route = useRoute();
   const { profile } = useAuth();
@@ -158,11 +160,11 @@ export default function BookAppointmentPage() {
       {/* One screen-level card holds everything the current step renders (header, fields, buttons) -
           web: the modal's `.bk-card` + `.bk-card-body`, not a shadow/border on each inner section. */}
       {isConsentStep ? (
-        <View style={styles.consentContent}>
+        <View style={[styles.consentContent, { paddingBottom: 12 + bottomSafe }]}>
           <View style={[styles.screenCard, styles.flex1]}>{renderStep()}</View>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 32 + bottomSafe }]} keyboardShouldPersistTaps="handled">
           <View style={styles.screenCard}>{renderStep()}</View>
         </ScrollView>
       )}

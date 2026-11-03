@@ -1,7 +1,9 @@
 import React from 'react';
 import { Modal, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { colors, adTokens } from '../theme/colors';
+import { useBottomSafeSpacing } from '../hooks/useBottomSafeSpacing';
 
 const COPY = {
   cancelled: {
@@ -29,14 +31,16 @@ export default function ConfirmationModal({
   onClose,
   onConfirm,
 }) {
+  const bottomSafe = useBottomSafeSpacing();
   const copy = COPY[type] || COPY.completed;
   const isCancelReasonValid = type === 'cancelled' ? cancelReason.trim().length >= 4 : true;
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={styles.card}>
+        <View style={[styles.card, { paddingBottom: 28 + bottomSafe }]}>
           <View style={styles.handle} />
           <Text style={styles.title}>{copy.title}</Text>
 

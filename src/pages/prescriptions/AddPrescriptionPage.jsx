@@ -6,7 +6,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { usePatients } from '../../hooks/usePatients';
 import { getAppointmentDetails } from '../../services/pendingRequestDetailsService';
-import { searchMedications, selectMedication } from '../../services/doseSpotClinicalService';
+import { searchMedications, selectMedication, getPharmacyById } from '../../services/doseSpotClinicalService';
 import {
   addCodedPrescription,
   editCodedPrescription,
@@ -47,6 +47,8 @@ import EPCSAuthorizationRequiredModal from '../../components/prescriptions/EPCSA
 import PrescriptionItemCard, { rxField, rxIdOf, rxNameOf, rxTypeOf } from '../../components/prescriptions/PrescriptionItemCard';
 import StatusBadge from '../../components/StatusBadge';
 import { adTokens, colors } from '../../theme/colors';
+import SegmentedTabs from '../../components/ui/SegmentedTabs';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 
 const STEPS = [
   { key: 'pharmacy', label: 'Select Pharmacy' },
@@ -179,19 +181,57 @@ function ContextHeader({ patient, doctor, appointment, fallbackPatientName }) {
       {!collapsed ? (
         <View style={styles.contextBody}>
           <Text style={styles.contextLabel}>Patient</Text>
-          <Text style={styles.contextName}>Patient Name: {patientName}</Text>
-          {dateText ? <Text style={styles.contextLine}>{dateText}</Text> : null}
-          <Text style={styles.contextLine}>
-            Disease : {appointment?.appointmentReason || appointment?.symtom || '-'} | Age : {appointment?.patientAge || appointment?.age || '-'}
-          </Text>
-          {patient?.email || patient?.Email ? <Text style={styles.contextLine}>{patient.email || patient.Email}</Text> : null}
-          <Text style={styles.contextLine}>Address: {fullAddress(patient) || '—'}</Text>
+          <Text style={styles.contextName}>{patientName}</Text>
+          <View style={styles.contextBadgeRow}>
+            {appointment?.appointmentReason || appointment?.symtom ? (
+              <View style={[styles.contextBadge, styles.contextBadgeInfo]}>
+                <MaterialCommunityIcons name="pulse" size={13} color={adTokens.infoDark} />
+                <Text style={styles.contextBadgeTextInfo}>{appointment.appointmentReason || appointment.symtom}</Text>
+              </View>
+            ) : null}
+            {appointment?.patientAge || appointment?.age ? (
+              <View style={[styles.contextBadge, styles.contextBadgeNeutral]}>
+                <Text style={styles.contextBadgeTextNeutral}>Age {appointment.patientAge || appointment.age}</Text>
+              </View>
+            ) : null}
+            {dateText ? (
+              <View style={[styles.contextBadge, styles.contextBadgeNeutral]}>
+                <MaterialCommunityIcons name="calendar-clock-outline" size={13} color={adTokens.textSecondary} />
+                <Text style={styles.contextBadgeTextNeutral}>{dateText}</Text>
+              </View>
+            ) : null}
+          </View>
+          {patient?.email || patient?.Email ? (
+            <View style={styles.contextIconLine}>
+              <MaterialCommunityIcons name="email-outline" size={13} color={adTokens.textMuted} />
+              <Text style={styles.contextLine}>{patient.email || patient.Email}</Text>
+            </View>
+          ) : null}
+          <View style={styles.contextIconLine}>
+            <MaterialCommunityIcons name="map-marker-outline" size={13} color={adTokens.textMuted} />
+            <Text style={styles.contextLine}>{fullAddress(patient) || '—'}</Text>
+          </View>
 
           <Text style={[styles.contextLabel, styles.contextGap]}>Doctor</Text>
-          <Text style={styles.contextName}>Doctor Name: {fullName(doctor) || '—'}</Text>
-          {doctor?.email || doctor?.Email ? <Text style={styles.contextLine}>{doctor.email || doctor.Email}</Text> : null}
-          <Text style={styles.contextLine}>Address: {fullAddress(doctor) || '—'}</Text>
-          <Text style={styles.contextLine}>DEA Number: {dea || '—'}</Text>
+          <Text style={styles.contextName}>{fullName(doctor) || '—'}</Text>
+          {dea ? (
+            <View style={styles.contextBadgeRow}>
+              <View style={[styles.contextBadge, styles.contextBadgeWarning]}>
+                <MaterialCommunityIcons name="certificate-outline" size={13} color={adTokens.warningDark} />
+                <Text style={styles.contextBadgeTextWarning}>DEA {dea}</Text>
+              </View>
+            </View>
+          ) : null}
+          {doctor?.email || doctor?.Email ? (
+            <View style={styles.contextIconLine}>
+              <MaterialCommunityIcons name="email-outline" size={13} color={adTokens.textMuted} />
+              <Text style={styles.contextLine}>{doctor.email || doctor.Email}</Text>
+            </View>
+          ) : null}
+          <View style={styles.contextIconLine}>
+            <MaterialCommunityIcons name="map-marker-outline" size={13} color={adTokens.textMuted} />
+            <Text style={styles.contextLine}>{fullAddress(doctor) || '—'}</Text>
+          </View>
         </View>
       ) : null}
     </View>
@@ -210,15 +250,18 @@ function ContextHeader({ patient, doctor, appointment, fallbackPatientName }) {
  * Not ported (see docs/PROGRESS.md): Order Sets (an empty tab on web too).
  */
 export default function AddPrescriptionPage() {
+  const bottomSafe = useBottomSafeSpacing();
   const navigation = useNavigation();
   const route = useRoute();
   const { profile } = useAuth();
   const { getUserDetails } = usePatients();
-  const { appointmentId, doseSpotPatientId, patientId, patientName } = route.params || {};
+  const { appointmentId, doseSpotPatientId, patientId, patientName, initialStepIndex, initialPharmacyId } = route.params || {};
   const isFreelancerDoctor =
     String(profile?.userType || '').toLowerCase() === 'freelancer' && String(profile?.roleName || '').toLowerCase().trim() === 'doctor';
 
-  const [stepIndex, setStepIndex] = useState(0);
+  // "Continue Prescription" (TreatmentPlanDetailPage, an appointment with a prescription already
+  // in flight) lands here past the pharmacy step, since that pharmacy was already chosen earlier.
+  const [stepIndex, setStepIndex] = useState(initialStepIndex ?? 0);
 
   // ---- header context ----
   const [patientDetails, setPatientDetails] = useState(null);
@@ -234,6 +277,16 @@ export default function AddPrescriptionPage() {
 
   // ---- Step 1 ----
   const [selectedPharmacy, setSelectedPharmacy] = useState(null);
+  // Re-resolve the pharmacy used by the in-progress prescription we're continuing, since the
+  // wizard was entered straight at the medication-search step and never ran its own picker.
+  useEffect(() => {
+    if (!initialPharmacyId) return;
+    getPharmacyById(String(initialPharmacyId)).then((result) => {
+      const pharmacy = result.success ? result.data?.Item || result.data?.item || result.data : null;
+      if (pharmacy) setSelectedPharmacy(pharmacy);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPharmacyId]);
   const onPharmaciesLoaded = useCallback((items) => {
     const defaultPharmacy = items.find((p) => p.IsDefault === true || p.isDefault === true);
     if (defaultPharmacy) setSelectedPharmacy((current) => current || defaultPharmacy);
@@ -303,7 +356,11 @@ export default function AddPrescriptionPage() {
     setIsLoadingItems(true);
     const result = await getPatientPrescriptionsByStatus(doseSpotPatientId, { status: LIST_STATUSES, limit: 40 });
     const data = result.data || {};
-    setItems(Array.isArray(data.Items) ? data.Items : Array.isArray(data) ? data : []);
+    // The backend wraps the array as { totalRecords, page, ..., data: [...] } (lowercase `data`,
+    // not `Items`) - check that shape first, before the other two this already handled.
+    setItems(
+      Array.isArray(data.data) ? data.data : Array.isArray(data.Items) ? data.Items : Array.isArray(data) ? data : [],
+    );
     setIsLoadingItems(false);
   }, [doseSpotPatientId]);
 
@@ -529,15 +586,18 @@ export default function AddPrescriptionPage() {
     dispenseForm: DISPENSE_UNIT_NAMES[ing.DispenseUnitId] || 'Each',
   });
 
-  const openCustomCompound = (prefill = {}) =>
+  const openCustomCompound = (prefill = {}) => {
+    // `emptyCompoundForm`'s overrides are spread onto its defaults, so an explicit
+    // `ingredients: undefined` here would overwrite (not skip) the default single-empty-
+    // ingredient array and crash the modal's `form.ingredients.map(...)` - only include the
+    // key at all when there's real prefill data to use.
+    const hasIngredients = Array.isArray(prefill.CompoundIngredients) && prefill.CompoundIngredients.length > 0;
     setCompound({
       ...CLOSED_COMPOUND,
       visible: true,
       form: emptyCompoundForm({
         compoundName: prefill.Title || prefill.CompoundDescription || '',
-        ingredients: Array.isArray(prefill.CompoundIngredients) && prefill.CompoundIngredients.length
-          ? prefill.CompoundIngredients.map(compoundIngredientFromFavorite)
-          : undefined,
+        ...(hasIngredients ? { ingredients: prefill.CompoundIngredients.map(compoundIngredientFromFavorite) } : {}),
         noSubstitutions: Boolean(prefill.NoSubstitutions),
         patientDirections: prefill.Directions || '',
         totalDispense: prefill.Quantity != null ? String(prefill.Quantity) : '',
@@ -547,6 +607,7 @@ export default function AddPrescriptionPage() {
         pharmacyNotesText: prefill.Notes || '',
       }),
     });
+  };
 
   const saveCompound = async () => {
     setCompound((prev) => ({ ...prev, tried: true }));
@@ -728,7 +789,7 @@ export default function AddPrescriptionPage() {
         visible: true,
         form: emptyCompoundForm({
           compoundName: detail.DisplayName || rxNameOf(rx) || '',
-          ingredients: ingredients.length ? ingredients : undefined,
+          ...(ingredients.length ? { ingredients } : {}),
           noSubstitutions: Boolean(detail.NoSubstitutions),
           urgent: Boolean(detail.IsUrgent),
           patientDirections: String(detail.Directions ?? ''),
@@ -1024,7 +1085,7 @@ export default function AddPrescriptionPage() {
                   )}
                 </View>
                 <View style={styles.flex1}>
-                  <Text style={styles.resultName}>{drug.DisplayName}</Text>
+                  <Text style={styles.resultName}>{drug.NameWithRouteDoseForm || drug.name || drug.DisplayName || 'N/A'}</Text>
                   <Text style={styles.resultMeta}>{drug.Strength || 'N/A'}</Text>
                 </View>
                 <Feather name="plus-circle" size={22} color={adTokens.primaryDark} />
@@ -1135,23 +1196,16 @@ export default function AddPrescriptionPage() {
             ) : null}
 
             <View style={styles.card}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabBar}>
-                {tabs.map((tab) => {
-                  const active = visibleTab === tab.key;
-                  return (
-                    <Pressable
-                      key={tab.key}
-                      style={[styles.tab, active && styles.tabActive]}
-                      onPress={() => {
-                        setActiveTab(tab.key);
-                        setManualTab(tab.key !== 'medication-supplies');
-                      }}
-                    >
-                      <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
+              <SegmentedTabs
+                tabs={tabs}
+                activeKey={visibleTab}
+                onChange={(key) => {
+                  setActiveTab(key);
+                  setManualTab(key !== 'medication-supplies');
+                }}
+                scrollable
+                style={styles.tabBar}
+              />
               <View style={styles.tabBody}>
                 {visibleTab === 'medication-supplies' ? renderMedicationTab() : null}
                 {visibleTab === 'clinic-presets' ? <FavoritesList source="clinic" pendingId={pendingFavoriteId} onUse={applyFavorite} /> : null}
@@ -1232,7 +1286,7 @@ export default function AddPrescriptionPage() {
         ) : null}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: 16 + bottomSafe }]}>
         {stepIndex === 0 ? (
           <>
             <Pressable style={styles.secondaryButton} onPress={() => navigation.goBack()}>
@@ -1392,8 +1446,17 @@ const styles = StyleSheet.create({
   contextBody: { paddingHorizontal: 14, paddingBottom: 14, paddingTop: 10, gap: 3, borderTopWidth: 1, borderTopColor: adTokens.border },
   contextLabel: { fontSize: 11.5, fontWeight: '800', letterSpacing: 0.8, color: adTokens.primaryDark, textTransform: 'uppercase' },
   contextGap: { marginTop: 10 },
-  contextName: { fontSize: 14.5, fontWeight: '700', color: adTokens.textPrimary },
+  contextName: { fontSize: 14.5, fontWeight: '700', color: adTokens.textPrimary, marginBottom: 6 },
   contextLine: { fontSize: 13, color: adTokens.textSecondary, lineHeight: 18 },
+  contextIconLine: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  contextBadgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 2 },
+  contextBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4, paddingHorizontal: 9, borderRadius: 999 },
+  contextBadgeInfo: { backgroundColor: adTokens.infoLight },
+  contextBadgeTextInfo: { fontSize: 11.5, fontWeight: '700', color: adTokens.infoDark },
+  contextBadgeNeutral: { backgroundColor: adTokens.gray100 },
+  contextBadgeTextNeutral: { fontSize: 11.5, fontWeight: '700', color: adTokens.textSecondary },
+  contextBadgeWarning: { backgroundColor: adTokens.warningLight },
+  contextBadgeTextWarning: { fontSize: 11.5, fontWeight: '700', color: adTokens.warningDark },
 
   stepBar: {
     flexDirection: 'row',
@@ -1445,11 +1508,7 @@ const styles = StyleSheet.create({
   blockedBox: { flexDirection: 'row', gap: 10, padding: 12, borderRadius: 12, backgroundColor: adTokens.dangerLight, borderWidth: 1, borderColor: '#FECACA' },
   blockedText: { flex: 1, fontSize: 13, color: adTokens.dangerDark, lineHeight: 18 },
 
-  tabBar: { gap: 4, borderBottomWidth: 1, borderBottomColor: adTokens.border },
-  tab: { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 3, borderBottomColor: 'transparent' },
-  tabActive: { borderBottomColor: adTokens.primary },
-  tabText: { fontSize: 13.5, fontWeight: '700', color: adTokens.textSecondary },
-  tabTextActive: { color: adTokens.primaryDark },
+  tabBar: { marginBottom: 10 },
   tabBody: { gap: 10 },
 
   resultList: { gap: 8 },

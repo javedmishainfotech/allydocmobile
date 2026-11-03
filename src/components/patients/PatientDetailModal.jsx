@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import Toast from 'react-native-toast-message';
 import PatientPersonalInfoTab from './PatientPersonalInfoTab';
 import PatientAppointmentsTab from './PatientAppointmentsTab';
 import CoverageTab from './CoverageTab';
@@ -14,7 +16,9 @@ import PrescriptionsTab from './PrescriptionsTab';
 import PatientDetailTabBar from './PatientDetailTabBar';
 import { consentToMedicationHistory } from '../../services/doseSpotClinicalService';
 import { toast } from '../../utils/toast';
-import { adTokens } from '../../theme/colors';
+import { adTokens, colors } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Port of AllyDocReactApp's ViewPatientPage.jsx. The web version uses a
  * ?tab= query param with its own route; mobile models it as a full-screen
@@ -28,6 +32,8 @@ import { adTokens } from '../../theme/colors';
  * shares the one fetch instead of each one re-deriving it.
  */
 export default function PatientDetailModal({ visible, patientId, patientName, initialTab = 'personal', onClose }) {
+  const bottomSafe = useBottomSafeSpacing();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [doseSpotPatientId, setDoseSpotPatientId] = useState(null);
   const [consentModalVisible, setConsentModalVisible] = useState(false);
@@ -60,19 +66,26 @@ export default function PatientDetailModal({ visible, patientId, patientName, in
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.screen}>
-        <View style={styles.header}>
+        <Toast />
+        <LinearGradient
+          colors={colors.authGradient}
+          locations={[0, 0.4, 1]}
+          start={{ x: 0.3, y: 0 }}
+          end={{ x: 0.7, y: 1 }}
+          style={[styles.header, { paddingTop: insets.top + 14 }]}
+        >
           <Pressable onPress={onClose} hitSlop={8} style={styles.backButton}>
-            <Feather name="chevron-left" size={24} color={adTokens.textPrimary} />
+            <Feather name="chevron-left" size={24} color={colors.white} />
           </Pressable>
           <Text style={styles.headerTitle} numberOfLines={1}>
             Patient Details
           </Text>
           <View style={styles.backButton} />
-        </View>
+        </LinearGradient>
 
         <PatientDetailTabBar activeTab={activeTab} onSelectTab={handleTabPress} />
 
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 32 + bottomSafe }]}>
           {/* Always mounted (invisible when inactive) so its own
               GetUserDetails fetch resolves doseSpotPatientId regardless of
               which tab the modal opened on. */}
@@ -125,14 +138,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 16,
-    paddingTop: 54,
     paddingBottom: 14,
-    backgroundColor: adTokens.white,
-    borderBottomWidth: 1,
-    borderBottomColor: adTokens.border,
   },
   backButton: { width: 28, alignItems: 'flex-start' },
-  headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: adTokens.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: colors.white, textAlign: 'center' },
 
   content: { padding: 16, paddingBottom: 32 },
   hidden: { position: 'absolute', opacity: 0, height: 0, overflow: 'hidden' },

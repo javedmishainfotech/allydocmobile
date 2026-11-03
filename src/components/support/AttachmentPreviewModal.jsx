@@ -3,6 +3,7 @@ import { Modal, View, Text, Image, Pressable, StyleSheet, useWindowDimensions } 
 import { ActivityIndicator } from 'react-native-paper';
 import Pdf from 'react-native-pdf';
 import { Feather } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { downloadAttachmentToCache, shareAttachment } from '../../services/supportService';
 import { fileMeta, isImageAttachment, isPdfAttachment } from '../../utils/supportFields';
 import { adTokens } from '../../theme/colors';
@@ -37,6 +38,7 @@ export default function AttachmentPreviewModal({ attachment, onClose }) {
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <Toast />
       <View style={styles.screen}>
         <View style={styles.header}>
           <Text style={styles.title} numberOfLines={1}>

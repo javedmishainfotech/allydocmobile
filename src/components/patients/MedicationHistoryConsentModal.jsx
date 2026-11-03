@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { colors, adTokens } from '../../theme/colors';
 
 /** Port of AllyDocReactApp's MedicationHistoryConsentModal.jsx - shown EVERY
@@ -9,6 +10,7 @@ import { colors, adTokens } from '../../theme/colors';
 export default function MedicationHistoryConsentModal({ visible, isSubmitting, onConfirm, onCancel }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <Text style={styles.title}>Medication History Consent</Text>

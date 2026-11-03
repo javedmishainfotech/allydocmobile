@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { searchPatients, mergePatients } from '../../services/settingsService';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
@@ -163,6 +164,7 @@ export default function MergePatientTab() {
       )}
 
       <Modal visible={mergeRow != null} transparent animationType="fade" onRequestClose={() => !mergeLoading && setMergeRow(null)}>
+        <Toast />
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>

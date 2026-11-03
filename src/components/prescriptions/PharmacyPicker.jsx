@@ -4,6 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { usePatients } from '../../hooks/usePatients';
 import { searchPharmaciesAdvanced, addPatientPharmacy, deletePatientPharmacy } from '../../services/prescriptionService';
 import { getStates, getCitiesByStateId } from '../../services/identityProofingService';
@@ -94,8 +95,13 @@ function PharmacyCard({ pharmacy, selected, isDefault, isPreferred, dark, onPres
       ) : null}
       <View style={styles.cardActions}>
         {mapQuery ? (
-          <Pressable onPress={() => openExternalLink(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`)} hitSlop={6}>
-            <Text style={[styles.linkPrimary, dark && styles.linkPrimaryDark]}>View map</Text>
+          <Pressable
+            style={[styles.btn, styles.btnOutlineSecondary, dark && styles.btnOutlineSecondaryDark]}
+            onPress={() => openExternalLink(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`)}
+            hitSlop={6}
+          >
+            <Feather name="map-pin" size={13} color={dark ? adTokens.white : adTokens.textSecondary} />
+            <Text style={[styles.btnOutlineSecondaryText, dark && styles.btnOutlineSecondaryTextDark]}>View Map</Text>
           </Pressable>
         ) : null}
         {children}
@@ -279,14 +285,32 @@ export default function PharmacyPicker({ doseSpotPatientId, mode = 'select', sel
       >
         {mode === 'manage' && !isDefault ? (
           isPreferred ? (
-            <Pressable style={styles.linkButton} onPress={() => setRemoveTarget(pharmacy)} disabled={busyId === id} hitSlop={6}>
-              <Text style={styles.linkDanger}>Remove as Preferred</Text>
-              {busyId === id ? <ActivityIndicator size="small" color={adTokens.danger} style={styles.buttonSpinner} /> : null}
+            <Pressable
+              style={[styles.btn, styles.btnOutlineDanger, busyId === id && styles.btnDisabled]}
+              onPress={() => setRemoveTarget(pharmacy)}
+              disabled={busyId === id}
+              hitSlop={6}
+            >
+              {busyId === id ? (
+                <ActivityIndicator size="small" color={adTokens.danger} />
+              ) : (
+                <Feather name="x-circle" size={13} color={adTokens.danger} />
+              )}
+              <Text style={styles.btnOutlineDangerText}>Remove as Preferred</Text>
             </Pressable>
           ) : (
-            <Pressable style={styles.linkButton} onPress={() => addPreferred(pharmacy)} disabled={busyId === id} hitSlop={6}>
-              <Text style={styles.linkSuccess}>Add as Preferred</Text>
-              {busyId === id ? <ActivityIndicator size="small" color={adTokens.successDark} style={styles.buttonSpinner} /> : null}
+            <Pressable
+              style={[styles.btn, styles.btnSuccess, busyId === id && styles.btnDisabled]}
+              onPress={() => addPreferred(pharmacy)}
+              disabled={busyId === id}
+              hitSlop={6}
+            >
+              {busyId === id ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Feather name="plus-circle" size={13} color={colors.white} />
+              )}
+              <Text style={styles.btnSuccessText}>Add as Preferred</Text>
             </Pressable>
           )
         ) : null}
@@ -405,6 +429,7 @@ export default function PharmacyPicker({ doseSpotPatientId, mode = 'select', sel
       ) : null}
 
       <Modal visible={Boolean(removeTarget)} transparent animationType="fade" onRequestClose={() => setRemoveTarget(null)}>
+        <Toast />
         <View style={styles.backdrop}>
           <View style={styles.dialog}>
             <Text style={styles.dialogTitle}>Remove Preferred Pharmacy</Text>
@@ -518,12 +543,30 @@ const styles = StyleSheet.create({
   specialtyPillDark: { backgroundColor: 'rgba(255,255,255,0.15)' },
   specialtyText: { fontSize: 11.5, fontWeight: '600', color: adTokens.textPrimary },
   specialtyTextDark: { color: adTokens.white },
-  cardActions: { flexDirection: 'row', alignItems: 'center', gap: 18, marginTop: 2 },
+  cardActions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   linkPrimary: { fontSize: 13, fontWeight: '700', color: adTokens.primaryDark },
-  linkPrimaryDark: { color: adTokens.white, textDecorationLine: 'underline' },
-  linkButton: { flexDirection: 'row', alignItems: 'center' },
-  linkSuccess: { fontSize: 13, fontWeight: '700', color: adTokens.successDark },
-  linkDanger: { fontSize: 13, fontWeight: '700', color: adTokens.danger },
+
+  // Bootstrap-style button variants shared by the card's actions (View Map / Add /
+  // Remove Preferred): a filled "primary" look (btnSuccess, used here for the
+  // positive Add action) and outline looks (btnOutlineSecondary / btnOutlineDanger)
+  // for the neutral and destructive actions.
+  btn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+  },
+  btnDisabled: { opacity: 0.55 },
+  btnOutlineSecondary: { borderWidth: 1, borderColor: adTokens.border, backgroundColor: adTokens.white },
+  btnOutlineSecondaryDark: { borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.08)' },
+  btnOutlineSecondaryText: { fontSize: 12.5, fontWeight: '700', color: adTokens.textSecondary },
+  btnOutlineSecondaryTextDark: { color: adTokens.white },
+  btnSuccess: { backgroundColor: adTokens.successDark },
+  btnSuccessText: { fontSize: 12.5, fontWeight: '700', color: colors.white },
+  btnOutlineDanger: { borderWidth: 1, borderColor: adTokens.danger, backgroundColor: adTokens.white },
+  btnOutlineDangerText: { fontSize: 12.5, fontWeight: '700', color: adTokens.danger },
 
   // Manage Pharmacy's "Default Pharmacy" card: a darker, polished panel (blur + dark tint) so it reads
   // as the one card that matters most, per the design pass requested on top of the plain light card above.

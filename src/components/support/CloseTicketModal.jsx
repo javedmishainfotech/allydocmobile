@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { REMARKS_MAX } from '../../services/supportService';
 import { adTokens, colors } from '../../theme/colors';
 
@@ -8,6 +9,7 @@ import { adTokens, colors } from '../../theme/colors';
 export default function CloseTicketModal({ visible, remarks, onChangeRemarks, submitting, onConfirm, onClose }) {
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.box}>
           <Text style={styles.title}>Mark ticket as closed</Text>

@@ -1,14 +1,18 @@
 import React from 'react';
 import { Modal, View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { adTokens } from '../theme/colors';
+import { useBottomSafeSpacing } from '../hooks/useBottomSafeSpacing';
 
 /** Port of the inline questionnaire modal in AllyDocReactApp's ManageAppointments.jsx
  * - a flat # | Question | Answer list, distinct from the Dashboard's collapsible
  * ConsultQuestionnaireItem version. */
 export default function QuestionnaireModal({ visible, questionAnswerList, onClose }) {
+  const bottomSafe = useBottomSafeSpacing();
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
@@ -31,7 +35,7 @@ export default function QuestionnaireModal({ visible, questionAnswerList, onClos
               </View>
             ))}
           </ScrollView>
-          <Pressable style={styles.closeButton} onPress={onClose}>
+          <Pressable style={[styles.closeButton, { marginBottom: 18 + bottomSafe }]} onPress={onClose}>
             <Text style={styles.closeButtonText}>Close</Text>
           </Pressable>
         </View>

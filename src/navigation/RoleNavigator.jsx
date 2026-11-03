@@ -9,6 +9,7 @@ import ChatWindowPage from '../pages/chat/ChatWindowPage';
 import VideoCallPage from '../pages/calls/VideoCallPage';
 import AddPrescriptionPage from '../pages/prescriptions/AddPrescriptionPage';
 import ManagePharmaciesPage from '../pages/prescriptions/ManagePharmaciesPage';
+import DiseaseQuestionnairePage from '../pages/settings/DiseaseQuestionnairePage';
 import SupportTicketDetailPage from '../pages/support/SupportTicketDetailPage';
 import BookAppointmentPage from '../pages/patient/BookAppointmentPage';
 import { renderStackHeader } from '../components/AppHeader';
@@ -113,6 +114,7 @@ export default function RoleNavigator() {
         <Stack.Screen name="VideoCall" component={VideoCallPage} options={{ headerShown: false }} />
         <Stack.Screen name="AddPrescription" component={AddPrescriptionPage} options={{ title: 'Add Prescription' }} />
         <Stack.Screen name="ManagePharmacies" component={ManagePharmaciesPage} options={{ title: 'Manage Pharmacies' }} />
+        <Stack.Screen name="DiseaseQuestionnaire" component={DiseaseQuestionnairePage} options={{ title: 'Assessment' }} />
         <Stack.Screen name="SupportTicketDetail" component={SupportTicketDetailPage} options={{ title: 'Support Ticket' }} />
         <Stack.Screen name="LegalWebView" component={LegalWebViewScreen} />
       </Stack.Navigator>

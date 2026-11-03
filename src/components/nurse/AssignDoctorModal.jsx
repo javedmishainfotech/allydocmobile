@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { Feather } from '@expo/vector-icons';
 import { useNursePendingAppointments } from '../../hooks/useNursePendingAppointments';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import StatusBadge from '../StatusBadge';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 
 function getDoctorDisplayName(doctor) {
   if (!doctor) return '';
@@ -24,6 +26,7 @@ function getDoctorDisplayName(doctor) {
  * summary once picked, and submits via `/AppointmentAccept`.
  */
 export default function AssignDoctorModal({ visible, appointment, onClose, onAssigned }) {
+  const bottomSafe = useBottomSafeSpacing();
   const appointmentId = appointment?.appointmentId;
   const {
     availableDoctors: doctorList,
@@ -71,6 +74,7 @@ export default function AssignDoctorModal({ visible, appointment, onClose, onAss
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={submitting ? undefined : onClose}>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
@@ -141,7 +145,7 @@ export default function AssignDoctorModal({ visible, appointment, onClose, onAss
             ) : null}
           </ScrollView>
 
-          <View style={styles.footer}>
+          <View style={[styles.footer, { paddingBottom: 16 + bottomSafe }]}>
             <Pressable style={[styles.footerButton, styles.cancelButton]} onPress={onClose} disabled={submitting}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </Pressable>

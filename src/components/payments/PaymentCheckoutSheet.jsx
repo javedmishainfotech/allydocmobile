@@ -5,6 +5,7 @@ import { WebView } from 'react-native-webview';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { confirmFailedPayment, confirmSuccessfulPayment } from '../../services/subscriptionService';
 import { getPaymentResultConfig, parsePaymentReturnUrl } from '../../utils/paymentFlow';
 import { adTokens } from '../../theme/colors';
@@ -108,6 +109,7 @@ export default function PaymentCheckoutSheet({ visible, token, fallbackType = nu
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={phase === 'paying' ? onCancel : undefined}>
+      <Toast />
       <View style={[styles.screen, { paddingTop: insets.top }]}>
         {phase === 'paying' ? (
           <>

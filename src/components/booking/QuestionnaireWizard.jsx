@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { getQuestionnaire, savePatientQuestionnaire, saveQuestionnaireAnswer } from '../../services/bookingService';
 import {
   ACTION_TYPES,
@@ -26,6 +27,7 @@ const getSymptomTypeId = (symptom) => (Array.isArray(symptom) ? symptom[0]?.symt
 function OutcomeDialog({ icon, tone, title, message, children }) {
   return (
     <Modal visible transparent animationType="fade" onRequestClose={() => {}}>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.dialog}>
           <View style={[styles.dialogIcon, { backgroundColor: tone.bg }]}>

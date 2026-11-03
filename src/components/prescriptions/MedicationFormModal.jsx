@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, Switch, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import OptionPicker from './OptionPicker';
 import SubstitutionConfirmationModal from './SubstitutionConfirmationModal';
 import DatePickerSheet from '../DatePickerSheet';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 import { DISPENSE_UNIT_OPTIONS } from '../../utils/dispenseUnits';
 import {
   DOSE_DELIVERY_METHODS,
@@ -75,8 +77,10 @@ export function NotesField({ value, onChange }) {
 }
 
 export function SheetShell({ visible, icon = 'pill', title, subtitle, onClose, children, footer }) {
+  const bottomSafe = useBottomSafeSpacing();
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
@@ -100,7 +104,7 @@ export function SheetShell({ visible, icon = 'pill', title, subtitle, onClose, c
           <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
             {children}
           </ScrollView>
-          {footer ? <View style={styles.footer}>{footer}</View> : null}
+          {footer ? <View style={[styles.footer, { paddingBottom: 16 + bottomSafe }]}>{footer}</View> : null}
         </View>
       </View>
     </Modal>

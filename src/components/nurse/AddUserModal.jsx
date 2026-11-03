@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { Feather } from '@expo/vector-icons';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -8,6 +9,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { useUserManagement } from '../../hooks/useUserManagement';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const VALIDATION_SCHEMA = Yup.object({
   firstName: Yup.string().required('First name is required'),
@@ -36,6 +39,8 @@ function Field({ label, required, error, children }) {
  * true - used by the clinic admin's "Doctors" list "+ Add Sub Doctor" action, not by Nurse).
  */
 export default function AddUserModal({ visible, isDoctor, isDoctorAdmin = false, onClose, onSuccess }) {
+  const bottomSafe = useBottomSafeSpacing();
+  const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const { createUser } = useUserManagement();
 
@@ -83,7 +88,8 @@ export default function AddUserModal({ visible, isDoctor, isDoctorAdmin = false,
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={formik.isSubmitting ? undefined : handleClose}>
       <KeyboardAvoidingView style={styles.flex1} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={styles.header}>
+        <Toast />
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
           <View>
             <Text style={styles.title}>Add {isDoctor ? 'Doctor' : 'Patient'}</Text>
             <Text style={styles.subtitle}>
@@ -168,7 +174,7 @@ export default function AddUserModal({ visible, isDoctor, isDoctorAdmin = false,
           </Pressable>
         </ScrollView>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: 16 + bottomSafe }]}>
           <Pressable style={[styles.footerButton, styles.cancelButton]} onPress={handleClose} disabled={formik.isSubmitting}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </Pressable>
@@ -192,7 +198,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     padding: 16,
-    paddingTop: 48,
     borderBottomWidth: 1,
     borderBottomColor: adTokens.border,
   },

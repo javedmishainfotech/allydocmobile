@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import {
   resetPin,
   setPin as setPinApi,
@@ -21,6 +22,7 @@ import { colors, adTokens } from '../../theme/colors';
  * which already copies every login response field into AsyncStorage).
  */
 export default function AccountSettingsTab({ userId }) {
+  const navigation = useNavigation();
   const [hasPinSetForTFA, setHasPinSetForTFA] = useState(null);
   const [adminResetPending, setAdminResetPending] = useState(false);
   const [tfaStatus, setTfaStatus] = useState(null);
@@ -239,7 +241,7 @@ export default function AccountSettingsTab({ userId }) {
         ) : tfaStatus === 'tfaactivateinit' || tfaStatus === 'pending' ? (
           <>
             <Text style={styles.mutedText}>Two-factor authentication setup is not complete yet.</Text>
-            <Pressable style={styles.primaryButton} onPress={() => toast.info('Open Identity Proofing to continue TFA verification.')}>
+            <Pressable style={styles.primaryButton} onPress={() => navigation.navigate('IdentityProofing')}>
               <Text style={styles.primaryButtonText}>Start TFA Verification</Text>
             </Pressable>
           </>

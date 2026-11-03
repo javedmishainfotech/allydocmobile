@@ -14,6 +14,15 @@ function InfoRow({ label, value }) {
   );
 }
 
+/** "1990-05-14T00:00:00Z" -> "May 14, 1990" (falls back to the raw value if it doesn't parse). */
+function formatDateOfBirth(value) {
+  if (!value) return value;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
+}
+
 /** Port of AllyDocReactApp's CoverageTab.jsx - read-only, GET
  * /api/Eligibilities/{doseSpotPatientId}/eligibilities. If multiple plans
  * exist, a chip selector switches between them (default: first). */
@@ -122,7 +131,7 @@ export default function CoverageTab({ doseSpotPatientId }) {
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Demographic Information</Text>
           <InfoRow label="Name" value={[demographics.FirstName, demographics.LastName].filter(Boolean).join(' ')} />
-          <InfoRow label="Date of Birth" value={demographics.DateOfBirth} />
+          <InfoRow label="Date of Birth" value={formatDateOfBirth(demographics.DateOfBirth)} />
           <InfoRow label="Gender" value={demographics.Gender} />
           <InfoRow
             label="Address"

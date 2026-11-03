@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import Toast from 'react-native-toast-message';
 import ProfileTab from '../settings/ProfileTab';
 import DoctorAppointmentsTab from './DoctorAppointmentsTab';
 import DoctorTreatmentPlansTab from './DoctorTreatmentPlansTab';
 import DoctorFeedbackTab from './DoctorFeedbackTab';
-import { adTokens } from '../../theme/colors';
+import SegmentedTabs from '../ui/SegmentedTabs';
+import { adTokens, colors } from '../../theme/colors';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
  * Port of AllyDocReactApp's DoctorProfile.jsx + its sibling standalone sub-pages
@@ -14,6 +19,8 @@ import { adTokens } from '../../theme/colors';
  * tabs, so one tabbed screen covers all of them here (same pattern as PatientDetailModal.jsx).
  */
 export default function DoctorDetailModal({ visible, doctorId, doctorName, showFeedback, onClose }) {
+  const bottomSafe = useBottomSafeSpacing();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState('personal');
 
   const tabs = [
@@ -25,30 +32,27 @@ export default function DoctorDetailModal({ visible, doctorId, doctorName, showF
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <Toast />
       <View style={styles.container}>
-        <View style={styles.header}>
+        <LinearGradient
+          colors={colors.authGradient}
+          locations={[0, 0.4, 1]}
+          start={{ x: 0.3, y: 0 }}
+          end={{ x: 0.7, y: 1 }}
+          style={[styles.header, { paddingTop: insets.top + 16 }]}
+        >
           <Pressable onPress={onClose} hitSlop={8}>
-            <Feather name="chevron-left" size={22} color={adTokens.textPrimary} />
+            <Feather name="chevron-left" size={22} color={colors.white} />
           </Pressable>
           <View>
             <Text style={styles.title}>Doctor Profile</Text>
             {doctorName ? <Text style={styles.subtitle}>Dr. {doctorName}</Text> : null}
           </View>
-        </View>
+        </LinearGradient>
 
-        <View style={styles.tabBar}>
-          {tabs.map((tab) => (
-            <Pressable
-              key={tab.key}
-              style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-              onPress={() => setActiveTab(tab.key)}
-            >
-              <Text style={[styles.tabLabel, activeTab === tab.key && styles.tabLabelActive]}>{tab.label}</Text>
-            </Pressable>
-          ))}
-        </View>
+        <SegmentedTabs tabs={tabs} activeKey={activeTab} onChange={setActiveTab} style={styles.tabBar} />
 
-        <ScrollView contentContainerStyle={styles.body}>
+        <ScrollView contentContainerStyle={[styles.body, { paddingBottom: 16 + bottomSafe }]}>
           {activeTab === 'personal' ? <ProfileTab userId={doctorId} /> : null}
           {activeTab === 'appointments' ? <DoctorAppointmentsTab doctorId={doctorId} /> : null}
           {activeTab === 'treatmentPlans' ? <DoctorTreatmentPlansTab doctorId={doctorId} /> : null}
@@ -66,16 +70,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 16,
-    paddingTop: 48,
-    borderBottomWidth: 1,
-    borderBottomColor: adTokens.border,
   },
-  title: { fontSize: 16, fontWeight: '700', color: adTokens.textPrimary },
-  subtitle: { fontSize: 12, color: adTokens.textSecondary, marginTop: 2 },
-  tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: adTokens.border },
-  tab: { flex: 1, paddingVertical: 11, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabActive: { borderBottomColor: adTokens.primary },
-  tabLabel: { fontSize: 11.5, fontWeight: '600', color: adTokens.textSecondary },
-  tabLabelActive: { color: adTokens.primaryDark },
+  title: { fontSize: 16, fontWeight: '700', color: colors.white },
+  subtitle: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  tabBar: { margin: 16, marginBottom: 0 },
   body: { padding: 16 },
 });

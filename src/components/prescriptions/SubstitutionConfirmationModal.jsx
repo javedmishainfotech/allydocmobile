@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { adTokens } from '../../theme/colors';
 
 /**
@@ -11,6 +12,7 @@ import { adTokens } from '../../theme/colors';
 export default function SubstitutionConfirmationModal({ visible, itemName, onConfirm, onCancel }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <Text style={styles.title}>No Substitutions for {itemName || 'this medication'}</Text>

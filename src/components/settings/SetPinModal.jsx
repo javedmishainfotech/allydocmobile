@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { colors, adTokens } from '../../theme/colors';
 
 /** Port of SetPinModal in AllyDocReactApp/src/utils/Modals/Modals.jsx - single 4-digit PIN input. */
@@ -15,6 +16,7 @@ export default function SetPinModal({ visible, mode = 'set', onClose, onSave, is
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Toast />
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <Text style={styles.title}>{mode === 'reset' ? 'Set New PIN' : 'Set PIN'}</Text>

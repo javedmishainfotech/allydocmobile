@@ -1,6 +1,8 @@
-import React, { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, View, Text, Pressable, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { navigationRef } from './navigationRef';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../hooks/useAuth';
@@ -15,6 +17,7 @@ import RoleNavigator from './RoleNavigator';
 import useAutoLogoutOnInactivity from '../hooks/useAutoLogoutOnInactivity';
 import { setSessionExpiredHandler, isAuthLogoutInProgress } from '../services/authSessionState';
 import { toast } from '../utils/toast';
+import { adTokens, colors } from '../theme/colors';
 
 const AuthStack = createNativeStackNavigator();
 
@@ -27,6 +30,12 @@ const AuthStack = createNativeStackNavigator();
  */
 export default function RootNavigator() {
   const { status, isAuthenticated, isTempPassword, bootstrap, logout } = useAuth();
+  const insets = useSafeAreaInsets();
+  // The toast is easy to miss since it fires right as the signed-in tree unmounts and the
+  // app swaps to the logged-out stack underneath it - this banner stays on screen (over
+  // whichever logged-out screen lands) until the user dismisses it or a few seconds pass,
+  // so the reason for being signed out is still visible after the toast itself is gone.
+  const [sessionBanner, setSessionBanner] = useState(null);
 
   useEffect(() => {
     bootstrap();
@@ -41,11 +50,18 @@ export default function RootNavigator() {
       setSessionExpiredHandler((message) => {
         if (isAuthLogoutInProgress()) return;
         toast.error(message);
+        setSessionBanner(message);
         logout();
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
+
+  useEffect(() => {
+    if (!sessionBanner) return undefined;
+    const timer = setTimeout(() => setSessionBanner(null), 6000);
+    return () => clearTimeout(timer);
+  }, [sessionBanner]);
 
   // Web AuthContext: 30 minutes without activity logs the user out.
   const { responderProps } = useAutoLogoutOnInactivity({
@@ -98,6 +114,36 @@ export default function RootNavigator() {
         <RoleNavigator />
       )}
     </NavigationContainer>
+
+      {sessionBanner ? (
+        <View style={[styles.bannerWrap, { top: insets.top + 8 }]} pointerEvents="box-none">
+          <View style={styles.banner}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={18} color={colors.white} />
+            <Text style={styles.bannerText}>{sessionBanner}</Text>
+            <Pressable onPress={() => setSessionBanner(null)} hitSlop={8}>
+              <MaterialCommunityIcons name="close" size={18} color={colors.white} />
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  bannerWrap: { position: 'absolute', left: 16, right: 16, zIndex: 999, elevation: 999 },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: adTokens.danger,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  bannerText: { flex: 1, color: colors.white, fontSize: 13, fontWeight: '600' },
+});

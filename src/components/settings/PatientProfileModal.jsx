@@ -3,6 +3,7 @@ import { Modal, View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingVi
 import { ActivityIndicator } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
 import { useFormik } from 'formik';
 import { useAuth } from '../../hooks/useAuth';
@@ -338,6 +339,7 @@ export default function PatientProfileModal({ visible, edit = false, data, onClo
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={edit ? onClose : undefined}>
+      <Toast />
       <KeyboardAvoidingView style={[styles.screen, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{edit ? 'Update' : 'Create'} Profile</Text>

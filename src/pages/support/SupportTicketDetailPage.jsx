@@ -10,6 +10,7 @@ import SupportStatusPill from '../../components/support/SupportStatusPill';
 import AttachmentChip from '../../components/support/AttachmentChip';
 import CloseTicketModal from '../../components/support/CloseTicketModal';
 import { toast } from '../../utils/toast';
+import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 import { adTokens, colors } from '../../theme/colors';
 
 const LIFECYCLE_STEPS = ['New', 'In Progress', 'Resolved', 'Closed'];
@@ -95,6 +96,7 @@ const BADGE_COLORS = {
  * timeline (original issue, every reply, and a closing entry) + reply composer, or a "closed" notice.
  */
 export default function SupportTicketDetailPage() {
+  const bottomSafe = useBottomSafeSpacing();
   const route = useRoute();
   const { ticketId } = route.params || {};
 
@@ -181,7 +183,7 @@ export default function SupportTicketDetailPage() {
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 32 + bottomSafe }]} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           <View style={styles.headerRow}>
             <View style={styles.flex1}>
