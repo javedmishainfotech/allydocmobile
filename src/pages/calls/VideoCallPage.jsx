@@ -19,7 +19,7 @@ function getRoleForRecording(roleName) {
 }
 
 // TEMP: on-screen call diagnostics (the APK runs without Metro, so console.log is not visible). Set to false / remove once the call video issue is sorted.
-const SHOW_CALL_DEBUG = false;
+const SHOW_CALL_DEBUG = true;
 
 // readyState / muted / enabled of a MediaStreamTrack. `muted:true` on a "playable" track means no frames are arriving.
 function describeTrack(track) {
@@ -38,7 +38,7 @@ function formatElapsed(seconds) {
  * SDK itself ships for this - instead of hand-rolling react-native-webrtc's RTCView/MediaStream,
  * which also means remote audio is now actually attached/played (the previous hand-rolled tile
  * only ever wired up video tracks, so remote audio never played on Android). */
-function VideoTile({ videoTrack, audioTrack, label, mirrored, cameraOff, muted }) {
+function VideoTile({ videoTrack, audioTrack, label, mirrored, cameraOff, muted, isLocal }) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   if (cameraOff) {
     return (
@@ -61,7 +61,7 @@ function VideoTile({ videoTrack, audioTrack, label, mirrored, cameraOff, muted }
           style={{ width: size.w, height: size.h }}
           objectFit="contain"
           mirror={mirrored}
-          zOrder={0}
+          zOrder={isLocal ? 1 : 0}
         />
       ) : null}
       <Text style={styles.tileLabel}>{muted ? `${label} (muted)` : label}</Text>
@@ -466,10 +466,10 @@ export default function VideoCallPage() {
       </View>
 
       <View style={styles.stage}>
-        <VideoTile videoTrack={remoteVideoTrack} audioTrack={remoteAudioTrack} label={remoteName} cameraOff={remoteCameraOff} muted={remoteMuted} />
+        <VideoTile videoTrack={remoteVideoTrack} audioTrack={remoteAudioTrack} label={remoteName} cameraOff={remoteCameraOff} muted={remoteMuted} isLocal={false} />
         {!isAudio ? (
           <View style={styles.selfTileWrap}>
-            <VideoTile videoTrack={localVideoTrack} audioTrack={null} label="You" mirrored cameraOff={isCameraOff} muted={isMicMuted} />
+            <VideoTile videoTrack={localVideoTrack} audioTrack={null} label="You" mirrored cameraOff={isCameraOff} muted={isMicMuted} isLocal />
           </View>
         ) : null}
       </View>

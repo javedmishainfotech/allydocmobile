@@ -17,7 +17,7 @@ module.exports = {
   ...appJson,
   expo: {
     ...appJson.expo,
-    plugins: [...(appJson.expo.plugins || []), 'expo-web-browser', 'react-native-blob-util'],
+    plugins: [...(appJson.expo.plugins || []), 'expo-web-browser', 'react-native-blob-util', 'expo-video'],
     extra: {
       ...(appJson.expo.extra || {}),
       apiBaseUrl: API_BASE_URL,

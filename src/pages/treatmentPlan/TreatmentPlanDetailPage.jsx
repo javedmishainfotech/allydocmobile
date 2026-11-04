@@ -34,6 +34,7 @@ import ConsultQuestionnaireItem from '../../components/ConsultQuestionnaireItem'
 import ConfirmationModal from '../../components/ConfirmationModal';
 import RescheduleModal from '../../components/appointments/RescheduleModal';
 import PrescriptionDetailModal from '../../components/treatmentPlan/PrescriptionDetailModal';
+import CallRecordingPlayerModal from '../../components/treatmentPlan/CallRecordingPlayerModal';
 import PrescriptionActionModal from '../../components/treatmentPlan/PrescriptionActionModal';
 import { getPrescriptionById, cancelPrescription, deletePrescriptions } from '../../services/prescriptionService';
 import { CANCELABLE_PRESCRIPTION_STATUSES, CANCELABLE_MEDICATION_STATUSES } from '../../utils/dispenseUnits';
@@ -298,6 +299,7 @@ export default function TreatmentPlanDetailPage() {
   const [activeTab, setActiveTab] = useState('consultation');
   const [recordingLink, setRecordingLink] = useState(null);
   const [isRecordingLoading, setIsRecordingLoading] = useState(false);
+  const [recordingPlayerOpen, setRecordingPlayerOpen] = useState(false);
   const [defaultPharmacy, setDefaultPharmacy] = useState(null);
   const [patientPharmacies, setPatientPharmacies] = useState([]);
   const [showPreferred, setShowPreferred] = useState(false);
@@ -939,7 +941,7 @@ export default function TreatmentPlanDetailPage() {
               <Text style={styles.secondaryButtonText}>{isRecordingLoading ? 'Checking...' : 'Check now'}</Text>
             </Pressable>
             {recordingLink ? (
-              <Pressable style={styles.successButton} onPress={() => openExternalLink(recordingLink)}>
+              <Pressable style={styles.successButton} onPress={() => setRecordingPlayerOpen(true)}>
                 <Feather name="play" size={14} color={adTokens.white} />
                 <Text style={styles.actionButtonText}>Play recording</Text>
               </Pressable>
@@ -1175,6 +1177,11 @@ export default function TreatmentPlanDetailPage() {
             }
             onClose={() => setIsRescheduleOpen(false)}
             onRescheduled={handleRescheduled}
+          />
+          <CallRecordingPlayerModal
+            visible={recordingPlayerOpen}
+            url={recordingLink}
+            onClose={() => setRecordingPlayerOpen(false)}
           />
         </>
       ) : null}
