@@ -10,7 +10,6 @@ import { useUserManagement } from '../../hooks/useUserManagement';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
 import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const VALIDATION_SCHEMA = Yup.object({
   firstName: Yup.string().required('First name is required'),
@@ -40,7 +39,6 @@ function Field({ label, required, error, children }) {
  */
 export default function AddUserModal({ visible, isDoctor, isDoctorAdmin = false, onClose, onSuccess }) {
   const bottomSafe = useBottomSafeSpacing();
-  const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const { createUser } = useUserManagement();
 
@@ -86,105 +84,112 @@ export default function AddUserModal({ visible, isDoctor, isDoctorAdmin = false,
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={formik.isSubmitting ? undefined : handleClose}>
-      <KeyboardAvoidingView style={styles.flex1} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Toast />
-        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-          <View>
-            <Text style={styles.title}>Add {isDoctor ? 'Doctor' : 'Patient'}</Text>
-            <Text style={styles.subtitle}>
-              Enter the {isDoctor ? "doctor's" : "patient's"} details to add them to the system.
-            </Text>
-          </View>
-          <Pressable onPress={handleClose} hitSlop={8} accessibilityLabel="Close">
-            <Feather name="x" size={22} color={adTokens.textSecondary} />
-          </Pressable>
-        </View>
-
-        <ScrollView contentContainerStyle={styles.body}>
-          <Field label="First name" required error={formik.touched.firstName && formik.errors.firstName}>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter first name"
-              value={formik.values.firstName}
-              onChangeText={formik.handleChange('firstName')}
-              onBlur={formik.handleBlur('firstName')}
-            />
-          </Field>
-          <Field label="Middle name" error={formik.touched.middleName && formik.errors.middleName}>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter middle name"
-              value={formik.values.middleName}
-              onChangeText={formik.handleChange('middleName')}
-              onBlur={formik.handleBlur('middleName')}
-            />
-          </Field>
-          <Field label="Last name" required error={formik.touched.lastName && formik.errors.lastName}>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter last name"
-              value={formik.values.lastName}
-              onChangeText={formik.handleChange('lastName')}
-              onBlur={formik.handleBlur('lastName')}
-            />
-          </Field>
-          <Field label="Email" required error={formik.touched.email && formik.errors.email}>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter email address"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={formik.values.email}
-              onChangeText={formik.handleChange('email')}
-              onBlur={formik.handleBlur('email')}
-            />
-          </Field>
-          <Field label="Phone number" required error={formik.touched.phoneNumber && formik.errors.phoneNumber}>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter phone number"
-              keyboardType="phone-pad"
-              maxLength={15}
-              value={formik.values.phoneNumber}
-              onChangeText={(text) => {
-                formik.setFieldValue('phoneNumber', text);
-                if (formik.values.isWhatsApp) formik.setFieldValue('whatsAppNumber', text);
-              }}
-              onBlur={formik.handleBlur('phoneNumber')}
-            />
-          </Field>
-          <Field label="WhatsApp number" required error={formik.touched.whatsAppNumber && formik.errors.whatsAppNumber}>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter WhatsApp number"
-              keyboardType="phone-pad"
-              maxLength={15}
-              value={formik.values.whatsAppNumber}
-              onChangeText={formik.handleChange('whatsAppNumber')}
-              onBlur={formik.handleBlur('whatsAppNumber')}
-            />
-          </Field>
-
-          <Pressable style={styles.checkboxRow} onPress={handleWhatsAppToggle}>
-            <View style={[styles.checkbox, formik.values.isWhatsApp && styles.checkboxChecked]}>
-              {formik.values.isWhatsApp ? <Feather name="check" size={12} color={adTokens.white} /> : null}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={formik.isSubmitting ? undefined : handleClose}
+    >
+      <Toast />
+      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={[styles.sheet, { paddingBottom: 16 + bottomSafe }]}>
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.title}>Add {isDoctor ? 'Doctor' : 'Patient'}</Text>
+              <Text style={styles.subtitle}>
+                Enter the {isDoctor ? "doctor's" : "patient's"} details to add them to the system.
+              </Text>
             </View>
-            <Text style={styles.checkboxLabel}>Mark as WhatsApp Number</Text>
-          </Pressable>
-        </ScrollView>
+            <Pressable onPress={handleClose} hitSlop={8} accessibilityLabel="Close">
+              <Feather name="x" size={22} color={adTokens.textSecondary} />
+            </Pressable>
+          </View>
 
-        <View style={[styles.footer, { paddingBottom: 16 + bottomSafe }]}>
-          <Pressable style={[styles.footerButton, styles.cancelButton]} onPress={handleClose} disabled={formik.isSubmitting}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.footerButton, styles.submitButton, formik.isSubmitting && styles.disabledButton]}
-            onPress={formik.handleSubmit}
-            disabled={formik.isSubmitting}
-          >
-            {formik.isSubmitting ? <ActivityIndicator size={14} color={adTokens.white} /> : <Text style={styles.submitButtonText}>Add</Text>}
-          </Pressable>
+          <ScrollView contentContainerStyle={styles.body}>
+            <Field label="First name" required error={formik.touched.firstName && formik.errors.firstName}>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter first name"
+                value={formik.values.firstName}
+                onChangeText={formik.handleChange('firstName')}
+                onBlur={formik.handleBlur('firstName')}
+              />
+            </Field>
+            <Field label="Middle name" error={formik.touched.middleName && formik.errors.middleName}>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter middle name"
+                value={formik.values.middleName}
+                onChangeText={formik.handleChange('middleName')}
+                onBlur={formik.handleBlur('middleName')}
+              />
+            </Field>
+            <Field label="Last name" required error={formik.touched.lastName && formik.errors.lastName}>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter last name"
+                value={formik.values.lastName}
+                onChangeText={formik.handleChange('lastName')}
+                onBlur={formik.handleBlur('lastName')}
+              />
+            </Field>
+            <Field label="Email" required error={formik.touched.email && formik.errors.email}>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter email address"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={formik.values.email}
+                onChangeText={formik.handleChange('email')}
+                onBlur={formik.handleBlur('email')}
+              />
+            </Field>
+            <Field label="Phone number" required error={formik.touched.phoneNumber && formik.errors.phoneNumber}>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter phone number"
+                keyboardType="phone-pad"
+                maxLength={15}
+                value={formik.values.phoneNumber}
+                onChangeText={(text) => {
+                  formik.setFieldValue('phoneNumber', text);
+                  if (formik.values.isWhatsApp) formik.setFieldValue('whatsAppNumber', text);
+                }}
+                onBlur={formik.handleBlur('phoneNumber')}
+              />
+            </Field>
+            <Field label="WhatsApp number" required error={formik.touched.whatsAppNumber && formik.errors.whatsAppNumber}>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter WhatsApp number"
+                keyboardType="phone-pad"
+                maxLength={15}
+                value={formik.values.whatsAppNumber}
+                onChangeText={formik.handleChange('whatsAppNumber')}
+                onBlur={formik.handleBlur('whatsAppNumber')}
+              />
+            </Field>
+
+            <Pressable style={styles.checkboxRow} onPress={handleWhatsAppToggle}>
+              <View style={[styles.checkbox, formik.values.isWhatsApp && styles.checkboxChecked]}>
+                {formik.values.isWhatsApp ? <Feather name="check" size={12} color={adTokens.white} /> : null}
+              </View>
+              <Text style={styles.checkboxLabel}>Mark as WhatsApp Number</Text>
+            </Pressable>
+          </ScrollView>
+
+          <View style={styles.footer}>
+            <Pressable style={[styles.footerButton, styles.cancelButton]} onPress={handleClose} disabled={formik.isSubmitting}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.footerButton, styles.submitButton, formik.isSubmitting && styles.disabledButton]}
+              onPress={formik.handleSubmit}
+              disabled={formik.isSubmitting}
+            >
+              {formik.isSubmitting ? <ActivityIndicator size={14} color={adTokens.white} /> : <Text style={styles.submitButtonText}>Add</Text>}
+            </Pressable>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -192,7 +197,8 @@ export default function AddUserModal({ visible, isDoctor, isDoctorAdmin = false,
 }
 
 const styles = StyleSheet.create({
-  flex1: { flex: 1, backgroundColor: adTokens.white },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.18)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: adTokens.white, borderTopLeftRadius: 18, borderTopRightRadius: 18, maxHeight: '90%' },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',

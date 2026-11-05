@@ -98,7 +98,7 @@ export default function MergePatientTab() {
   };
 
   return (
-    <View>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.screenContent}>
       <View style={styles.filterCard}>
         <Text style={styles.filterTitle}>Search Patients</Text>
         <View style={styles.filterRow}>
@@ -204,11 +204,13 @@ export default function MergePatientTab() {
           </View>
         </View>
       </Modal>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: adTokens.white },
+  screenContent: { padding: 16 },
   flex1: { flex: 1 },
   filterCard: { backgroundColor: adTokens.gray50, borderRadius: 12, padding: 14, marginBottom: 16, gap: 8 },
   filterTitle: { fontSize: 14, fontWeight: '700', color: adTokens.textPrimary, marginBottom: 4 },

@@ -1,72 +1,142 @@
 import apiClient from '../api/client';
-import { callApi } from '../utils/apiResponse';
+import { normalizeApiBody, normalizeApiError } from '../utils/apiEnvelope';
 
 /** Mirrors GetUserDetailsAction in AllyDocReactApp/src/store/actions. */
-export function getUserDetails(userId) {
-  return callApi(() => apiClient.get(`/UserDetails?userid=${userId}`));
+export async function getUserDetails(userId) {
+  try {
+    const response = await apiClient.get(`/UserDetails?userid=${userId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors GetAssignedDiseasesAction/AssignDiseasesAction in
  * AllyDocReactApp/.../Settings/action.js (Clinic Admin "Assign Disease" tab). */
-export function getAssignedDiseases(clinicCode) {
-  return callApi(() => apiClient.get(`/GetAssignedDiseases?code=${encodeURIComponent(clinicCode)}`));
+export async function getAssignedDiseases(clinicCode) {
+  try {
+    const response = await apiClient.get(`/GetAssignedDiseases?code=${encodeURIComponent(clinicCode)}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
-export function assignDiseases({ code, diseaseIds }) {
-  return callApi(() => apiClient.post('/AssignDiseases', { code, diseaseIds }));
+export async function assignDiseases({ code, diseaseIds }) {
+  try {
+    const response = await apiClient.post('/AssignDiseases', { code, diseaseIds });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors SearchPatientsAction in AllyDocReactApp/.../Patients/action.js (Clinic Admin's
  * "Merge Patient" search). */
-export function searchPatients(params) {
-  return callApi(() => apiClient.get('/api/Patients/SearchPatients', { params: { pageNumber: 1, ...params } }));
+export async function searchPatients(params) {
+  try {
+    const response = await apiClient.get('/api/Patients/SearchPatients', { params: { pageNumber: 1, ...params } });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors MergePatientsAction - transfers all medications from fromPatientId to toPatientId. */
-export function mergePatients({ fromPatientId, toPatientId }) {
+export async function mergePatients({ fromPatientId, toPatientId }) {
   const body = new URLSearchParams();
   body.append('fromPatientId', String(fromPatientId ?? ''));
   body.append('toPatientId', String(toPatientId ?? ''));
-  return callApi(() =>
-    apiClient.post('/api/Patients/MergePatients', body.toString(), {
+  try {
+    const response = await apiClient.post('/api/Patients/MergePatients', body.toString(), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    }),
-  );
+    });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 // ---- Clinic Available Hours (Settings → MyAvailableHours.jsx) ----
-export function getDailyAvailableHours(doctorId) {
-  return callApi(() => apiClient.get(`/DailyAvailableHours?Doctorid=${doctorId}`));
+export async function getDailyAvailableHours(doctorId) {
+  try {
+    const response = await apiClient.get(`/DailyAvailableHours?Doctorid=${doctorId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
-export function getDuration(userId) {
-  return callApi(() => apiClient.get(`/Duration?UserId=${userId}`));
+export async function getDuration(userId) {
+  try {
+    const response = await apiClient.get(`/Duration?UserId=${userId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
-export function getDoctorTimeZone(userId) {
-  return callApi(() => apiClient.get(`/DoctorTimeZone?userId=${userId}`));
+export async function getDoctorTimeZone(userId) {
+  try {
+    const response = await apiClient.get(`/DoctorTimeZone?userId=${userId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
-export function getTimeZones() {
-  return callApi(() => apiClient.get('/TimeZones'));
+export async function getTimeZones() {
+  try {
+    const response = await apiClient.get('/TimeZones');
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
-export function saveWeeklySchedule(values) {
-  return callApi(() => apiClient.post('/SaveWeeklySchedule', values));
+export async function saveWeeklySchedule(values) {
+  try {
+    const response = await apiClient.post('/SaveWeeklySchedule', values);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors ChangePasswordActions. */
-export function changePassword({ currentPassword, newPassword, confirmPassword }) {
-  return callApi(() => apiClient.post('/ChangePassword', { currentPassword, newPassword, confirmPassword }));
+export async function changePassword({ currentPassword, newPassword, confirmPassword }) {
+  try {
+    const response = await apiClient.post('/ChangePassword', { currentPassword, newPassword, confirmPassword });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors GetCertificates in AllyDocReactApp/.../Settings/action.js. */
-export function getCertificates(doctorId) {
-  return callApi(() => apiClient.get(`/GetCertificates?doctorId=${doctorId}`));
+export async function getCertificates(doctorId) {
+  try {
+    const response = await apiClient.get(`/GetCertificates?doctorId=${doctorId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors addCertificates - multipart form with CertificateName, UserId, Certificate (file). */
-export function addCertificate({ certificateName, userId, file }) {
+export async function addCertificate({ certificateName, userId, file }) {
   const formData = new FormData();
   formData.append('CertificateName', certificateName);
   formData.append('UserId', String(userId));
@@ -75,44 +145,84 @@ export function addCertificate({ certificateName, userId, file }) {
     name: file.name,
     type: file.mimeType || 'application/octet-stream',
   });
-  return callApi(() =>
-    apiClient.post('/SaveCertificates', formData, {
+  try {
+    const response = await apiClient.post('/SaveCertificates', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-    }),
-  );
+    });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors RemoveCertificate - DELETE with a query param, not a path param. */
-export function removeCertificate(documentId) {
-  return callApi(() => apiClient.delete(`/RemoveCertificate?documentId=${documentId}`));
+export async function removeCertificate(documentId) {
+  try {
+    const response = await apiClient.delete(`/RemoveCertificate?documentId=${documentId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors resetPinAction in AllyDocReactApp/src/components/IdentityProofing/Actions.js. */
-export function resetPin() {
-  return callApi(() => apiClient.post('/api/Clinicians/ResetPin'));
+export async function resetPin() {
+  try {
+    const response = await apiClient.post('/api/Clinicians/ResetPin');
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors setPinAction. */
-export function setPin(pin) {
-  return callApi(() => apiClient.post('/api/Clinicians/SetPin', { pin }));
+export async function setPin(pin) {
+  try {
+    const response = await apiClient.post('/api/Clinicians/SetPin', { pin });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors updateDoseSpotStatusAction. */
-export function updateDoseSpotStatus({ userId, processName, text, stepCount }) {
+export async function updateDoseSpotStatus({ userId, processName, text, stepCount }) {
   const payload = { userId, processName };
   if (text !== undefined) payload.text = text;
   if (stepCount !== undefined) payload.stepCount = stepCount;
-  return callApi(() => apiClient.post('/updateDoseSpotStatus', payload));
+  try {
+    const response = await apiClient.post('/updateDoseSpotStatus', payload);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors sendTfaDeactivationRequestEmailAction. */
-export function requestTfaDeactivation() {
-  return callApi(() => apiClient.post('/api/Clinicians/RequestTfaDeactivation'));
+export async function requestTfaDeactivation() {
+  try {
+    const response = await apiClient.post('/api/Clinicians/RequestTfaDeactivation');
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors tfaDeactivateAction. */
-export function tfaDeactivate({ oneTimePassword, pin, credentialId }) {
+export async function tfaDeactivate({ oneTimePassword, pin, credentialId }) {
   const payload = { OneTimePassword: oneTimePassword, PIN: pin };
   if (credentialId) payload.CredentialID = credentialId;
-  return callApi(() => apiClient.post('/api/Clinicians/TfaDeactivate', payload));
+  try {
+    const response = await apiClient.post('/api/Clinicians/TfaDeactivate', payload);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }

@@ -13,12 +13,13 @@ import AllergiesTab from './AllergiesTab';
 import RxChangeTab from './RxChangeTab';
 import RefillsTab from './RefillsTab';
 import PrescriptionsTab from './PrescriptionsTab';
-import PatientDetailTabBar from './PatientDetailTabBar';
+import PatientDetailTabBar, { NURSE_ALLOWED_TABS } from './PatientDetailTabBar';
 import { consentToMedicationHistory } from '../../services/doseSpotClinicalService';
 import { toast } from '../../utils/toast';
 import { adTokens, colors } from '../../theme/colors';
 import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '../../hooks/useAuth';
 
 /** Port of AllyDocReactApp's ViewPatientPage.jsx. The web version uses a
  * ?tab= query param with its own route; mobile models it as a full-screen
@@ -34,12 +35,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function PatientDetailModal({ visible, patientId, patientName, initialTab = 'personal', onClose }) {
   const bottomSafe = useBottomSafeSpacing();
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const { profile } = useAuth();
+  // Nurse only gets Personal Info, Appointments History and Prescriptions on this page
+  // (web: ViewPatientPage.jsx NURSE_ALLOWED_TABS).
+  const isNurse = String(profile?.roleName || '').toLowerCase().trim() === 'nurse';
+  const [activeTab, setActiveTab] = useState(isNurse && !NURSE_ALLOWED_TABS.includes(initialTab) ? 'personal' : initialTab);
   const [doseSpotPatientId, setDoseSpotPatientId] = useState(null);
   const [consentModalVisible, setConsentModalVisible] = useState(false);
   const [isConsenting, setIsConsenting] = useState(false);
 
   const handleTabPress = (tabKey) => {
+    if (isNurse && !NURSE_ALLOWED_TABS.includes(tabKey)) return;
     // Medication History always re-confirms consent before loading - no
     // persisted "already consented" state, matching web exactly.
     if (tabKey === 'history') {
@@ -83,7 +89,7 @@ export default function PatientDetailModal({ visible, patientId, patientName, in
           <View style={styles.backButton} />
         </LinearGradient>
 
-        <PatientDetailTabBar activeTab={activeTab} onSelectTab={handleTabPress} />
+        <PatientDetailTabBar activeTab={activeTab} onSelectTab={handleTabPress} isNurse={isNurse} />
 
         <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 32 + bottomSafe }]}>
           {/* Always mounted (invisible when inactive) so its own

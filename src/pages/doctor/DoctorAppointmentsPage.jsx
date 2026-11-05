@@ -71,17 +71,21 @@ function AppointmentListRow({ appointment, onOpen }) {
  * `GET /AllDoctorAppointment`, server-paginated (20 a page), filterable by status (multi),
  * date range and patient. The web table's "view" icon routes to the merged
  * treatment-plan detail page; here a row opens the same screen (`TreatmentPlanDetail`). "Rescheduled" is not offered to a freelancer doctor, as on the web.
- * (A nurse's version of this page reads `/AllFacilityAppointment` instead - added with the
- * Nurse module.)
+ * (A nurse's version of this page reads `/AllFacilityAppointment` instead, via isNurse below.)
  */
 export default function DoctorAppointmentsPage() {
   const dockInset = useDockInset();
   const { profile } = useAuth();
-  const { getDoctorAppointmentsList } = useManageAppointments();
+  const { getDoctorAppointmentsList, getFacilityAppointmentsList } = useManageAppointments();
   const doctorId = profile?.userId;
   const userType = String(profile?.userType || '').toLowerCase();
   const roleName = String(profile?.roleName || '').toLowerCase().trim();
   const isFreelancerDoctor = userType === 'freelancer' && roleName === 'doctor';
+  // A Nurse has no "my own patients as a doctor" concept (Appointment.UserId is the DOCTOR, never
+  // a Nurse) - `/AllDoctorAppointment` correctly returns nothing for her own userId. She instead
+  // needs every appointment at her own facility, regardless of which doctor is assigned (web:
+  // module/Doctor/Pages/DoctorAppointments/index.jsx).
+  const isNurse = roleName === 'nurse';
 
   const [filter, setFilter] = useState(EMPTY_APPOINTMENT_FILTER);
   const [page, setPage] = useState(1);
@@ -100,14 +104,16 @@ export default function DoctorAppointmentsPage() {
   });
 
   const load = useCallback(async () => {
-    if (!doctorId) return;
+    if (!isNurse && !doctorId) return;
     // Only the newest request may write state - a slow earlier one must not overwrite it.
     const requestId = (requestCounter.current += 1);
     setIsLoading(true);
     setLoadError(null);
 
     try {
-      const raw = await getDoctorAppointmentsList(doctorId, { ...filter, page, pageSize: PAGE_SIZE });
+      const raw = isNurse
+        ? await getFacilityAppointmentsList({ ...filter, page, pageSize: PAGE_SIZE })
+        : await getDoctorAppointmentsList(doctorId, { ...filter, page, pageSize: PAGE_SIZE });
       if (requestId !== requestCounter.current) return;
       const parsed = parseAppointmentListResponse(raw, page, PAGE_SIZE);
       setAppointments(applyRescheduledClientFilter(parsed.list, filter.status));
@@ -121,7 +127,7 @@ export default function DoctorAppointmentsPage() {
       setLoadError(message || 'Unable to load appointments.');
     }
     setIsLoading(false);
-  }, [doctorId, filter, page, getDoctorAppointmentsList]);
+  }, [doctorId, filter, page, isNurse, getDoctorAppointmentsList, getFacilityAppointmentsList]);
 
   useEffect(() => {
     load();

@@ -18,10 +18,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
  * on web these are separate routes, but they're the same data/behavior as this doctor's detail
  * tabs, so one tabbed screen covers all of them here (same pattern as PatientDetailModal.jsx).
  */
-export default function DoctorDetailModal({ visible, doctorId, doctorName, showFeedback, onClose }) {
+export default function DoctorDetailModal({ visible, doctorId, doctorName, showFeedback, initialTab = 'personal', onClose }) {
   const bottomSafe = useBottomSafeSpacing();
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState('personal');
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   const tabs = [
     { key: 'personal', label: 'Profile' },

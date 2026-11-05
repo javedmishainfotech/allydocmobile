@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -130,7 +130,7 @@ export function DateTimeStep({ questionnaireId, onNext }) {
         </View>
       </View>
 
-      <View style={styles.dayRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dayRow}>
         {weekDays.map((entry) => {
           const active = selectedDate.toDateString() === entry.date.toDateString();
           return (
@@ -141,7 +141,7 @@ export function DateTimeStep({ questionnaireId, onNext }) {
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
 
       <Text style={[styles.sectionTitle, styles.hoursTitle]}>
         Available Hours <Text style={styles.zone}>(Times shown in your local time zone ({viewerTimeZone}))</Text>
@@ -483,12 +483,12 @@ const styles = StyleSheet.create({
   weekNav: { flexDirection: 'row', gap: 6 },
   weekButton: { padding: 8, borderRadius: 10, backgroundColor: adTokens.primaryLight },
 
-  dayRow: { flexDirection: 'row', gap: 6 },
+  dayRow: { flexDirection: 'row', gap: 8 },
   dayChip: {
-    flex: 1,
+    width: 68,
     alignItems: 'center',
     gap: 2,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: adTokens.border,

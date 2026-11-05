@@ -18,10 +18,18 @@ const TABS = [
   { key: 'refills', label: 'Refills', icon: 'autorenew' },
 ];
 
-export default function PatientDetailTabBar({ activeTab, onSelectTab }) {
+// Nurse role is restricted to a view-only subset of these tabs (web: ViewPatientPage.jsx
+// NURSE_ALLOWED_TABS).
+export const NURSE_ALLOWED_TABS = ['personal', 'appointments', 'prescriptions'];
+
+export default function PatientDetailTabBar({ activeTab, onSelectTab, isNurse = false }) {
+  const tabs = isNurse ? TABS.filter((t) => NURSE_ALLOWED_TABS.includes(t.key)) : TABS;
   return (
     <View style={styles.wrap}>
-      <SegmentedTabs tabs={TABS} activeKey={activeTab} onChange={onSelectTab} scrollable style={styles.track} />
+      {/* Nurse's 3-tab subset fits comfortably as an equal-width, non-scrolling row (per
+          SegmentedTabs' own doc comment: that mode is for a small fixed set) - only the full
+          9-tab set needs horizontal scrolling. */}
+      <SegmentedTabs tabs={tabs} activeKey={activeTab} onChange={onSelectTab} scrollable={!isNurse} style={styles.track} />
     </View>
   );
 }

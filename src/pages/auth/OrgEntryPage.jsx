@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useOrg } from '../../hooks/useOrg';
 import { colors } from '../../theme/colors';
@@ -25,8 +25,7 @@ export default function OrgEntryPage({ navigation }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-      <AuthLayout hideFooter>
+    <AuthLayout hideFooter>
         {/* Says what THIS page is. "Welcome to AllyDoc" now belongs to the onboarding landing page. */}
         <Text style={styles.heading}>Organization code</Text>
         <Text style={styles.desc}>
@@ -71,13 +70,11 @@ export default function OrgEntryPage({ navigation }) {
           </View>
           <MaterialCommunityIcons name="chevron-right" size={22} color={colors.accentDark} />
         </Pressable>
-      </AuthLayout>
-    </ScrollView>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { flexGrow: 1, backgroundColor: colors.white },
   heading: { fontSize: 26, fontWeight: '700', color: colors.heading, marginBottom: 6 },
   desc: { fontSize: 14.5, color: colors.bodyText, marginBottom: 24, lineHeight: 20 },
   divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 20 },

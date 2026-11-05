@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import { useFormik } from 'formik';
 import { updatePasswordValidationSchema } from '../../utils/validationSchema';
 import { useAuth } from '../../hooks/useAuth';
@@ -38,8 +38,7 @@ export default function UpdateTempPasswordPage() {
   });
 
   return (
-    <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-      <AuthLayout>
+    <AuthLayout>
         <Text style={styles.heading}>Set a new password</Text>
         <Text style={styles.desc}>
           Your account was created with a temporary password. Please set a new one to continue.
@@ -79,13 +78,11 @@ export default function UpdateTempPasswordPage() {
           loading={isSubmitting}
           disabled={isSubmitting || !formik.isValid}
         />
-      </AuthLayout>
-    </ScrollView>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { flexGrow: 1, backgroundColor: colors.white },
   heading: { fontSize: 24, fontWeight: '700', color: colors.heading, marginBottom: 6 },
   desc: { fontSize: 14.5, color: colors.bodyText, marginBottom: 22, lineHeight: 20 },
   submitError: { fontSize: 13, color: colors.dangerText, marginTop: 4, marginBottom: 12 },

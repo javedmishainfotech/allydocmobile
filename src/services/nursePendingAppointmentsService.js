@@ -1,18 +1,36 @@
 import apiClient from '../api/client';
-import { callApi } from '../utils/apiResponse';
+import { normalizeApiBody, normalizeApiError } from '../utils/apiEnvelope';
 
 /** Mirrors getPendingAppointmentsAction in AllyDocReactApp/src/module/Nurse/PendingAppointments/actions.js. */
-export function getPendingAppointments() {
-  return callApi(() => apiClient.get('/AllPendingAppointment'));
+export async function getPendingAppointments() {
+  try {
+    const response = await apiClient.get('/AllPendingAppointment');
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors getAvailableDoctorAction. */
-export function getAvailableDoctors(appointmentId) {
-  return callApi(() => apiClient.get(`/GetAvailableDoctors?AppointmentId=${appointmentId}`));
+export async function getAvailableDoctors(appointmentId) {
+  try {
+    const response = await apiClient.get(`/GetAvailableDoctors?AppointmentId=${appointmentId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors AppointmentRequestAcceptAction (store/actions) - same endpoint used to accept a
  * pending request, here reused by a Nurse to assign it to a doctor. */
-export function assignDoctorToAppointment({ appointmentId, doctorId }) {
-  return callApi(() => apiClient.post('/AppointmentAccept', { appointmentId, doctorId }));
+export async function assignDoctorToAppointment({ appointmentId, doctorId }) {
+  try {
+    const response = await apiClient.post('/AppointmentAccept', { appointmentId, doctorId });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }

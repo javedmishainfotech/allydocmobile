@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, View, Text, Pressable, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,11 +36,22 @@ export default function RootNavigator() {
   // whichever logged-out screen lands) until the user dismisses it or a few seconds pass,
   // so the reason for being signed out is still visible after the toast itself is gone.
   const [sessionBanner, setSessionBanner] = useState(null);
+  // Tracks whether this signed-out stack should open on Login (just logged out of a real
+  // session) instead of Onboarding (fresh install / never signed in this app session).
+  const [loggedOutRoute, setLoggedOutRoute] = useState('Onboarding');
+  const wasAuthenticatedRef = useRef(false);
 
   useEffect(() => {
     bootstrap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (wasAuthenticatedRef.current && !isAuthenticated) {
+      setLoggedOutRoute('Login');
+    }
+    wasAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
 
   // The API client reports a dead session (refresh failed / no refresh token) through this
   // handler; logging out flips isAuthenticated, which unmounts the signed-in tree and
@@ -84,10 +95,12 @@ export default function RootNavigator() {
     <View style={{ flex: 1 }} {...responderProps}>
     <NavigationContainer ref={navigationRef}>
       {!isAuthenticated ? (
-        // Onboarding is the logged-out landing page, like the web app's "/" LandingPage: it is
-        // what every signed-out visitor starts on (fresh launch and after logout) - no
-        // 'seen once' flag. Signing in unmounts this whole stack, so it is gone while authed.
-        <AuthStack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Onboarding">
+        // Onboarding is the logged-out landing page, like the web app's "/" LandingPage, for a
+        // fresh install / app launch that was never signed in. An explicit logout (manual, session
+        // expiry, or inactivity timeout) instead opens straight on Login - the user already knows
+        // the app, they don't need the marketing/onboarding screen again. Signing in unmounts this
+        // whole stack, so it is gone while authed.
+        <AuthStack.Navigator screenOptions={{ headerShown: false }} initialRouteName={loggedOutRoute}>
           <AuthStack.Screen name="Onboarding" component={OnboardingPage} />
           <AuthStack.Screen name="OrgEntry" component={OrgEntryPage} />
           <AuthStack.Screen name="Login" component={LoginPage} />

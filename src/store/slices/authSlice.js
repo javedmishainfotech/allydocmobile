@@ -29,7 +29,7 @@ export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async ({ email, password, userType, clientName }, { rejectWithValue }) => {
     // authService.login() always resolves with the global
-    // { success, message, data, statusCode } envelope (src/utils/apiResponse.js) -
+    // { success, message, data, statusCode } envelope -
     // never throws, so there's no try/catch needed here. Every thunk in the
     // app reads this same shape, whether the failure was the backend saying
     // "wrong password" or the request never reaching the server at all.

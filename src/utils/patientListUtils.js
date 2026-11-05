@@ -114,7 +114,7 @@ export function formatProfileStatus(patient) {
 const INNER_LIST_KEYS = ['data', 'items', 'list', 'records', 'patients', 'Patients', 'doctors', 'Doctors', 'subDoctors', 'result', 'results'];
 
 /** `response` here is the already-unwrapped global envelope ({success,data,...}
- * from callApi()), one level shallower than the web's raw axios response. */
+ * from the service layer), one level shallower than the web's raw axios response. */
 export function parsePagedListResponse(response, fallbackPage, fallbackPageSize) {
   const empty = { list: [], totalPages: 0, page: fallbackPage, totalRecords: 0 };
   if (!response.success) return empty;

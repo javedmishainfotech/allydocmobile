@@ -6,10 +6,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAudioPlayer } from 'expo-audio';
 import Avatar from '../Avatar';
 import { useIncomingCall } from '../../contexts/IncomingCallContext';
+import { getRingtoneById, DEFAULT_RINGTONE_ID, RINGTONE_STORAGE_KEY } from '../../constants/ringtones';
+import { getItem } from '../../utils/storage';
 import { adTokens } from '../../theme/colors';
 
 const DEFAULT_RINGING_SECONDS = 45;
-const RINGTONE = require('../../../assets/sounds/ringtone-soft.mp3');
 
 /**
  * Port of AllyDocReactApp's IncomingCallPopup.jsx + DeclineCallConfirmationModal.jsx: ringing
@@ -19,7 +20,7 @@ const RINGTONE = require('../../../assets/sounds/ringtone-soft.mp3');
  */
 export default function IncomingCallModal() {
   const { incomingCall, handleJoin, handleDecline } = useIncomingCall();
-  const player = useAudioPlayer(RINGTONE);
+  const player = useAudioPlayer(getRingtoneById(DEFAULT_RINGTONE_ID).asset);
   const [secondsLeft, setSecondsLeft] = useState(DEFAULT_RINGING_SECONDS);
   const [isJoining, setIsJoining] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
@@ -30,17 +31,24 @@ export default function IncomingCallModal() {
   const totalSeconds = Number(incomingCall?.ringingTimeoutSeconds) > 0 ? Number(incomingCall.ringingTimeoutSeconds) : DEFAULT_RINGING_SECONDS;
   const isBusy = isJoining || isDeclining;
 
-  // Ringtone loop + countdown reset for every new call session.
+  // Ringtone loop + countdown reset for every new call session. Reads the user's chosen ringtone
+  // (set via RingtoneSelector in My Profile) fresh for every incoming call.
   useEffect(() => {
     if (!isShowing) return undefined;
     const elapsed = Math.floor((Date.now() - (incomingCall.receivedAt || Date.now())) / 1000);
     setSecondsLeft(Math.max(0, totalSeconds - elapsed));
     autoDeclinedRef.current = '';
     setConfirmDecline(false);
-    player.loop = true;
-    player.seekTo(0);
-    player.play();
+    let cancelled = false;
+    getItem(RINGTONE_STORAGE_KEY).then((storedId) => {
+      if (cancelled) return;
+      player.replace(getRingtoneById(storedId).asset);
+      player.loop = true;
+      player.seekTo(0);
+      player.play();
+    });
     return () => {
+      cancelled = true;
       player.pause();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,12 +1,12 @@
 import apiClient from '../api/client';
-import { callApi } from '../utils/apiResponse';
+import { normalizeApiBody, normalizeApiError } from '../utils/apiEnvelope';
 
 /**
  * Mirrors GetFreelancerDoctorPatientsAction in AllyDocReactApp's
  * src/module/Doctor/Pages/DoctorPatients/action.js - server-paginated list,
  * filterable by firstName/lastName/dob/email/gender/doseSpotId/phoneNumber.
  */
-export function getFreelancerPatients({ pageNumber = 1, pageSize = 10, filters = {} } = {}) {
+export async function getFreelancerPatients({ pageNumber = 1, pageSize = 10, filters = {} } = {}) {
   const params = new URLSearchParams();
   params.append('pageNumber', String(pageNumber));
   params.append('pageSize', String(pageSize));
@@ -15,7 +15,13 @@ export function getFreelancerPatients({ pageNumber = 1, pageSize = 10, filters =
     if (key === 'gender' && String(value).toLowerCase() === 'both') return;
     params.append(key, String(value));
   });
-  return callApi(() => apiClient.get(`/FreelancerDoctorPatients?${params.toString()}`));
+  try {
+    const response = await apiClient.get(`/FreelancerDoctorPatients?${params.toString()}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 // Query-param names GET /GetListOfPatients expects (web CLINIC_LIST_FILTER_KEYS) for each filter field
@@ -35,34 +41,64 @@ const CLINIC_FILTER_PARAM = {
  * GET /GetListOfPatients - what hospital/clinic doctors (doctor sub, doctor admin, clinic
  * doctors) see. Takes the same filter object as getFreelancerPatients.
  */
-export function getClinicPatients({ pageNumber = 1, pageSize = 10, filters = {} } = {}) {
+export async function getClinicPatients({ pageNumber = 1, pageSize = 10, filters = {} } = {}) {
   const params = { pageNumber, pageSize };
   Object.entries(CLINIC_FILTER_PARAM).forEach(([key, paramName]) => {
     const value = filters[key];
     if (value === undefined || value === null || String(value).trim() === '') return;
     params[paramName] = String(value).trim();
   });
-  return callApi(() => apiClient.get('/GetListOfPatients', { params }));
+  try {
+    const response = await apiClient.get('/GetListOfPatients', { params });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors GetUserDetailsAction (same endpoint ProfileTab/Settings already uses). */
-export function getUserDetails(userId) {
-  return callApi(() => apiClient.get(`/UserDetails?userid=${userId}`));
+export async function getUserDetails(userId) {
+  try {
+    const response = await apiClient.get(`/UserDetails?userid=${userId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors PatientAppointmentHistory in AllyDocReactApp's ViewPatientPage.jsx. */
-export function getPatientAppointmentHistory(patientId) {
-  return callApi(() => apiClient.get(`/HistoryAppointmentPatient?PatientId=${patientId}`));
+export async function getPatientAppointmentHistory(patientId) {
+  try {
+    const response = await apiClient.get(`/HistoryAppointmentPatient?PatientId=${patientId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors GetPatientPharmaciesAction - keyed by DoseSpot patient id, not userId. */
-export function getPatientPharmacies(doseSpotPatientId) {
-  return callApi(() => apiClient.get(`/api/Pharmacies/GetPatientPharmacies/${doseSpotPatientId}`));
+export async function getPatientPharmacies(doseSpotPatientId) {
+  try {
+    const response = await apiClient.get(`/api/Pharmacies/GetPatientPharmacies/${doseSpotPatientId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors DoctorPatientDropdownAction: `GET /DoctorPatientDropdown` (no parameters) - the logged-in
  * doctor's patients as { id, name }, used by the filter modals of the appointment and
  * treatment-plan lists. */
-export function getDoctorPatientDropdown() {
-  return callApi(() => apiClient.get('/DoctorPatientDropdown'));
+export async function getDoctorPatientDropdown() {
+  try {
+    const response = await apiClient.get('/DoctorPatientDropdown');
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }

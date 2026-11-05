@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, Switch, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Switch, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -32,6 +33,27 @@ function buildDefaultDays() {
   return DAYS_OF_WEEK.map((name) => ({ name, enabled: false, startTime: DEFAULT_START_TIME, endTime: DEFAULT_END_TIME }));
 }
 
+function timeStringToDate(value) {
+  const [hours, minutes] = String(value || DEFAULT_START_TIME).split(':').map((n) => parseInt(n, 10) || 0);
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+}
+
+function dateToTimeString(date) {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+/** "09:00" -> "9:00 AM" - web's native `<input type="time">` displays times in the browser's own
+ * locale format; this is the mobile equivalent for the read-only field display. */
+function formatTimeDisplay(value) {
+  const [hours, minutes] = String(value || '').split(':').map((n) => parseInt(n, 10));
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return value;
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+  return `${hour12}:${String(minutes).padStart(2, '0')} ${period}`;
+}
+
 /** Port of AllyDocReactApp/.../Settings/MyAvailableHours.jsx (Clinic Admin's weekly schedule
  * editor): timezone + default appointment duration, then per-day enable/start/end time, saved
  * via `POST /SaveWeeklySchedule`. Times use a plain "HH:MM" (24h) text field, same value shape
@@ -48,6 +70,8 @@ export default function ClinicAvailableHoursTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  // Which day/field's native time picker is currently open - only one at a time.
+  const [activePicker, setActivePicker] = useState(null); // { index, field }
 
   const selectedTimeZoneLabel = timeZoneOptions.find((tz) => tz.id === timeZoneId)?.label || timeZoneId;
 
@@ -204,24 +228,42 @@ export default function ClinicAvailableHoursTab() {
               <Text style={styles.dayLabel}>{d.name}</Text>
             </View>
             <View style={styles.timeRow}>
-              <TextInput
-                style={[styles.timeInput, !d.enabled && styles.timeInputDisabled]}
-                value={d.startTime}
-                editable={d.enabled}
-                placeholder="09:00"
-                onChangeText={(v) => updateDayTime(index, 'startTime', v)}
-              />
+              <Pressable
+                style={[styles.timeField, !d.enabled && styles.timeFieldDisabled]}
+                disabled={!d.enabled}
+                onPress={() => setActivePicker({ index, field: 'startTime' })}
+              >
+                <Feather name="clock" size={13} color={d.enabled ? adTokens.textSecondary : adTokens.textMuted} />
+                <Text style={[styles.timeFieldText, !d.enabled && styles.timeFieldTextDisabled]}>
+                  {formatTimeDisplay(d.startTime)}
+                </Text>
+              </Pressable>
               <Text style={styles.toText}>to</Text>
-              <TextInput
-                style={[styles.timeInput, !d.enabled && styles.timeInputDisabled]}
-                value={d.endTime}
-                editable={d.enabled}
-                placeholder="17:00"
-                onChangeText={(v) => updateDayTime(index, 'endTime', v)}
-              />
+              <Pressable
+                style={[styles.timeField, !d.enabled && styles.timeFieldDisabled]}
+                disabled={!d.enabled}
+                onPress={() => setActivePicker({ index, field: 'endTime' })}
+              >
+                <Feather name="clock" size={13} color={d.enabled ? adTokens.textSecondary : adTokens.textMuted} />
+                <Text style={[styles.timeFieldText, !d.enabled && styles.timeFieldTextDisabled]}>
+                  {formatTimeDisplay(d.endTime)}
+                </Text>
+              </Pressable>
             </View>
           </View>
         ))}
+
+        {activePicker ? (
+          <DateTimePicker
+            value={timeStringToDate(days[activePicker.index][activePicker.field])}
+            mode="time"
+            onChange={(event, date) => {
+              const { index, field } = activePicker;
+              setActivePicker(null);
+              if (event.type !== 'dismissed' && date) updateDayTime(index, field, dateToTimeString(date));
+            }}
+          />
+        ) : null}
       </View>
 
       {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
@@ -258,8 +300,22 @@ const styles = StyleSheet.create({
   dayToggleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
   dayLabel: { fontSize: 13, fontWeight: '600', color: adTokens.textPrimary },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  timeInput: { flex: 1, borderWidth: 1, borderColor: adTokens.border, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10, fontSize: 13, color: adTokens.textPrimary, backgroundColor: adTokens.white, textAlign: 'center' },
-  timeInputDisabled: { backgroundColor: adTokens.gray100, color: adTokens.textMuted },
+  timeField: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: adTokens.border,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: adTokens.white,
+  },
+  timeFieldDisabled: { backgroundColor: adTokens.gray100 },
+  timeFieldText: { fontSize: 13, color: adTokens.textPrimary },
+  timeFieldTextDisabled: { color: adTokens.textMuted },
   toText: { fontSize: 12, color: adTokens.textSecondary },
   errorText: { fontSize: 12, color: adTokens.danger, marginBottom: 10 },
   footerRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },

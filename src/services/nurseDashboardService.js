@@ -1,13 +1,25 @@
 import apiClient from '../api/client';
-import { callApi } from '../utils/apiResponse';
+import { normalizeApiBody, normalizeApiError } from '../utils/apiEnvelope';
 
 /** Mirrors GetNurseData in AllyDocReactApp/src/store/actions/GetNurseData.js. */
-export function getNurseDashboard(nurseId) {
-  return callApi(() => apiClient.get(`/NurseDashboard?NurseId=${nurseId}`));
+export async function getNurseDashboard(nurseId) {
+  try {
+    const response = await apiClient.get(`/NurseDashboard?NurseId=${nurseId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors AddUserAction - adds a Doctor (roleId 8) or Patient (roleId 9) from the
  * Nurse dashboard's "Add Doctor"/"Add Patient" buttons. */
-export function addUser(values) {
-  return callApi(() => apiClient.post('/AddUser', values));
+export async function addUser(values) {
+  try {
+    const response = await apiClient.post('/AddUser', values);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }

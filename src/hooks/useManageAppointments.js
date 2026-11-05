@@ -8,6 +8,7 @@ import {
   fetchAppointmentNotes,
   saveAppointmentNotesThunk,
   fetchDoctorAppointmentsList,
+  fetchFacilityAppointmentsList,
   updateAppointmentThunk,
   fetchAppointmentRecordingLink,
 } from '../store/slices/manageAppointmentsSlice';
@@ -51,6 +52,11 @@ export function useManageAppointments() {
     [dispatch],
   );
 
+  const getFacilityAppointmentsList = useCallback(
+    (filter) => dispatch(fetchFacilityAppointmentsList(filter)).unwrap(),
+    [dispatch],
+  );
+
   const updateAppointment = useCallback(
     (appointmentId, appointmentDate, appointMentTime, rescheduleReason) =>
       dispatch(updateAppointmentThunk({ appointmentId, appointmentDate, appointMentTime, rescheduleReason })).unwrap(),
@@ -71,6 +77,7 @@ export function useManageAppointments() {
     getAppointmentNotes,
     saveAppointmentNotes,
     getDoctorAppointmentsList,
+    getFacilityAppointmentsList,
     updateAppointment,
     getAppointmentRecordingLink,
   };

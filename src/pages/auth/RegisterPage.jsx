@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFormik } from 'formik';
 import { signUpValidationSchema, clinicSetupValidationSchema } from '../../utils/validationSchema';
@@ -261,9 +261,7 @@ export default function RegisterPage({ navigation, route }) {
   );
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <AuthLayout hideFooter={step === 'otp' || step === 'created'}>
+    <AuthLayout hideFooter={step === 'otp' || step === 'created'}>
           {step === 'form' ? renderForm() : null}
           {step === 'type' ? renderTypeStep() : null}
           {step === 'clinic' ? (
@@ -289,9 +287,7 @@ export default function RegisterPage({ navigation, route }) {
               <AuthButton label="Continue to Login" onPress={goToLogin} />
             </View>
           ) : null}
-        </AuthLayout>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </AuthLayout>
   );
 }
 
@@ -451,8 +447,6 @@ function ClinicSetupStep({ onBack, onSubmit, submitting }) {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.white },
-  scroll: { flexGrow: 1 },
   heading: { fontSize: 26, fontWeight: '700', color: colors.heading, marginBottom: 6 },
   desc: { fontSize: 14.5, color: colors.bodyText, marginBottom: 22, lineHeight: 20 },
   roleLabel: {

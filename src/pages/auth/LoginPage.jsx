@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFormik } from 'formik';
 import { loginValidationSchema } from '../../utils/validationSchema';
@@ -96,9 +96,7 @@ export default function LoginPage({ navigation }) {
   const isSubmitting = status === 'loading';
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <AuthLayout>
+    <AuthLayout>
           <Text style={styles.heading}>Welcome back</Text>
           <Text style={styles.desc}>Sign in to continue to your health dashboard</Text>
 
@@ -214,9 +212,7 @@ export default function LoginPage({ navigation }) {
               <Text style={styles.registerLink}>Register</Text>
             </Pressable>
           ) : null}
-        </AuthLayout>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </AuthLayout>
   );
 }
 
@@ -224,8 +220,6 @@ const styles = StyleSheet.create({
   registerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 14 },
   registerText: { fontSize: 14.5, color: colors.bodyText },
   registerLink: { fontSize: 14.5, color: colors.accentDark, fontWeight: '600' },
-  flex: { flex: 1, backgroundColor: colors.white },
-  scroll: { flexGrow: 1 },
   heading: { fontSize: 26, fontWeight: '700', color: colors.heading, marginBottom: 4, letterSpacing: -0.4 },
   desc: { fontSize: 14, color: colors.bodyText, marginBottom: 14 },
   orgRow: {

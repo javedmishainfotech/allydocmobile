@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Modal, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Toast from 'react-native-toast-message';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import InlineCalendar from '../InlineCalendar';
@@ -108,7 +109,7 @@ export default function RescheduleModal({ visible, appointmentId, patientId, ini
             </Pressable>
           </View>
 
-          <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+          <KeyboardAwareScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" bottomOffset={24}>
             <InlineCalendar selectedDate={selectedDate} onSelectDate={pickDate} />
 
             <Text style={styles.sectionTitle}>Available Time Slots</Text>
@@ -151,7 +152,7 @@ export default function RescheduleModal({ visible, appointmentId, patientId, ini
               placeholderTextColor={adTokens.textMuted}
             />
             {!reason.trim() && selectedSlot ? <Text style={styles.validationText}>A reason is required.</Text> : null}
-          </ScrollView>
+          </KeyboardAwareScrollView>
 
           <View style={styles.footer}>
             <Pressable style={styles.cancelButton} onPress={handleClose} disabled={submitting}>
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
   loadingWrap: { paddingVertical: 20, alignItems: 'center' },
   noSlots: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 14, justifyContent: 'center' },
   noSlotsText: { fontSize: 12.5, color: adTokens.textMuted },
-  slotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, maxHeight: 180 },
+  slotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
   slotChip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: adTokens.border, backgroundColor: adTokens.gray50 },
   slotChipActive: { backgroundColor: adTokens.primary, borderColor: adTokens.primary },
   slotText: { fontSize: 12, fontWeight: '600', color: adTokens.textPrimary },

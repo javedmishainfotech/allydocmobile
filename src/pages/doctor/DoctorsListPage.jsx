@@ -47,15 +47,16 @@ function FeedbackBadge({ doctorId }) {
   );
 }
 
-function DoctorRow({ doctor, showFeedback, onOpen }) {
+function DoctorRow({ doctor, showFeedback, onOpenProfile, onOpenAppointments, onOpenTreatmentPlans }) {
   return (
-    <Pressable style={styles.row} onPress={() => onOpen(doctor)}>
+    <View style={styles.row}>
       <View style={styles.rowTop}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{doctor.fullName.slice(0, 1).toUpperCase()}</Text>
         </View>
         <View style={styles.flex1}>
           <Text style={styles.name} numberOfLines={1}>Dr. {doctor.fullName}</Text>
+          <Text style={styles.email} numberOfLines={1}>{doctor.email}</Text>
           <View style={styles.badgeRow}>
             <View style={styles.roleBadge}>
               <Text style={styles.roleBadgeText}>{doctor.roleLabel}</Text>
@@ -67,11 +68,22 @@ function DoctorRow({ doctor, showFeedback, onOpen }) {
             ) : null}
           </View>
         </View>
-        <Feather name="chevron-right" size={18} color={adTokens.textMuted} />
+        <View style={styles.rowActions}>
+          <Pressable style={styles.viewButton} onPress={() => onOpenProfile(doctor)}>
+            <Feather name="eye" size={16} color={adTokens.primaryDark} />
+          </Pressable>
+          <Pressable style={styles.viewButton} onPress={() => onOpenAppointments(doctor)}>
+            <MaterialCommunityIcons name="calendar-clock-outline" size={16} color={adTokens.primaryDark} />
+          </Pressable>
+          <Pressable style={styles.viewButton} onPress={() => onOpenTreatmentPlans(doctor)}>
+            <MaterialCommunityIcons name="clipboard-text-outline" size={16} color={adTokens.primaryDark} />
+          </Pressable>
+        </View>
       </View>
       <View style={styles.metaRow}>
         <Text style={styles.metaText} numberOfLines={1}>{doctor.phoneNumber}</Text>
-        <Text style={styles.metaText} numberOfLines={1}>{doctor.email}</Text>
+        <Text style={styles.metaText} numberOfLines={1}>DOB {doctor.dob}</Text>
+        <Text style={styles.metaText} numberOfLines={1}>{doctor.gender}</Text>
       </View>
       {showFeedback ? (
         <View style={styles.feedbackRow}>
@@ -79,7 +91,7 @@ function DoctorRow({ doctor, showFeedback, onOpen }) {
           <FeedbackBadge doctorId={doctor.userId} />
         </View>
       ) : null}
-    </Pressable>
+    </View>
   );
 }
 
@@ -104,6 +116,7 @@ export default function DoctorsListPage() {
   const [filter, setFilter] = useState(EMPTY_FREELANCER_PATIENT_FILTER);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [detailInitialTab, setDetailInitialTab] = useState('personal');
   const [addDoctorVisible, setAddDoctorVisible] = useState(false);
 
   const loadDoctors = useCallback(async (pageNumber, activeFilter) => {
@@ -165,7 +178,23 @@ export default function DoctorsListPage() {
           </View>
         ) : (
           doctors.map((doctor) => (
-            <DoctorRow key={doctor.userId} doctor={doctor} showFeedback={showFeedback} onOpen={setSelectedDoctor} />
+            <DoctorRow
+              key={doctor.userId}
+              doctor={doctor}
+              showFeedback={showFeedback}
+              onOpenProfile={(d) => {
+                setDetailInitialTab('personal');
+                setSelectedDoctor(d);
+              }}
+              onOpenAppointments={(d) => {
+                setDetailInitialTab('appointments');
+                setSelectedDoctor(d);
+              }}
+              onOpenTreatmentPlans={(d) => {
+                setDetailInitialTab('treatmentPlans');
+                setSelectedDoctor(d);
+              }}
+            />
           ))
         )}
 
@@ -198,10 +227,12 @@ export default function DoctorsListPage() {
       />
 
       <DoctorDetailModal
+        key={selectedDoctor?.userId ?? 'none'}
         visible={Boolean(selectedDoctor)}
         doctorId={selectedDoctor?.userId}
         doctorName={selectedDoctor?.fullName}
         showFeedback={showFeedback}
+        initialTab={detailInitialTab}
         onClose={() => setSelectedDoctor(null)}
       />
 
@@ -239,12 +270,15 @@ const styles = StyleSheet.create({
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: adTokens.primaryTint, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 15, fontWeight: '700', color: adTokens.primaryDark },
   name: { fontSize: 14, fontWeight: '700', color: adTokens.textPrimary },
+  email: { fontSize: 11.5, color: adTokens.textSecondary, marginTop: 2 },
   badgeRow: { flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap' },
   roleBadge: { backgroundColor: adTokens.infoLight, borderRadius: 6, paddingVertical: 2, paddingHorizontal: 7 },
   roleBadgeText: { fontSize: 10, fontWeight: '700', color: adTokens.infoDark },
   specBadge: { backgroundColor: adTokens.gray100, borderRadius: 6, paddingVertical: 2, paddingHorizontal: 7 },
   specBadgeText: { fontSize: 10, fontWeight: '600', color: adTokens.textSecondary },
-  metaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  rowActions: { flexDirection: 'row', gap: 8 },
+  viewButton: { width: 34, height: 34, borderRadius: 17, backgroundColor: adTokens.primaryTint, alignItems: 'center', justifyContent: 'center' },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   metaText: { fontSize: 11.5, color: adTokens.textSecondary, flexShrink: 1 },
   feedbackRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: adTokens.gray100 },
   metaLabel: { fontSize: 11, color: adTokens.textMuted },

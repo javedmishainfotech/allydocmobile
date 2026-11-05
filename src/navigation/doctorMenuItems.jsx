@@ -19,6 +19,7 @@ import DoctorIdentityProofingPage from '../pages/doctor/DoctorIdentityProofingPa
 import DoctorNotificationPage from '../pages/doctor/DoctorNotificationPage';
 import DoctorRequestsPage from '../pages/doctor/DoctorRequestsPage';
 import DoctorFeedbackPage from '../pages/doctor/DoctorFeedbackPage';
+import DoctorPaymentsPage from '../pages/doctor/DoctorPaymentsPage';
 import NurseDashboardPage from '../pages/nurse/NurseDashboardPage';
 import NursePendingAppointmentsPage from '../pages/nurse/NursePendingAppointmentsPage';
 import PlaceholderScreen from '../components/PlaceholderScreen';
@@ -72,6 +73,7 @@ export const DOCTOR_MENU_ITEMS = [
   { key: 'DoctorRequests', title: 'Pharmacy Requests', icon: 'pill', component: DoctorRequestsPage, pathKeywords: ['pharmacy-request', 'pharmacyrequest', 'rxrequest', 'rx-request', 'request'] },
   { key: 'DoctorNotification', title: 'Notifications', icon: 'bell-outline', component: DoctorNotificationPage, pathKeywords: ['notification'] },
   { key: 'DoctorFeedback', title: 'Feedback', icon: 'comment-text-outline', component: DoctorFeedbackPage, pathKeywords: ['feedback'] },
+  { key: 'DoctorPayments', title: 'Payments', icon: 'credit-card-outline', component: DoctorPaymentsPage, pathKeywords: ['payment'] },
   { key: 'IdentityProofing', title: 'Identity Proofing', icon: 'shield-account-outline', component: DoctorIdentityProofingPage, pathKeywords: ['identity-proofing', 'identityproofing'] },
   { key: 'DoctorSettings', title: 'Settings', icon: 'cog-outline', component: DoctorSettingsPage, pathKeywords: ['setting'] },
   { key: 'DoctorSupport', title: 'Support', icon: 'lifebuoy', component: DoctorSupportPage, pathKeywords: ['support'] },
@@ -93,6 +95,9 @@ export const NURSE_MENU_ITEMS = [
   { key: 'NurseClinicFavorites', title: 'Clinic Favorites', icon: 'star-check-outline', component: ClinicFavoritesPage, pathKeywords: ['clinic-favorite', 'clinicfavorite'] },
   { key: 'NurseFavorites', title: 'Favorites', icon: 'star-outline', component: ClinicianFavoritesPage, pathKeywords: ['favorite'] },
   { key: 'NurseNotification', title: 'Notifications', icon: 'bell-outline', component: DoctorNotificationPage, pathKeywords: ['notification'] },
+  // Web's NursePayments (module/Nurse/NursePayments/index.jsx) literally re-exports the Doctor
+  // Payments component - same reuse here.
+  { key: 'NursePayments', title: 'Payments', icon: 'credit-card-outline', component: DoctorPaymentsPage, pathKeywords: ['payment'] },
   { key: 'NurseSettings', title: 'Settings', icon: 'cog-outline', component: DoctorSettingsPage, pathKeywords: ['setting'] },
   { key: 'NurseSupport', title: 'Support', icon: 'lifebuoy', component: DoctorSupportPage, pathKeywords: ['support'] },
 ];

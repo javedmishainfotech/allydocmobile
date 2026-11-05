@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, Text, StyleSheet, Pressable, View } from 'react-native';
+import { Text, StyleSheet, Pressable, View } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { toast } from '../../utils/toast';
@@ -72,8 +72,7 @@ export default function ForgotPasswordPage({ navigation }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-      <AuthLayout hideFooter>
+    <AuthLayout hideFooter>
         {step !== 'done' ? (
           <Pressable style={styles.backRow} onPress={goBackToLogin}>
             <Feather name="arrow-left" size={16} color={colors.accentDark} />
@@ -171,13 +170,11 @@ export default function ForgotPasswordPage({ navigation }) {
             <AuthButton label="Back To Login" onPress={goBackToLogin} />
           </View>
         ) : null}
-      </AuthLayout>
-    </ScrollView>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { flexGrow: 1, backgroundColor: colors.white },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
   backText: { color: colors.accentDark, fontSize: 14.5, fontWeight: '500' },
   heading: { fontSize: 26, fontWeight: '700', color: colors.heading, marginBottom: 6 },

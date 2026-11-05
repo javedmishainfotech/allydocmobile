@@ -1,46 +1,86 @@
 import apiClient from '../api/client';
-import { callApi } from '../utils/apiResponse';
+import { normalizeApiBody, normalizeApiError } from '../utils/apiEnvelope';
 
 /** Mirrors AllyDocReactApp/src/store/actions/diseaseAssessmentActions.js - the clinic-admin
  * Disease Questionnaire Builder's API contract (question CRUD, publish state, reorder). */
 
-export function getDiseaseAssessment(diseaseId) {
-  return callApi(() => apiClient.get(`/DiseaseAssessment/GetAssessment?diseaseId=${diseaseId}`));
+export async function getDiseaseAssessment(diseaseId) {
+  try {
+    const response = await apiClient.get(`/DiseaseAssessment/GetAssessment?diseaseId=${diseaseId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
-export function saveDiseaseQuestion(payload) {
-  return callApi(() => apiClient.post('/DiseaseAssessment/SaveQuestion', payload));
+export async function saveDiseaseQuestion(payload) {
+  try {
+    const response = await apiClient.post('/DiseaseAssessment/SaveQuestion', payload);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
-export function deleteDiseaseQuestion(diseaseId, questionId) {
-  return callApi(() =>
-    apiClient.delete(`/DiseaseAssessment/DeleteQuestion?diseaseId=${diseaseId}&questionId=${questionId}`),
-  );
+export async function deleteDiseaseQuestion(diseaseId, questionId) {
+  try {
+    const response = await apiClient.delete(`/DiseaseAssessment/DeleteQuestion?diseaseId=${diseaseId}&questionId=${questionId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
-export function duplicateDiseaseQuestion(questionId) {
-  return callApi(() => apiClient.post(`/DiseaseAssessment/DuplicateQuestion?questionId=${questionId}`));
+export async function duplicateDiseaseQuestion(questionId) {
+  try {
+    const response = await apiClient.post(`/DiseaseAssessment/DuplicateQuestion?questionId=${questionId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
-export function saveDiseaseAssessmentSettings(payload) {
-  return callApi(() => apiClient.post('/DiseaseAssessment/SaveSettings', payload));
+export async function saveDiseaseAssessmentSettings(payload) {
+  try {
+    const response = await apiClient.post('/DiseaseAssessment/SaveSettings', payload);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
-export function setDiseaseQuestionPublish(questionId, isPublished) {
-  return callApi(() =>
-    apiClient.put(`/DiseaseAssessment/SetQuestionPublish?questionId=${questionId}&isPublished=${isPublished}`),
-  );
+export async function setDiseaseQuestionPublish(questionId, isPublished) {
+  try {
+    const response = await apiClient.put(`/DiseaseAssessment/SetQuestionPublish?questionId=${questionId}&isPublished=${isPublished}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
-export function setDiseaseAssessmentPublish(diseaseId, isPublished) {
-  return callApi(() =>
-    apiClient.put(`/DiseaseAssessment/SetAssessmentPublish?diseaseId=${diseaseId}&isPublished=${isPublished}`),
-  );
+export async function setDiseaseAssessmentPublish(diseaseId, isPublished) {
+  try {
+    const response = await apiClient.put(`/DiseaseAssessment/SetAssessmentPublish?diseaseId=${diseaseId}&isPublished=${isPublished}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 // Different controller than the rest (DiseaseManagement, not DiseaseAssessment) - matches web.
-export function updateDiseaseQuestionSequence(diseaseId, questionIds) {
-  return callApi(() =>
-    apiClient.put('/DiseaseManagement/UpdateQuestionSequence', { diseaseId, questionIds }),
-  );
+export async function updateDiseaseQuestionSequence(diseaseId, questionIds) {
+  try {
+    const response = await apiClient.put('/DiseaseManagement/UpdateQuestionSequence', { diseaseId, questionIds });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }

@@ -1,18 +1,36 @@
 import apiClient from '../api/client';
-import { callApi } from '../utils/apiResponse';
+import { normalizeApiBody, normalizeApiError } from '../utils/apiEnvelope';
 
 /** Mirrors PatientAppointmentHistory in AllyDocReactApp/src/store/actions. */
-export function getPatientAppointmentHistory(patientId) {
-  return callApi(() => apiClient.get(`/HistoryAppointmentPatient?PatientId=${encodeURIComponent(patientId)}`));
+export async function getPatientAppointmentHistory(patientId) {
+  try {
+    const response = await apiClient.get(`/HistoryAppointmentPatient?PatientId=${encodeURIComponent(patientId)}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors GetUserActiveSubscriptionAction (module/Patient/Pages/Setting/action.js). The
  * endpoint identifies the patient from the auth token, so it takes no id. */
-export function getUserActiveSubscription() {
-  return callApi(() => apiClient.get('/GetUserActiveSubscription'));
+export async function getUserActiveSubscription() {
+  try {
+    const response = await apiClient.get('/GetUserActiveSubscription');
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors GetPendingBookingAttemptAction (BookAppointmentModal/Actions.js). */
-export function getPendingBookingAttempt(patientId) {
-  return callApi(() => apiClient.get(`/BookingProgress/GetPending?patientId=${encodeURIComponent(patientId)}`));
+export async function getPendingBookingAttempt(patientId) {
+  try {
+    const response = await apiClient.get(`/BookingProgress/GetPending?patientId=${encodeURIComponent(patientId)}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }

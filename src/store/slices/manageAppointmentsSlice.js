@@ -78,6 +78,17 @@ export const fetchDoctorAppointmentsList = createAsyncThunk(
   },
 );
 
+/** Mirrors GetFacilityAppointmentsListAction. Resolves to the raw response body, same as
+ * fetchDoctorAppointmentsList. */
+export const fetchFacilityAppointmentsList = createAsyncThunk(
+  'manageAppointments/fetchFacilityList',
+  async (filter, { rejectWithValue }) => {
+    const result = await manageAppointmentsService.getFacilityAppointmentsList(filter);
+    if (!result.success) return rejectWithValue(result.message || 'Unable to load appointments.');
+    return result.raw;
+  },
+);
+
 /** Mirrors UpdateAppointmentAction (reschedule). */
 export const updateAppointmentThunk = createAsyncThunk(
   'manageAppointments/update',

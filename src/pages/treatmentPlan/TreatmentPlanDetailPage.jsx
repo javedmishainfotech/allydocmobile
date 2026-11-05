@@ -350,7 +350,7 @@ export default function TreatmentPlanDetailPage() {
         const data = await getAppointmentRecordingLink(appointmentId, forceSync);
         setRecordingLink(data?.link || null);
       } catch {
-        // keep whatever was already shown on failure, same as the old callApi-failure no-op
+        // keep whatever was already shown on failure, same as before
       } finally {
         setIsRecordingLoading(false);
       }

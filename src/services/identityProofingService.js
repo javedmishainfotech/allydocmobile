@@ -1,5 +1,5 @@
 import apiClient from '../api/client';
-import { callApi } from '../utils/apiResponse';
+import { normalizeApiBody, normalizeApiError } from '../utils/apiEnvelope';
 
 /**
  * Identity Proofing (IDP) + Two-Factor Authentication endpoints. Each function
@@ -13,70 +13,144 @@ import { callApi } from '../utils/apiResponse';
  */
 
 /** Mirrors createIDPAction. Callers read `raw` (Questions / Answers / SessionID / IDCapture / result). */
-export function createIdp(payload) {
-  return callApi(() => apiClient.post('api/Clinicians/CreateIdp', payload));
+export async function createIdp(payload) {
+  try {
+    const response = await apiClient.post('api/Clinicians/CreateIdp', payload);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors submitIDPAnswersAction. */
-export function submitIdpAnswers(payload) {
-  return callApi(() => apiClient.post('api/Clinicians/SubmitClinicianIdpAnswers', payload));
+export async function submitIdpAnswers(payload) {
+  try {
+    const response = await apiClient.post('api/Clinicians/SubmitClinicianIdpAnswers', payload);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors getRegistrationStatusAction. The status is `raw.item`. */
-export function getRegistrationStatus(clinicianId) {
-  return callApi(() =>
-    apiClient.get(`/api/Clinicians/registrationStatus?clinicianId=${encodeURIComponent(clinicianId)}`),
-  );
+export async function getRegistrationStatus(clinicianId) {
+  try {
+    const response = await apiClient.get(`/api/Clinicians/registrationStatus?clinicianId=${encodeURIComponent(clinicianId)}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors GetLegalAgreementAction. */
-export function getLegalAgreement(clinicianId) {
-  return callApi(() =>
-    apiClient.get(`api/Clinicians/GetLegalAggrement?clinicianId=${encodeURIComponent(clinicianId)}`),
-  );
+export async function getLegalAgreement(clinicianId) {
+  try {
+    const response = await apiClient.get(`api/Clinicians/GetLegalAggrement?clinicianId=${encodeURIComponent(clinicianId)}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors AcceptLegalAgreementAction. */
-export function acceptLegalAgreement({ agreementId, nameSigned }) {
-  return callApi(() => apiClient.post('api/Clinicians/AcceptAgreement', { agreementId, nameSigned }));
+export async function acceptLegalAgreement({ agreementId, nameSigned }) {
+  try {
+    const response = await apiClient.post('api/Clinicians/AcceptAgreement', { agreementId, nameSigned });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors GetIdentityProofingDisclaimerAction. */
-export function getIdpDisclaimer() {
-  return callApi(() => apiClient.get('api/Clinicians/idpDisclaimer'));
+export async function getIdpDisclaimer() {
+  try {
+    const response = await apiClient.get('api/Clinicians/idpDisclaimer');
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors AcceptIdentityProofingDisclaimerAction. */
-export function acceptIdpDisclaimer(payload) {
-  return callApi(() => apiClient.post('api/Clinicians/acceptDisclaimer', payload));
+export async function acceptIdpDisclaimer(payload) {
+  try {
+    const response = await apiClient.post('api/Clinicians/acceptDisclaimer', payload);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors fetchStatesAction. */
-export function getStates() {
-  return callApi(() => apiClient.get('/api/Location/GetStates'));
+export async function getStates() {
+  try {
+    const response = await apiClient.get('/api/Location/GetStates');
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors fetchCitiesAction. */
-export function getCitiesByStateId(stateId) {
-  return callApi(() => apiClient.get(`/api/Location/GetCitiesByStateId?stateId=${encodeURIComponent(stateId)}`));
+export async function getCitiesByStateId(stateId) {
+  try {
+    const response = await apiClient.get(`/api/Location/GetCitiesByStateId?stateId=${encodeURIComponent(stateId)}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors sendMobileTfaAction. */
-export function sendMobileTfa({ mobilePhoneNumber }) {
-  return callApi(() => apiClient.post('/api/Clinicians/SendMobileTfa', { mobilePhoneNumber }));
+export async function sendMobileTfa({ mobilePhoneNumber }) {
+  try {
+    const response = await apiClient.post('/api/Clinicians/SendMobileTfa', { mobilePhoneNumber });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors tfaActivateAction. */
-export function tfaActivate({ oneTimePassword, pin }) {
-  return callApi(() => apiClient.post('/api/Clinicians/TfaActivate', { oneTimePassword, pin }));
+export async function tfaActivate({ oneTimePassword, pin }) {
+  try {
+    const response = await apiClient.post('/api/Clinicians/TfaActivate', { oneTimePassword, pin });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors updatePinAction (PUT ChangePin). */
-export function updatePin({ newPIN, currentPIN }) {
-  return callApi(() => apiClient.put('api/Clinicians/ChangePin', { newPIN, currentPIN }));
+export async function updatePin({ newPIN, currentPIN }) {
+  try {
+    const response = await apiClient.put('api/Clinicians/ChangePin', { newPIN, currentPIN });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors sendTfaInitiationRequestEmailAction - JWT only, no body. */
-export function requestTfaActivation() {
-  return callApi(() => apiClient.post('/api/Clinicians/RequestTfaActivation'));
+export async function requestTfaActivation() {
+  try {
+    const response = await apiClient.post('/api/Clinicians/RequestTfaActivation');
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }

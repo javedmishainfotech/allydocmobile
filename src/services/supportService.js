@@ -4,7 +4,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import Constants from 'expo-constants';
 import apiClient from '../api/client';
-import { callApi } from '../utils/apiResponse';
+import { normalizeApiBody, normalizeApiError } from '../utils/apiEnvelope';
 import { getItem } from '../utils/storage';
 import { toast } from '../utils/toast';
 
@@ -54,37 +54,65 @@ function toForm(fields, files = []) {
 }
 
 /** My tickets (newest activity first) plus counts per status. */
-export function fetchMyTickets({ status, search } = {}) {
+export async function fetchMyTickets({ status, search } = {}) {
   const params = { page: 1, pageSize: 100 };
   if (status && status !== 'all') params.status = status;
   if (search) params.search = search;
-  return callApi(() => apiClient.get('/api/Support/Tickets', { params }));
+  try {
+    const response = await apiClient.get('/api/Support/Tickets', { params });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** One of my tickets with its attachments and conversation. */
-export function fetchMyTicket(id) {
-  return callApi(() => apiClient.get(`/api/Support/Tickets/${encodeURIComponent(id)}`));
+export async function fetchMyTicket(id) {
+  try {
+    const response = await apiClient.get(`/api/Support/Tickets/${encodeURIComponent(id)}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** New ticket; name and e-mail are taken from the account on the server. Returns { id, ticketNumber }. */
-export function createTicket({ subject, message, files = [] }) {
-  return callApi(() =>
-    apiClient.post('/api/Support/Tickets', toForm({ subject, message }, files), { headers: { 'Content-Type': 'multipart/form-data' } }),
-  );
+export async function createTicket({ subject, message, files = [] }) {
+  try {
+    const response = await apiClient.post('/api/Support/Tickets', toForm({ subject, message }, files), {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Adds my reply (with optional attachments); returns the updated ticket. */
-export function replyToTicket(id, message, files = []) {
-  return callApi(() =>
-    apiClient.post(`/api/Support/Tickets/${encodeURIComponent(id)}/Replies`, toForm({ message }, files), {
+export async function replyToTicket(id, message, files = []) {
+  try {
+    const response = await apiClient.post(`/api/Support/Tickets/${encodeURIComponent(id)}/Replies`, toForm({ message }, files), {
       headers: { 'Content-Type': 'multipart/form-data' },
-    }),
-  );
+    });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Closes my ticket with optional remarks; returns the updated ticket. */
-export function closeTicket(id, remarks) {
-  return callApi(() => apiClient.post(`/api/Support/Tickets/${encodeURIComponent(id)}/Close`, { remarks: remarks || null }));
+export async function closeTicket(id, remarks) {
+  try {
+    const response = await apiClient.post(`/api/Support/Tickets/${encodeURIComponent(id)}/Close`, { remarks: remarks || null });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Downloads one of my attachments (auth'd) to a cache file and returns its local `file://` uri -

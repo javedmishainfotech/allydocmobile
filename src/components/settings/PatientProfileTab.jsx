@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getUserDetails } from '../../services/settingsService';
 import Avatar from '../Avatar';
 import PatientProfileModal from './PatientProfileModal';
+import RingtoneSelector from './RingtoneSelector';
 import { adTokens } from '../../theme/colors';
 
 const PHONE_TYPES = { 1: 'Beeper', 2: 'Cell', 3: 'Fax', 4: 'Home', 5: 'Work', 6: 'Night' };
@@ -43,8 +44,8 @@ function Field({ label, value }) {
 /**
  * Patient "My Profile" - port of AllyDocReactApp's module/Patient/Pages/Setting/Tab/PatientProfile:
  * the profile read from `GET /UserDetails?userid=` (hero with photo, name, email, phone and the
- * personal / contact / body details) and Edit Profile (the web's Create Profile modal, in edit
- * mode). The call ringtone picker is not ported (the web only plays it for incoming calls).
+ * personal / contact / body details), Edit Profile (the web's Create Profile modal, in edit mode),
+ * and the incoming-call ringtone picker (RingtoneSelector).
  */
 export default function PatientProfileTab({ userId }) {
   const [details, setDetails] = useState(null);
@@ -148,6 +149,11 @@ export default function PatientProfileTab({ userId }) {
         <Field label="Height Metric" value={hUnit || '-'} />
         <Field label="Weight" value={show(details.weight)} />
         <Field label="Weight Metric" value={wUnit || '-'} />
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Ringtone</Text>
+        <RingtoneSelector />
       </View>
 
       <PatientProfileModal visible={editing} edit data={details} onClose={() => setEditing(false)} onSaved={load} />

@@ -1,5 +1,5 @@
 import apiClient from '../api/client';
-import { callApi } from '../utils/apiResponse';
+import { normalizeApiBody, normalizeApiError } from '../utils/apiEnvelope';
 
 // Ports of createProfileAction / UpdateProfileAction in AllyDocReactApp/src/store/actions/createProfileAction.js.
 // Both send multipart form data (the profile photo is a file part).
@@ -7,13 +7,25 @@ import { callApi } from '../utils/apiResponse';
 const MULTIPART = { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 };
 
 /** First-visit "Create Profile" (`POST /CreateProfileV4`). */
-export function createPatientProfile(formData) {
-  return callApi(() => apiClient.post('/CreateProfileV4', formData, MULTIPART));
+export async function createPatientProfile(formData) {
+  try {
+    const response = await apiClient.post('/CreateProfileV4', formData, MULTIPART);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** "Edit Profile" (`PUT /UpdateProfile`). */
-export function updatePatientProfile(formData) {
-  return callApi(() => apiClient.put('/UpdateProfile', formData, MULTIPART));
+export async function updatePatientProfile(formData) {
+  try {
+    const response = await apiClient.put('/UpdateProfile', formData, MULTIPART);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 // Same two endpoints, used by the Doctor/Nurse "Create Profile" first-visit form - aliased under

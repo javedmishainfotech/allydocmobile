@@ -4,6 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { getUserDetails } from '../../services/settingsService';
 import DocumentPreviewModal from '../DocumentPreviewModal';
+import RingtoneSelector from './RingtoneSelector';
 import { adTokens } from '../../theme/colors';
 
 const PHONE_TYPE_MAP = { 1: 'Beeper', 2: 'Cell', 3: 'Fax', 4: 'Home', 5: 'Work', 6: 'Night' };
@@ -108,6 +109,11 @@ export default function ProfileTab({ userId }) {
         <InfoRow label="NPI Number" value={details.npiNumber} />
         <InfoRow label="DEA Number" value={dea ? `${dea.deaNumber} (${dea.state})` : null} />
         <InfoRow label="NADEA Number" value={nadea ? `${nadea.nadeaNumber} (${nadea.state})` : null} />
+      </View>
+
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>Ringtone</Text>
+        <RingtoneSelector />
       </View>
 
       {details.uploadLicence ? (

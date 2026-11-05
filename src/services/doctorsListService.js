@@ -1,9 +1,9 @@
 import apiClient from '../api/client';
-import { callApi } from '../utils/apiResponse';
+import { normalizeApiBody, normalizeApiError } from '../utils/apiEnvelope';
 
 /** Mirrors GetListOfDoctorsAction in AllyDocReactApp/.../Doctors/action.js (Clinic/Hospital
  * admin's "Doctors" list - sub-doctors in the clinic). */
-export function getListOfDoctors({ pageNumber = 1, pageSize = 20, filters = {} } = {}) {
+export async function getListOfDoctors({ pageNumber = 1, pageSize = 20, filters = {} } = {}) {
   const params = { PageNumber: pageNumber, PageSize: pageSize };
   if (filters.firstname) params.Firstname = filters.firstname;
   if (filters.lastname) params.Lastname = filters.lastname;
@@ -12,16 +12,34 @@ export function getListOfDoctors({ pageNumber = 1, pageSize = 20, filters = {} }
   if (filters.gender && filters.gender !== 'both') params.Gender = filters.gender;
   if (filters.doseSpotId) params.DoseSpotID = filters.doseSpotId;
   if (filters.phoneNumber) params.Phonenumber = filters.phoneNumber;
-  return callApi(() => apiClient.get('/GetListOfDoctors', { params }));
+  try {
+    const response = await apiClient.get('/GetListOfDoctors', { params });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors GetDoctorTreatmentPlansActions - a clinic admin's view of one doctor's
  * in-progress/completed treatment plans. */
-export function getDoctorTreatmentPlans(doctorId) {
-  return callApi(() => apiClient.get(`/GetDoctorTreatmentPlans?DoctorId=${doctorId}`));
+export async function getDoctorTreatmentPlans(doctorId) {
+  try {
+    const response = await apiClient.get(`/GetDoctorTreatmentPlans?DoctorId=${doctorId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors the Feedback module's action.js - one doctor's rated appointments. */
-export function getDoctorFeedbackAppointments(doctorId) {
-  return callApi(() => apiClient.get(`/GetDoctorFeedbackAppointments/${doctorId}`));
+export async function getDoctorFeedbackAppointments(doctorId) {
+  try {
+    const response = await apiClient.get(`/GetDoctorFeedbackAppointments/${doctorId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }

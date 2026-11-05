@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import apiClient from '../api/client';
-import { callApi } from '../utils/apiResponse';
+import { normalizeApiBody, normalizeApiError } from '../utils/apiEnvelope';
 
 /**
  * Mirrors AllyDocReactApp/src/services/fcmRegister.js's registerFcmTokenWithBackend /
@@ -11,10 +11,22 @@ import { callApi } from '../utils/apiResponse';
  */
 const SOURCE = Platform.OS === 'ios' ? 'ios' : 'android';
 
-export function registerFcmToken(deviceToken) {
-  return callApi(() => apiClient.post('/RegisterFcmToken', { deviceToken, source: SOURCE }));
+export async function registerFcmToken(deviceToken) {
+  try {
+    const response = await apiClient.post('/RegisterFcmToken', { deviceToken, source: SOURCE });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
-export function unregisterFcmToken(deviceToken) {
-  return callApi(() => apiClient.post('/UnregisterFcmToken', { deviceToken, source: SOURCE }));
+export async function unregisterFcmToken(deviceToken) {
+  try {
+    const response = await apiClient.post('/UnregisterFcmToken', { deviceToken, source: SOURCE });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }

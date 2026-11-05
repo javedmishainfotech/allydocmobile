@@ -1,44 +1,70 @@
 import apiClient from '../api/client';
-import { callApi } from '../utils/apiResponse';
+import { normalizeApiBody, normalizeApiError } from '../utils/apiEnvelope';
 
 /** Mirrors GetURlAction (AllyDocReactApp/src/components/Daily_Co/action.js): starts (or rejoins) the
  * Daily.co room for this appointment and returns `{ url, token, callSessionId }`. */
-export function startAppointmentCall(appointmentId, callType) {
-  return callApi(() => apiClient.post(`/StartAppointmentCall?AppointmentId=${appointmentId}&Type=${callType}`));
+export async function startAppointmentCall(appointmentId, callType) {
+  try {
+    const response = await apiClient.post(`/StartAppointmentCall?AppointmentId=${appointmentId}&Type=${callType}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors StartCallRecordingAction. Doctor-side only. */
-export function startCallRecording(roomName) {
-  return callApi(() => apiClient.post(`/start-recording/${roomName}`));
+export async function startCallRecording(roomName) {
+  try {
+    const response = await apiClient.post(`/start-recording/${roomName}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors StopCallRecordingAction. Doctor-side only. */
-export function stopCallRecording(roomName, appointmentId) {
-  return callApi(() => apiClient.post(`/stop-recording/${roomName}?appointmentId=${appointmentId}`));
+export async function stopCallRecording(roomName, appointmentId) {
+  try {
+    const response = await apiClient.post(`/stop-recording/${roomName}?appointmentId=${appointmentId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors notifyCallAccepted (AllyDocReactApp/src/services/callDeclined.js) - the patient (or a
  * device that was already in the call) telling the backend it is answering a CALL_RINGING push.
  * Answers HTTP 200 even when refused (see `getCallAcceptRefusal` below). */
-export function acceptCall({ appointmentId, callSessionId, deviceToken }) {
-  return callApi(() =>
-    apiClient.post('/CallAccept', { appointmentId, callSessionId, deviceToken: deviceToken || undefined }),
-  );
+export async function acceptCall({ appointmentId, callSessionId, deviceToken }) {
+  try {
+    const response = await apiClient.post('/CallAccept', { appointmentId, callSessionId, deviceToken: deviceToken || undefined });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** Mirrors notifyCallDeclined. `isAutoReject` is true when the ring timed out with no answer. */
-export function declineCall({ appointmentId, callSessionId, isAutoReject = false, deviceToken }) {
-  return callApi(() =>
-    apiClient.post('/CallDeclined', {
+export async function declineCall({ appointmentId, callSessionId, isAutoReject = false, deviceToken }) {
+  try {
+    const response = await apiClient.post('/CallDeclined', {
       appointmentId,
       callSessionId: callSessionId || undefined,
       isAutoReject,
       deviceToken: deviceToken || undefined,
-    }),
-  );
+    });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
-/** Mirrors getCallAcceptRefusal, adapted to this app's normalized `callApi` envelope (web reads
+/** Mirrors getCallAcceptRefusal, adapted to this app's normalized response envelope (web reads
  * the raw axios response; here `result.success`/`result.data`/`result.statusCode` already carry
  * the same information). Returns a short reason when the accept was refused, or null when it
  * succeeded. */

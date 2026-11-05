@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, RefreshControl, Modal, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, RefreshControl, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import Toast from 'react-native-toast-message';
+import { useNavigation } from '@react-navigation/native';
 import { usePatients } from '../../hooks/usePatients';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -13,14 +13,13 @@ import {
 } from '../../utils/patientListUtils';
 import PatientFilterModal, { EMPTY_FREELANCER_PATIENT_FILTER } from '../../components/patients/PatientFilterModal';
 import PatientDetailModal from '../../components/patients/PatientDetailModal';
-import MergePatientTab from '../../components/settings/MergePatientTab';
+import AddUserModal from '../../components/nurse/AddUserModal';
 import { adTokens } from '../../theme/colors';
 import { useDockInset } from '../../navigation/DockInsetContext';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const PAGE_SIZE = 10;
 
-function PatientRow({ patient, onOpen, onOpenAppointmentHistory }) {
+function PatientRow({ patient, onOpen, onOpenAppointmentHistory, onOpenTreatmentPlans }) {
   const isRegistered = patient.profileStatusLabel?.toLowerCase().trim() === 'profile created';
   return (
     <View style={styles.row}>
@@ -66,26 +65,45 @@ function PatientRow({ patient, onOpen, onOpenAppointmentHistory }) {
             color={isRegistered ? adTokens.primaryDark : adTokens.textMuted}
           />
         </Pressable>
+        <Pressable
+          style={[styles.viewButton, !isRegistered && styles.viewButtonDisabled]}
+          disabled={!isRegistered}
+          onPress={() => onOpenTreatmentPlans(patient)}
+        >
+          <MaterialCommunityIcons
+            name="clipboard-text-outline"
+            size={16}
+            color={isRegistered ? adTokens.primaryDark : adTokens.textMuted}
+          />
+        </Pressable>
       </View>
     </View>
   );
 }
 
 /**
- * Port of AllyDocReactApp/src/module/Doctor/Pages/DoctorPatients/index.jsx
- * (freelancer variant, confirmed via DoctorPatientsRoute.jsx's
- * userType==='freelancer' branch) - GET /FreelancerDoctorPatients,
- * server-paginated + filterable, no client-side search/sort, no "Add
- * Patient" button (web doesn't have one on this page either). Row actions:
- * web has 3 icons (profile/appointments/treatment-plans); the profile (eye)
- * and appointment-history icons both open PatientDetailModal (on its
- * "Personal Info" vs "Appointments" tab respectively) - the treatment-plan
- * icon routes to a Nurse-shared screen on web that this app hasn't ported
- * yet, so it's left out rather than linking to nothing.
+ * Port of AllyDocReactApp/src/module/Doctor/Pages/DoctorPatients/index.jsx (freelancer variant)
+ * and .../Patients/index.jsx (clinic/hospital variant) - DoctorPatientsRoute.jsx picks between
+ * them by userType/roleName, which this page mirrors via `isFreelancerDoctor`.
+ * GET /FreelancerDoctorPatients or /GetListOfPatients, server-paginated + filterable, no
+ * client-side search/sort.
+ *
+ * "+ Add Patient": only the clinic/hospital Patients page has this button on web, and only when
+ * roleName2 !== 'doctor admin' (module/Doctor/Pages/Patients/index.jsx) - freelancer doctors never
+ * see it, matching `canAddPatient` below. Opens AddPatientModal (POST /AddUser, roleId 9).
+ *
+ * Row actions: web has 3 icons on both variants (profile/appointments/treatment-plans), all
+ * disabled until the patient's profile is created - none of the three are role-gated on web (only
+ * "Book Appointment", a 4th icon neither web variant's menu this app has reached shows, is gated
+ * by roleName2 !== 'doctor admin'). The profile (eye) and appointment-history icons both open
+ * PatientDetailModal (on its "Personal Info" vs "Appointments" tab respectively). The
+ * treatment-plan icon navigates to a dedicated per-patient list on web
+ * (patients/:id/treatment-plans); this app has no such screen/endpoint ported, so it instead opens
+ * the shared DoctorTreatmentPlanPage pre-filtered to that patient, which shows the same data.
  */
 export default function DoctorPatientsPage() {
   const dockInset = useDockInset();
-  const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const { profile } = useAuth();
   const { getFreelancerPatients, getClinicPatients } = usePatients();
   // Same routing as the web's DoctorPatientsRoute.jsx: only a freelancer "doctor" uses
@@ -103,10 +121,14 @@ export default function DoctorPatientsPage() {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [detailInitialTab, setDetailInitialTab] = useState('personal');
-  const [mergePatientVisible, setMergePatientVisible] = useState(false);
+  const [addPatientVisible, setAddPatientVisible] = useState(false);
   // Web's canShowMergePatientLink(): hidden for doctor admin and nurse.
   const roleNameLower = String(profile?.roleName || '').toLowerCase().trim();
   const canShowMergePatientLink = roleNameLower !== 'doctor admin' && roleNameLower !== 'nurse';
+  // Web's module/Doctor/Pages/Patients/index.jsx - the clinic/hospital "+ Add Patients" button
+  // only renders when roleName2 !== 'doctor admin' (not shown for doctor admin, shown for doctor
+  // sub / clinic doctors); it doesn't exist at all on the freelancer DoctorPatients page.
+  const canAddPatient = !isFreelancerDoctor && roleNameLower !== 'doctor admin';
 
   const loadPatients = useCallback(
     async (pageNumber, activeFilter) => {
@@ -151,13 +173,11 @@ export default function DoctorPatientsPage() {
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => loadPatients(page, filter)} />}
       >
         <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.pageTitle}>Patients</Text>
-            <Text style={styles.pageSubtitle}>{totalRecords} patient{totalRecords === 1 ? '' : 's'}</Text>
-          </View>
+          <Text style={styles.pageTitle}>Patients</Text>
+          <Text style={styles.pageSubtitle}>{totalRecords} patient{totalRecords === 1 ? '' : 's'}</Text>
           <View style={styles.headerActions}>
             {canShowMergePatientLink ? (
-              <Pressable style={styles.mergeButton} onPress={() => setMergePatientVisible(true)}>
+              <Pressable style={styles.mergeButton} onPress={() => navigation.navigate('MergePatient')}>
                 <MaterialCommunityIcons name="account-multiple-plus-outline" size={16} color={adTokens.primaryDark} />
                 <Text style={styles.mergeButtonText}>Merge Patient</Text>
               </Pressable>
@@ -166,6 +186,12 @@ export default function DoctorPatientsPage() {
               <MaterialCommunityIcons name="filter-variant" size={16} color={hasActiveFilter ? '#FFFFFF' : adTokens.primaryDark} />
               <Text style={[styles.filterButtonText, hasActiveFilter && styles.filterButtonTextActive]}>Filter</Text>
             </Pressable>
+            {canAddPatient ? (
+              <Pressable style={styles.addPatientButton} onPress={() => setAddPatientVisible(true)}>
+                <Feather name="plus" size={15} color={adTokens.white} />
+                <Text style={styles.addPatientButtonText}>Add Patient</Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
 
@@ -191,6 +217,12 @@ export default function DoctorPatientsPage() {
                 setDetailInitialTab('appointments');
                 setSelectedPatient(p);
               }}
+              onOpenTreatmentPlans={(p) =>
+                navigation.navigate('DoctorTreatmentPlan', {
+                  initialPatientId: p.userId,
+                  initialPatientName: p.fullName,
+                })
+              }
             />
           ))
         )}
@@ -234,23 +266,16 @@ export default function DoctorPatientsPage() {
         onClose={() => setSelectedPatient(null)}
       />
 
-      <Modal visible={mergePatientVisible} animationType="slide" onRequestClose={() => setMergePatientVisible(false)}>
-        <View style={styles.flex1}>
-          <Toast />
-          <View style={[styles.mergeModalHeader, { paddingTop: insets.top + 16 }]}>
-            <Pressable onPress={() => setMergePatientVisible(false)} hitSlop={8}>
-              <Feather name="chevron-left" size={22} color={adTokens.textPrimary} />
-            </Pressable>
-            <View>
-              <Text style={styles.mergeModalTitle}>Merge Patient</Text>
-              <Text style={styles.mergeModalSubtitle}>Search and merge duplicate patient records</Text>
-            </View>
-          </View>
-          <ScrollView contentContainerStyle={styles.mergeModalBody}>
-            <MergePatientTab />
-          </ScrollView>
-        </View>
-      </Modal>
+      <AddUserModal
+        visible={addPatientVisible}
+        isDoctor={false}
+        onClose={() => setAddPatientVisible(false)}
+        onSuccess={() => {
+          setAddPatientVisible(false);
+          setPage(1);
+          loadPatients(1, filter);
+        }}
+      />
     </View>
   );
 }
@@ -258,10 +283,10 @@ export default function DoctorPatientsPage() {
 const styles = StyleSheet.create({
   flex1: { flex: 1 },
   container: { padding: 16, paddingBottom: 32 },
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 },
+  headerRow: { marginBottom: 16 },
   pageTitle: { fontSize: 19, fontWeight: '700', color: adTokens.textPrimary },
   pageSubtitle: { fontSize: 12.5, color: adTokens.textSecondary, marginTop: 3 },
-  headerActions: { flexDirection: 'row', gap: 8 },
+  headerActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   mergeButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -273,17 +298,6 @@ const styles = StyleSheet.create({
     borderColor: adTokens.primary,
   },
   mergeButtonText: { fontSize: 12, fontWeight: '600', color: adTokens.primaryDark },
-  mergeModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: adTokens.border,
-  },
-  mergeModalTitle: { fontSize: 16, fontWeight: '700', color: adTokens.textPrimary },
-  mergeModalSubtitle: { fontSize: 12, color: adTokens.textSecondary, marginTop: 2 },
-  mergeModalBody: { padding: 16 },
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -296,6 +310,16 @@ const styles = StyleSheet.create({
   filterButtonActive: { backgroundColor: adTokens.primary },
   filterButtonText: { fontSize: 12.5, fontWeight: '700', color: adTokens.primaryDark },
   filterButtonTextActive: { color: '#FFFFFF' },
+  addPatientButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: adTokens.primary,
+  },
+  addPatientButtonText: { fontSize: 12.5, fontWeight: '700', color: adTokens.white },
 
   emptyState: { paddingVertical: 50, alignItems: 'center', gap: 10 },
   emptyStateText: { fontSize: 13, color: adTokens.textSecondary },

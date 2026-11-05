@@ -139,6 +139,32 @@ export function buildDoctorAppointmentsQuery(doctorId, filter = {}) {
   return params.toString();
 }
 
+/** `GET /AllFacilityAppointment` query - every appointment at the caller's own facility (any
+ * doctor, or none assigned yet), for staff (Nurse) who have no "my own patients as a doctor"
+ * concept the way `buildDoctorAppointmentsQuery` requires a doctorId (web: GetFacilityAppointmentsListAction
+ * / buildAppointmentListQueryParams). Same filter shape as `buildDoctorAppointmentsQuery` minus Doctorid. */
+export function buildFacilityAppointmentsQuery(filter = {}) {
+  const params = new URLSearchParams();
+
+  normalizeStatusFilter(filter?.status).forEach((status) => params.append('Status', status));
+
+  const fromDate = filter?.fromDate != null ? String(filter.fromDate).trim() : '';
+  const toDate = filter?.toDate != null ? String(filter.toDate).trim() : '';
+  const patientId = filter?.patientId != null ? String(filter.patientId).trim() : '';
+  const { fromDateUtc, toDateUtc } = toUtcDateRangeParams(fromDate, toDate);
+  if (fromDateUtc) params.append('fromDate', fromDateUtc);
+  if (toDateUtc) params.append('toDate', toDateUtc);
+  if (patientId) params.append('PatientId', patientId);
+
+  const page = filter?.page != null && filter.page !== '' ? Number(filter.page) : null;
+  const pageSize = filter?.pageSize != null && filter.pageSize !== '' ? Number(filter.pageSize) : null;
+  if (page != null && Number.isFinite(page) && page >= 1) params.append('page', String(Math.floor(page)));
+  if (pageSize != null && Number.isFinite(pageSize) && pageSize >= 1) {
+    params.append('pageSize', String(Math.floor(pageSize)));
+  }
+  return params.toString();
+}
+
 /** Reads { list, totalRecords, totalPages, page, pageSize } out of the several shapes the API returns. */
 export function parseAppointmentListResponse(body, fallbackPage, fallbackPageSize) {
   const base = { list: [], totalRecords: 0, totalPages: 0, page: fallbackPage, pageSize: fallbackPageSize };

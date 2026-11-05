@@ -52,6 +52,19 @@ export const doctorPerson = (load) => ({
   load,
 });
 
+/** web's personFilterType 'none' - status + dates only, no person picker (a Nurse has no
+ * "my own patients" concept the way a doctor does: web's FilterTreatmentPlansModal hides the
+ * Patient dropdown entirely for her). Keeps the same patientId/patientName filter keys so the
+ * filter object shape stays uniform; `hidden` tells the sheet to skip rendering the field. */
+export const noPerson = () => ({
+  label: 'Patient',
+  allLabel: 'All patients',
+  idKey: 'patientId',
+  nameKey: 'patientName',
+  hidden: true,
+  load: () => Promise.resolve({ success: true, data: [] }),
+});
+
 const parseDay = (value) => {
   const [year, month, day] = String(value || '').split('-').map(Number);
   return year && month && day ? new Date(year, month - 1, day) : null;
@@ -274,13 +287,17 @@ export default function AppointmentFilterSheet({
               </Pressable>
               {!fromDay ? <Text style={styles.hint}>Select a From date first.</Text> : null}
 
-              <Text style={styles.label}>{effectivePerson.label}</Text>
-              <Pressable style={styles.field} onPress={() => setPersonPickerOpen(true)}>
-                <MaterialCommunityIcons name="account-outline" size={18} color={adTokens.textMuted} />
-                <Text style={[styles.fieldText, !draft[idKey] && styles.placeholder]} numberOfLines={1}>
-                  {draft[idKey] ? draft[nameKey] || `Selected ${effectivePerson.label.toLowerCase()}` : effectivePerson.allLabel}
-                </Text>
-              </Pressable>
+              {!effectivePerson.hidden ? (
+                <>
+                  <Text style={styles.label}>{effectivePerson.label}</Text>
+                  <Pressable style={styles.field} onPress={() => setPersonPickerOpen(true)}>
+                    <MaterialCommunityIcons name="account-outline" size={18} color={adTokens.textMuted} />
+                    <Text style={[styles.fieldText, !draft[idKey] && styles.placeholder]} numberOfLines={1}>
+                      {draft[idKey] ? draft[nameKey] || `Selected ${effectivePerson.label.toLowerCase()}` : effectivePerson.allLabel}
+                    </Text>
+                  </Pressable>
+                </>
+              ) : null}
             </ScrollView>
 
             <View style={styles.footer}>

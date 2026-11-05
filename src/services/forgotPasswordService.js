@@ -1,5 +1,5 @@
 import apiClient from '../api/client';
-import { callApi } from '../utils/apiResponse';
+import { normalizeApiBody, normalizeApiError } from '../utils/apiEnvelope';
 
 /**
  * Mirrors AllyDocReactApp/src/components/ForgotPassword/Actions.js. Pure API calls, all
@@ -8,34 +8,50 @@ import { callApi } from '../utils/apiResponse';
  */
 
 /** POST /ForgotPassword - emails an OTP. data: { id, userEmail }. */
-export function sendResetCode(email) {
-  return callApi(() =>
-    apiClient.post('/ForgotPassword', { email }, { skipAuthTokenAttach: true }),
-  );
+export async function sendResetCode(email) {
+  try {
+    const response = await apiClient.post('/ForgotPassword', { email }, { skipAuthTokenAttach: true });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** POST /ResendOtp */
-export function resendResetCode(email) {
-  return callApi(() =>
-    apiClient.post('/ResendOtp', { email }, { skipAuthTokenAttach: true }),
-  );
+export async function resendResetCode(email) {
+  try {
+    const response = await apiClient.post('/ResendOtp', { email }, { skipAuthTokenAttach: true });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** POST /VerifyOtpForgotpassword - the reset token comes back as raw.auth_token. */
-export function verifyResetCode({ id, otpNumber }) {
-  return callApi(() =>
-    apiClient.post('/VerifyOtpForgotpassword', { id, otpNumber }, { skipAuthTokenAttach: true }),
-  );
+export async function verifyResetCode({ id, otpNumber }) {
+  try {
+    const response = await apiClient.post('/VerifyOtpForgotpassword', { id, otpNumber }, { skipAuthTokenAttach: true });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }
 
 /** POST /ResetPassword - authorised with the reset token from verifyResetCode, sent as the
  * bare token (no "Bearer " prefix), exactly as the web app does. */
-export function resetPassword({ email, password, confirmPassword, resetToken }) {
-  return callApi(() =>
-    apiClient.post(
+export async function resetPassword({ email, password, confirmPassword, resetToken }) {
+  try {
+    const response = await apiClient.post(
       '/ResetPassword',
       { email, password, confirmPassword },
       { skipAuthTokenAttach: true, headers: { Authorization: resetToken } },
-    ),
-  );
+    );
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }

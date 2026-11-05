@@ -1,5 +1,5 @@
 import apiClient from '../api/client';
-import { callApi } from '../utils/apiResponse';
+import { normalizeApiBody, normalizeApiError } from '../utils/apiEnvelope';
 
 /**
  * Mirrors AllyDocReactApp's src/store/actions/GetUnreadNotificationAction.js -
@@ -20,16 +20,34 @@ function normalizeList(result) {
 }
 
 export async function getAllNotifications() {
-  return normalizeList(await callApi(() => apiClient.get('/AllNotification')));
+  let result;
+  try {
+    const response = await apiClient.get('/AllNotification');
+    result = normalizeApiBody(response.data, true);
+  } catch (err) {
+    result = err.response ? normalizeApiBody(err.response.data, false) : normalizeApiError(err);
+  }
+  return normalizeList(result);
 }
 
 export async function getUnreadNotifications() {
-  return normalizeList(await callApi(() => apiClient.get('/UnReadNotification')));
+  let result;
+  try {
+    const response = await apiClient.get('/UnReadNotification');
+    result = normalizeApiBody(response.data, true);
+  } catch (err) {
+    result = err.response ? normalizeApiBody(err.response.data, false) : normalizeApiError(err);
+  }
+  return normalizeList(result);
 }
 
 /** source: 'local' | 'dosespot' - which upstream system the row came from. */
-export function markNotificationAsRead(notificationId, source = 'local') {
-  return callApi(() =>
-    apiClient.post(`/UpdateNotificationStatus?id=${notificationId}&source=${encodeURIComponent(source)}`),
-  );
+export async function markNotificationAsRead(notificationId, source = 'local') {
+  try {
+    const response = await apiClient.post(`/UpdateNotificationStatus?id=${notificationId}&source=${encodeURIComponent(source)}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
 }

@@ -12,6 +12,7 @@ import ManagePharmaciesPage from '../pages/prescriptions/ManagePharmaciesPage';
 import DiseaseQuestionnairePage from '../pages/settings/DiseaseQuestionnairePage';
 import SupportTicketDetailPage from '../pages/support/SupportTicketDetailPage';
 import BookAppointmentPage from '../pages/patient/BookAppointmentPage';
+import MergePatientTab from '../components/settings/MergePatientTab';
 import { renderStackHeader } from '../components/AppHeader';
 import { DoctorMenuContext } from './DoctorMenuContext';
 import {
@@ -116,6 +117,7 @@ export default function RoleNavigator() {
         <Stack.Screen name="ManagePharmacies" component={ManagePharmaciesPage} options={{ title: 'Manage Pharmacies' }} />
         <Stack.Screen name="DiseaseQuestionnaire" component={DiseaseQuestionnairePage} options={{ title: 'Assessment' }} />
         <Stack.Screen name="SupportTicketDetail" component={SupportTicketDetailPage} options={{ title: 'Support Ticket' }} />
+        <Stack.Screen name="MergePatient" component={MergePatientTab} options={{ title: 'Merge Patient' }} />
         <Stack.Screen name="LegalWebView" component={LegalWebViewScreen} />
       </Stack.Navigator>
     </DoctorMenuContext.Provider>
