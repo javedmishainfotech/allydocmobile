@@ -17,7 +17,23 @@ module.exports = {
   ...appJson,
   expo: {
     ...appJson.expo,
-    plugins: [...(appJson.expo.plugins || []), 'expo-web-browser', 'react-native-blob-util', 'expo-video'],
+    plugins: [
+      ...(appJson.expo.plugins || []),
+      'expo-web-browser',
+      'react-native-blob-util',
+      'expo-video',
+      'expo-asset',
+      'expo-font',
+      '@react-native-firebase/app',
+      '@react-native-firebase/messaging',
+      './plugins/withFirebaseNotificationColorFix.js',
+      // react-native-firebase's iOS SDK resolves via Swift Package Manager as automatic
+      // (non-dynamic) libraries - with the default static pod linkage, each pod that pulls in
+      // Firebase embeds its own copy, colliding as duplicate-symbol link errors. Dynamic linkage
+      // is react-native-firebase's documented fix (https://rnfirebase.io/ios-spm); Android is
+      // untouched by this (useFrameworks is iOS-only).
+      ['expo-build-properties', { ios: { useFrameworks: 'dynamic' } }],
+    ],
     extra: {
       ...(appJson.expo.extra || {}),
       apiBaseUrl: API_BASE_URL,

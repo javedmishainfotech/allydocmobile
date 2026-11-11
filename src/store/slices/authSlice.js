@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import * as authService from '../../services/authService';
+import { clearPushToken } from '../../services/pushNotifications';
 import { getItem, setItem, clearAll } from '../../utils/storage';
 import { validateSession } from '../../utils/roleAccess';
 import {
@@ -169,9 +170,11 @@ export const updateTempPassword = createAsyncThunk(
 
 export const logoutUser = createAsyncThunk('auth/logoutUser', async () => {
   // Mirrors the web's runLogoutCleanup(): revoke the refresh token server-side (best-effort,
-  // capped so a bad connection can't trap the user on a "logging out" state), then wipe local
-  // session state. FCM token deregistration and activity-log flush are still to be added once
-  // push notifications/activity logging land. Only the login-tab preference survives the wipe.
+  // capped so a bad connection can't trap the user on a "logging out" state), deregister the push
+  // token, then wipe local session state. clearPushToken() MUST run (and be awaited) before
+  // clearAll() - clearAll() wipes the AsyncStorage key clearPushToken reads the device token from,
+  // and web's own logout cleanup enforces this exact order (unregister, then localStorage.clear())
+  // at every one of its call sites. Only the login-tab preference survives the wipe.
   setAuthLogoutInProgress(true);
   try {
     stopProactiveRefresh();
@@ -182,6 +185,7 @@ export const logoutUser = createAsyncThunk('auth/logoutUser', async () => {
         new Promise((resolve) => setTimeout(resolve, 3000)),
       ]);
     }
+    await clearPushToken().catch(() => {});
     const preferredTab = await getItem('preferredLoginTab');
     await clearAll(preferredTab ? ['preferredLoginTab'] : []);
   } finally {

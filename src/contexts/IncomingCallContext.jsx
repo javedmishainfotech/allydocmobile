@@ -1,9 +1,11 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import { getMessaging, onMessage, onNotificationOpenedApp, getInitialNotification } from '@react-native-firebase/messaging';
 import { useAuth } from '../hooks/useAuth';
 import { useNotifications } from '../hooks/useNotifications';
 import { acceptCall, declineCall, getCallAcceptRefusal } from '../services/callService';
-import { syncPushToken, clearPushToken } from '../services/pushNotifications';
+import { syncPushToken } from '../services/pushNotifications';
 import { navigate } from '../navigation/navigationRef';
 import { toast } from '../utils/toast';
 
@@ -78,12 +80,28 @@ export function IncomingCallProvider({ children }) {
     console.log('[call] IncomingCallProvider auth effect, isAuthenticated =', isAuthenticated);
     if (isAuthenticated) {
       wasAuthenticatedRef.current = true;
-      syncPushToken().then((token) => console.log('[call] syncPushToken resolved, token =', token));
+      syncPushToken({ force: true }).then((token) => console.log('[call] syncPushToken resolved, token =', token));
     } else if (wasAuthenticatedRef.current) {
       wasAuthenticatedRef.current = false;
+      // The backend unregister call already happened inside the logoutUser thunk (authSlice.js),
+      // awaited BEFORE it wiped storage - clearPushToken() can't run correctly from here anymore,
+      // since by the time isAuthenticated flips false the device token is already gone from
+      // storage. This effect only needs to clear the in-app ring UI.
       setIncomingCall(null);
-      clearPushToken();
     }
+  }, [isAuthenticated]);
+
+  // Keeps the push token healthy while the app stays open across days (web's equivalent: re-check
+  // on window focus/visibilitychange/online). `syncPushToken()` (no force) is cheap - internally
+  // throttled to at most once per 10 minutes and a no-op unless the token actually changed, a
+  // different user logged in, or the daily heartbeat is due.
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active') return;
+      syncPushToken().then((token) => console.log('[call] syncPushToken (foreground resync) resolved, token =', token));
+    });
+    return () => subscription.remove();
   }, [isAuthenticated]);
 
   const closeForSession = useCallback((callSessionId, { toastMessage } = {}) => {
@@ -215,17 +233,9 @@ export function IncomingCallProvider({ children }) {
     [closeForSession, refreshUnreadCount],
   );
 
-  useEffect(() => {
-    console.log('[call] subscribing notification listeners, isAuthenticated =', isAuthenticated);
-    const receivedSub = Notifications.addNotificationReceivedListener((notification) => {
-      console.log('[call] addNotificationReceivedListener fired, isAuthenticated =', isAuthenticated, notification?.request?.content);
-      if (!isAuthenticated) return;
-      const content = notification.request.content;
-      handlePushData(content.data || {}, content.body);
-    });
-
-    const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
-      console.log('[call] addNotificationResponseReceivedListener fired, actionIdentifier =', response?.actionIdentifier, response?.notification?.request?.content);
+  const handleNotificationResponse = useCallback(
+    (response, source) => {
+      console.log(`[call] notification response (${source}), actionIdentifier =`, response?.actionIdentifier, response?.notification?.request?.content);
       if (!isAuthenticated) return;
       const data = response.notification.request.content.data || {};
       if (data.type !== 'CALL_RINGING') {
@@ -244,14 +254,86 @@ export function IncomingCallProvider({ children }) {
       }
       // A plain tap (not an action button): show the ring popup so the user can still choose.
       handlePushData(data);
+    },
+    [isAuthenticated, handlePushData, handleJoin, handleDecline],
+  );
+
+  // Android's expo-notifications listeners (@react-native-firebase/messaging owns iOS's native
+  // remote-notification delegate instead - see the iOS-specific effect below).
+  useEffect(() => {
+    if (Platform.OS !== 'android') return undefined;
+    console.log('[call] subscribing notification listeners, isAuthenticated =', isAuthenticated);
+    const receivedSub = Notifications.addNotificationReceivedListener((notification) => {
+      console.log('[call] addNotificationReceivedListener fired, isAuthenticated =', isAuthenticated, notification?.request?.content);
+      if (!isAuthenticated) return;
+      const content = notification.request.content;
+      handlePushData(content.data || {}, content.body);
     });
+
+    const responseSub = Notifications.addNotificationResponseReceivedListener((response) =>
+      handleNotificationResponse(response, 'listener'),
+    );
 
     return () => {
       console.log('[call] unsubscribing notification listeners');
       receivedSub.remove();
       responseSub.remove();
     };
-  }, [isAuthenticated, handlePushData, handleJoin, handleDecline]);
+  }, [isAuthenticated, handlePushData, handleNotificationResponse]);
+
+  // Android cold-launch case: if the app was fully killed and the user tapped the CALL_RINGING
+  // notification to launch it, `addNotificationResponseReceivedListener` above - which only
+  // subscribes once this effect runs after React mounts - already missed that tap (per Expo's own
+  // docs: use `getLastNotificationResponseAsync()` at startup for exactly this case, alongside the
+  // listener for taps that happen while already running). iOS doesn't need this - its own
+  // `getInitialNotification()` (the effect below) already covers the equivalent case.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (!response) return;
+      console.log('[call] getLastNotificationResponseAsync fired (android cold launch)');
+      handleNotificationResponse(response, 'cold-launch');
+      Notifications.clearLastNotificationResponseAsync();
+    });
+  }, [handleNotificationResponse]);
+
+  // iOS counterpart to the listeners above: once `@react-native-firebase/messaging` is installed
+  // (needed to get an actual FCM token there, since expo-notifications only hands back a raw APNs
+  // token on iOS) it takes over iOS's native remote-notification delegate, so the
+  // expo-notifications listeners in the effect above stop firing on iOS. `onMessage` covers
+  // foreground pushes; `onNotificationOpenedApp`/`getInitialNotification` cover a tap bringing the
+  // app up from background/killed - there's no iOS equivalent of Android's action-button
+  // `actionIdentifier` here, so a tap always just surfaces the ring popup (same as `handleJoin`/
+  // `handleDecline` being for the in-app modal's own buttons).
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return undefined;
+    console.log('[call] subscribing firebase messaging listeners (ios), isAuthenticated =', isAuthenticated);
+    const messaging = getMessaging();
+
+    const unsubscribeOnMessage = onMessage(messaging, (remoteMessage) => {
+      console.log('[call] onMessage fired, isAuthenticated =', isAuthenticated, remoteMessage?.data);
+      if (!isAuthenticated) return;
+      handlePushData(remoteMessage?.data || {}, remoteMessage?.notification?.body);
+    });
+
+    const unsubscribeOnOpened = onNotificationOpenedApp(messaging, (remoteMessage) => {
+      console.log('[call] onNotificationOpenedApp fired, isAuthenticated =', isAuthenticated, remoteMessage?.data);
+      if (!isAuthenticated) return;
+      handlePushData(remoteMessage?.data || {});
+    });
+
+    getInitialNotification(messaging).then((remoteMessage) => {
+      if (!remoteMessage || !isAuthenticated) return;
+      console.log('[call] getInitialNotification fired', remoteMessage?.data);
+      handlePushData(remoteMessage.data || {});
+    });
+
+    return () => {
+      console.log('[call] unsubscribing firebase messaging listeners (ios)');
+      unsubscribeOnMessage();
+      unsubscribeOnOpened();
+    };
+  }, [isAuthenticated, handlePushData]);
 
   const value = useMemo(() => ({ incomingCall, handleJoin, handleDecline }), [incomingCall, handleJoin, handleDecline]);
 

@@ -3,6 +3,12 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { AndroidImportance, AndroidNotificationVisibility } from 'expo-notifications'; // named enums, not Notifications.* namespace members
 import * as TaskManager from 'expo-task-manager';
+import {
+  getMessaging,
+  registerDeviceForRemoteMessages,
+  getToken as getFirebaseFcmToken,
+  setBackgroundMessageHandler,
+} from '@react-native-firebase/messaging';
 import { registerFcmToken, unregisterFcmToken } from './fcmService';
 import { getItem, setItem, removeItem } from '../utils/storage';
 
@@ -20,7 +26,39 @@ export const DEFAULT_CHANNEL_ID = 'default';
 export const INCOMING_CALL_CATEGORY = 'incoming_call';
 export const BACKGROUND_NOTIFICATION_TASK = 'ALLYDOC_BACKGROUND_NOTIFICATION_TASK';
 
-const DEVICE_TOKEN_KEY = 'fcmDeviceToken';
+// Bump when token-generation itself changes (e.g. the iOS raw-APNs -> RNFB/FCM switch) - every
+// device then retires its old token and registers a fresh one on its next sync.
+const FCM_TOKEN_VERSION = '2026-11-10';
+const LAST_SYNC_KEY = 'fcmTokenSync'; // { token, userId, version, at } - mirrors web's fcmRegister.js
+const REREGISTER_AFTER_MS = 24 * 60 * 60 * 1000; // heartbeat so the backend knows the device is alive
+const MIN_CHECK_GAP_MS = 10 * 60 * 1000; // foreground-resync checks at most every 10 min
+
+let syncInFlight = null;
+let lastCheckAt = 0;
+
+async function readLastSync() {
+  try {
+    const raw = await getItem(LAST_SYNC_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+async function writeLastSync(value) {
+  try {
+    if (value) await setItem(LAST_SYNC_KEY, JSON.stringify(value));
+    else await removeItem(LAST_SYNC_KEY);
+  } catch {
+    // storage unavailable - the next sync simply registers again
+  }
+}
+
+/** Quietly retires one specific (old) token on the backend. Never throws. */
+async function unregisterTokenQuietly(deviceToken) {
+  if (!deviceToken) return;
+  await unregisterFcmToken(deviceToken).catch(() => {});
+}
 
 // How foreground notifications are presented while the app is open. The incoming-call ring UI
 // itself is a custom in-app modal (see IncomingCallProvider), so this only governs plain
@@ -71,60 +109,110 @@ export async function requestNotificationPermission() {
 }
 
 /** Raw FCM token for this device, or null if permission isn't granted / unavailable (e.g. an
- * emulator without Google Play services). */
+ * emulator without Google Play services).
+ *
+ * iOS's native push transport is APNs, not FCM - `Notifications.getDevicePushTokenAsync()` there
+ * returns a raw APNs token the backend's Firebase-based `SendAsync()` can't deliver to (confirmed:
+ * a Firebase Console test send to that raw token silently never arrived). `@react-native-firebase/
+ * messaging` performs the APNs<->FCM registration Firebase itself expects, so `getToken()` there
+ * returns an actual FCM token - letting the backend's existing Firebase send path work unchanged
+ * for iOS too. Android is untouched: expo-notifications already returns an FCM token directly
+ * there (Android's native push transport IS FCM). */
 export async function getDeviceFcmToken() {
   if (!Device.isDevice) {
     console.log('[push] Not a physical device - FCM token may be unavailable on this emulator.');
   }
   try {
+    if (Platform.OS === 'ios') {
+      const messaging = getMessaging();
+      await registerDeviceForRemoteMessages(messaging);
+      const token = await getFirebaseFcmToken(messaging);
+      return token || null;
+    }
     const token = await Notifications.getDevicePushTokenAsync();
     return token?.data || null;
   } catch (error) {
-    console.warn('[push] getDevicePushTokenAsync failed:', error?.message || error);
+    console.warn('[push] getDeviceFcmToken failed:', error?.message || error);
     return null;
   }
 }
 
 /**
- * Registers (or re-registers) this device's current FCM token with the backend. Mirrors web's
- * syncFcmToken: skips re-registering an unchanged token, but always registers when it rotated.
- * Call after login and on app start while already authenticated.
+ * Keeps this device's push token healthy so notifications never silently stop - port of web's
+ * fcmRegister.js `syncFcmToken`:
+ *  - asks for the CURRENT token (it may have been rotated since last time);
+ *  - registers it when it changed, when a different user is now logged in, when
+ *    FCM_TOKEN_VERSION changed (old token retired first), or once a day as a heartbeat;
+ *  - retires the previous token on the backend when it was replaced.
+ * `force: true` (login, app start) bypasses the 10-minute throttle; bare calls (app foregrounded)
+ * are cheap no-ops most of the time. Never throws.
  */
-export async function syncPushToken() {
-  const granted = await requestNotificationPermission();
-  console.log('[push] notification permission granted =', granted);
-  if (!granted) return null;
+export function syncPushToken({ force = false } = {}) {
+  if (syncInFlight) return syncInFlight;
+  syncInFlight = (async () => {
+    try {
+      const granted = await requestNotificationPermission();
+      console.log('[push] notification permission granted =', granted);
+      if (!granted) return null;
 
-  await configureAndroidChannels();
-  await configureNotificationCategories();
+      const now = Date.now();
+      if (!force && now - lastCheckAt < MIN_CHECK_GAP_MS) return null;
+      lastCheckAt = now;
 
-  const token = await getDeviceFcmToken();
-  console.log('[push] device FCM token =', token);
-  if (!token) return null;
+      await configureAndroidChannels();
+      await configureNotificationCategories();
 
-  const previousToken = await getItem(DEVICE_TOKEN_KEY);
-  if (previousToken === token) {
-    console.log('[push] token unchanged, skipping re-registration');
-    return token;
-  }
+      const last = await readLastSync();
+      if (last.version && last.version !== FCM_TOKEN_VERSION) {
+        await unregisterTokenQuietly(last.token);
+        await writeLastSync(null);
+      }
 
-  const result = await registerFcmToken(token);
-  console.log('[push] registerFcmToken result =', result.success, result.message);
-  if (result.success) {
-    await setItem(DEVICE_TOKEN_KEY, token);
-  } else {
-    console.warn('[push] FCM token registration failed:', result.message);
-  }
-  return token;
+      const token = await getDeviceFcmToken();
+      console.log('[push] device FCM token =', token);
+      if (!token) return null;
+
+      const current = await readLastSync();
+      const userId = (await getItem('userId')) || '';
+      const changed = token !== current.token;
+      const userChanged = String(current.userId || '') !== String(userId);
+      const due = !current.at || now - current.at > REREGISTER_AFTER_MS;
+      if (!force && !changed && !userChanged && !due) {
+        console.log('[push] token unchanged, skipping re-registration');
+        return token;
+      }
+
+      if (changed && current.token && !userChanged) {
+        await unregisterTokenQuietly(current.token);
+      }
+
+      const result = await registerFcmToken(token);
+      console.log('[push] registerFcmToken result =', result.success, result.message);
+      if (result.success) {
+        await writeLastSync({ token, userId, version: FCM_TOKEN_VERSION, at: now });
+      } else {
+        console.warn('[push] FCM token registration failed:', result.message);
+      }
+      return token;
+    } finally {
+      syncInFlight = null;
+    }
+  })();
+  return syncInFlight;
 }
 
-/** Best-effort cleanup on logout - mirrors unregisterFcmTokenWithBackend + resetFcmTokenSync. */
+/**
+ * Best-effort cleanup on logout - mirrors unregisterFcmTokenWithBackend + resetFcmTokenSync.
+ * Must be called (and awaited) BEFORE the caller wipes local storage - storage.js's `clearAll()`
+ * would otherwise delete `LAST_SYNC_KEY` first, leaving nothing here to read and silently
+ * skipping the backend unregister call entirely.
+ */
 export async function clearPushToken() {
-  const token = await getItem(DEVICE_TOKEN_KEY);
+  const { token } = await readLastSync();
   if (token) {
     await unregisterFcmToken(token).catch(() => {});
   }
-  await removeItem(DEVICE_TOKEN_KEY);
+  await writeLastSync(null);
 }
 
 /**
@@ -165,5 +253,23 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, ({ data, error }) => {
 export function registerBackgroundNotificationTask() {
   return Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK).catch((error) => {
     console.warn('[push] registerTaskAsync failed:', error?.message || error);
+  });
+}
+
+/**
+ * iOS counterpart to `registerBackgroundNotificationTask`: once `@react-native-firebase/messaging`
+ * is installed it takes over iOS's native remote-notification delegate, so `expo-notifications`'
+ * own listeners (and its TaskManager background task, Android-only in practice) stop firing there.
+ * `setBackgroundMessageHandler` must be registered at module scope (same requirement as the
+ * TaskManager task above) so iOS can invoke it while the app is backgrounded/killed - a no-op is
+ * enough today since, like Android, the backend's `notification` block already makes iOS
+ * auto-display a heads-up alert without any JS code running; the actual CALL_RINGING handling
+ * happens once the user taps it (see IncomingCallContext's onNotificationOpenedApp/
+ * getInitialNotification wiring).
+ */
+export function registerFirebaseBackgroundMessageHandler() {
+  if (Platform.OS !== 'ios') return;
+  setBackgroundMessageHandler(getMessaging(), async (remoteMessage) => {
+    console.log('[push] background message handler fired (ios)', remoteMessage?.data);
   });
 }
