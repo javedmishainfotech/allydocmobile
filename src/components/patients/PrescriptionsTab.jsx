@@ -3,8 +3,8 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
-import { getPatientPrescriptions, getPrescriptionById, cancelPrescription } from '../../services/prescriptionService';
-import { getPharmacyById } from '../../services/doseSpotClinicalService';
+import { usePrescriptions } from '../../hooks/usePrescriptions';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
 import {
   normalizePrescriptionRow,
   getPrescriptionStatusTone,
@@ -131,6 +131,8 @@ function PrescriptionRow({ rx, pharmacy, pharmacyLoading, showActions, isNurse, 
  */
 export default function PrescriptionsTab({ doseSpotPatientId }) {
   const { profile } = useAuth();
+  const { getPharmacyById } = useDoseSpotClinical();
+  const { getPatientPrescriptions, getPrescriptionById, cancelPrescription } = usePrescriptions();
   const roleName = String(profile?.roleName || '').toLowerCase().trim();
   const isNurse = roleName === 'nurse';
   const isDoctorAdmin = roleName === 'doctor admin';

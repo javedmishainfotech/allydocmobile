@@ -7,12 +7,7 @@ import {
   PASSWORD_MAX_LENGTH,
   getPasswordValidationMessage,
 } from '../../utils/passwordValidation';
-import {
-  sendResetCode,
-  resendResetCode,
-  verifyResetCode,
-  resetPassword,
-} from '../../services/forgotPasswordService';
+import { useForgotPassword } from '../../hooks/useForgotPassword';
 import AuthLayout from '../../components/AuthLayout';
 import FormField from '../../components/FormField';
 import AuthButton from '../../components/AuthButton';
@@ -24,6 +19,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * UpdatePassword -> success), kept as one screen with a `step` state like the web.
  */
 export default function ForgotPasswordPage({ navigation }) {
+  const { sendResetCode, resendResetCode, verifyResetCode, resetPassword } = useForgotPassword();
   const [step, setStep] = useState('email'); // email | otp | password | done
   const [email, setEmail] = useState('');
   const [userId, setUserId] = useState(null);

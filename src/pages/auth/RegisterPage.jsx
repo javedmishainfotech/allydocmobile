@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFormik } from 'formik';
 import { signUpValidationSchema, clinicSetupValidationSchema } from '../../utils/validationSchema';
-import { registerUser, verifyRegistrationOtp } from '../../services/registerService';
-import { resendResetCode } from '../../services/forgotPasswordService';
-import { getStates, getCitiesByStateId } from '../../services/identityProofingService';
+import { useRegister } from '../../hooks/useRegister';
+import { useForgotPassword } from '../../hooks/useForgotPassword';
+import { useIdentityProofingApi } from '../../hooks/useIdentityProofingApi';
 import { PASSWORD_MAX_LENGTH } from '../../utils/passwordValidation';
 import { colors } from '../../theme/colors';
 import { toast } from '../../utils/toast';
@@ -57,6 +57,8 @@ const getStateName = (state) => state?.stateName ?? state?.StateName ?? state?.n
  * reachable from the non-org login.
  */
 export default function RegisterPage({ navigation, route }) {
+  const { resendResetCode } = useForgotPassword();
+  const { registerUser, verifyRegistrationOtp } = useRegister();
   const [step, setStep] = useState('form'); // form | type | clinic | otp | created
   const [activeTab, setActiveTab] = useState(route?.params?.activeTab === 'doctor' ? 'doctor' : 'patient');
   const [accountData, setAccountData] = useState(null); // validated step-1 values, kept for the clinician steps
@@ -314,6 +316,7 @@ function TypeCard({ title, subtitle, icon, active, onPress }) {
 
 // Port of SignUp/New/ClinicSetup.jsx: clinic details for a clinician who is setting up a clinic.
 function ClinicSetupStep({ onBack, onSubmit, submitting }) {
+  const { getStates, getCitiesByStateId } = useIdentityProofingApi();
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const [statesLoaded, setStatesLoaded] = useState(false);

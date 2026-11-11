@@ -3,8 +3,8 @@ import { Modal, View, Text, TextInput, Pressable, ScrollView, Switch, StyleSheet
 import { ActivityIndicator } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
 import { Feather } from '@expo/vector-icons';
-import { searchMedications } from '../../services/doseSpotClinicalService';
-import { createCompoundFavorite, updateCompoundFavorite } from '../../services/prescriptionService';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
+import { usePrescriptions } from '../../hooks/usePrescriptions';
 import OptionPicker from '../prescriptions/OptionPicker';
 import SubstitutionConfirmationModal from '../prescriptions/SubstitutionConfirmationModal';
 import { DISPENSE_UNIT_OPTIONS } from '../../utils/dispenseUnits';
@@ -55,6 +55,8 @@ function emptyIngredient() {
 export default function CompoundFavoriteModal({ visible, scope, scopeId, favorite, onClose, onSaved }) {
   const bottomSafe = useBottomSafeSpacing();
   const insets = useSafeAreaInsets();
+  const { searchMedications } = useDoseSpotClinical();
+  const { createCompoundFavorite, updateCompoundFavorite } = usePrescriptions();
   const isEdit = Boolean(favorite);
 
   const [displayName, setDisplayName] = useState('');

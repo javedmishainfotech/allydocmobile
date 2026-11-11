@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, FlatList, Pressable, RefreshControl, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getAllPayments, getPaymentInvoice } from '../../services/patientPaymentsService';
+import { usePatientPayments } from '../../hooks/usePatientPayments';
 import {
   formatMoney,
   formatPaymentDate,
@@ -90,6 +90,7 @@ function PaymentRow({ item, downloading, onInvoice }) {
  */
 export default function PatientPaymentsPage() {
   const dockInset = useDockInset();
+  const { getAllPayments, getPaymentInvoice } = usePatientPayments();
   const [filter, setFilter] = useState(getDefaultPaymentFilter);
   const [payments, setPayments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);

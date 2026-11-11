@@ -3,7 +3,7 @@ import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import PharmacyPicker, { getPharmacyId } from '../../components/prescriptions/PharmacyPicker';
-import { addPatientPharmacy } from '../../services/prescriptionService';
+import { usePrescriptions } from '../../hooks/usePrescriptions';
 import { toast } from '../../utils/toast';
 import { adTokens, colors } from '../../theme/colors';
 import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
@@ -18,6 +18,7 @@ export default function ManagePharmaciesPage() {
   const bottomSafe = useBottomSafeSpacing();
   const navigation = useNavigation();
   const route = useRoute();
+  const { addPatientPharmacy } = usePrescriptions();
   const { doseSpotPatientId } = route.params || {};
   const [selectedPharmacy, setSelectedPharmacy] = useState(null);
   const [hasDefault, setHasDefault] = useState(false);

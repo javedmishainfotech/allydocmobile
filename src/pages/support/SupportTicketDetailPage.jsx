@@ -4,7 +4,8 @@ import { ActivityIndicator } from 'react-native-paper';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRoute } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { fetchMyTicket, replyToTicket, closeTicket, ATTACHMENT_MIME_TYPES, REPLY_MAX, checkAttachments } from '../../services/supportService';
+import { ATTACHMENT_MIME_TYPES, REPLY_MAX, checkAttachments } from '../../services/supportService';
+import { useSupport } from '../../hooks/useSupport';
 import { formatDateTime } from '../../utils/supportFields';
 import SupportStatusPill from '../../components/support/SupportStatusPill';
 import AttachmentChip from '../../components/support/AttachmentChip';
@@ -98,6 +99,7 @@ const BADGE_COLORS = {
 export default function SupportTicketDetailPage() {
   const bottomSafe = useBottomSafeSpacing();
   const route = useRoute();
+  const { fetchMyTicket, replyToTicket, closeTicket } = useSupport();
   const { ticketId } = route.params || {};
 
   const [detail, setDetail] = useState(null);

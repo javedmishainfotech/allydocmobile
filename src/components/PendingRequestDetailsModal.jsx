@@ -3,7 +3,7 @@ import { Modal, View, Text, ScrollView, Pressable, StyleSheet } from 'react-nati
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
-import { getAppointmentDetails, getPatientAllergies } from '../services/pendingRequestDetailsService';
+import { usePendingRequestDetails } from '../hooks/usePendingRequestDetails';
 import { getAppointmentDisplay } from '../utils/formatAppointmentDate';
 import ConsultQuestionnaireItem from './ConsultQuestionnaireItem';
 import { colors, adTokens } from '../theme/colors';
@@ -30,6 +30,7 @@ export default function PendingRequestDetailsModal({
   acceptDisabled,
 }) {
   const bottomSafe = useBottomSafeSpacing();
+  const { getAppointmentDetails, getPatientAllergies } = usePendingRequestDetails();
   const [isLoading, setIsLoading] = useState(false);
   const [details, setDetails] = useState(null);
   const [questionnaire, setQuestionnaire] = useState([]);

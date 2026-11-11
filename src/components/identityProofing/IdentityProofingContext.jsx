@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { getItem, setItem } from '../../utils/storage';
-import { updateDoseSpotStatus } from '../../services/settingsService';
-import { getRegistrationStatus } from '../../services/identityProofingService';
+import { useSettings } from '../../hooks/useSettings';
+import { useIdentityProofingApi } from '../../hooks/useIdentityProofingApi';
 import { toast } from '../../utils/toast';
 import {
   getIdentityDisplayStatus,
@@ -31,6 +31,8 @@ export function useIdentityProofing() {
 const OVERVIEW_ROUTE = { name: 'overview', params: undefined };
 
 export function IdentityProofingProvider({ children, drawerNavigation }) {
+  const { getRegistrationStatus } = useIdentityProofingApi();
+  const { updateDoseSpotStatus } = useSettings();
   const [idpStatus, setIdpStatus] = useState('');
   const [idpAttemptCount, setIdpAttemptCount] = useState(0);
   const [idpStepCount, setIdpStepCount] = useState(0);

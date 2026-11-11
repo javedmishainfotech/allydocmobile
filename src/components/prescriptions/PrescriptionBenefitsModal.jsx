@@ -3,8 +3,8 @@ import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
-import { getPatientEligibilities, getPharmacyById } from '../../services/doseSpotClinicalService';
-import { getPrescriptionBenefits } from '../../services/prescriptionService';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
+import { usePrescriptions } from '../../hooks/usePrescriptions';
 import OptionPicker from './OptionPicker';
 import ReplaceMedicationConfirmationModal from './ReplaceMedicationConfirmationModal';
 import { toast } from '../../utils/toast';
@@ -50,6 +50,8 @@ function toggleInSet(set, key) {
 export default function PrescriptionBenefitsModal({ visible, patientId, ndc, currentPrescription, onClose, onReplace }) {
   const bottomSafe = useBottomSafeSpacing();
   const insets = useSafeAreaInsets();
+  const { getPatientEligibilities, getPharmacyById } = useDoseSpotClinical();
+  const { getPrescriptionBenefits } = usePrescriptions();
   const [eligibilities, setEligibilities] = useState([]);
   const [selectedEligibilityId, setSelectedEligibilityId] = useState(null);
   const [loading, setLoading] = useState(false);

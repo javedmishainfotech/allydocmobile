@@ -3,7 +3,7 @@ import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
-import { searchPatients, mergePatients } from '../../services/settingsService';
+import { useSettings } from '../../hooks/useSettings';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
 
@@ -48,6 +48,7 @@ const STATUS_OPTIONS = [
 /** Port of AllyDocReactApp/.../Settings/MergePatientTab.jsx: search patients, then merge
  * a duplicate record's medications into another patient via /api/Patients/MergePatients. */
 export default function MergePatientTab() {
+  const { searchPatients, mergePatients } = useSettings();
   const [filters, setFilters] = useState({ firstname: '', lastname: '', status: '2' });
   const [patients, setPatients] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);

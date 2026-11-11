@@ -3,14 +3,8 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
-import { getUserActiveSubscription } from '../../services/patientDashboardService';
-import {
-  getPatientSubscriptionHistory,
-  getSubscriptionInvoice,
-  getSubscriptionPlansByClinic,
-  purchaseSubscriptionPlan,
-  renewSubscriptionPlan,
-} from '../../services/subscriptionService';
+import { usePatientDashboard } from '../../hooks/usePatientDashboard';
+import { useSubscription } from '../../hooks/useSubscription';
 import { extractPaymentToken, PAYMENT_RESULT_TYPES } from '../../utils/paymentFlow';
 import { getItem } from '../../utils/storage';
 import { toast } from '../../utils/toast';
@@ -186,6 +180,14 @@ function HistoryRow({ row, number, downloading, onInvoice }) {
  */
 export default function SubscriptionPlansTab() {
   const { profile } = useAuth();
+  const { getUserActiveSubscriptionRaw } = usePatientDashboard();
+  const {
+    getPatientSubscriptionHistory,
+    getSubscriptionInvoice,
+    getSubscriptionPlansByClinic,
+    purchaseSubscriptionPlan,
+    renewSubscriptionPlan,
+  } = useSubscription();
   const userType = String(profile?.userType || '').toLowerCase();
   const isFreelancer = userType === 'freelancer';
 
@@ -229,7 +231,7 @@ export default function SubscriptionPlansTab() {
   const loadSubscription = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
-    const result = await getUserActiveSubscription();
+    const result = await getUserActiveSubscriptionRaw();
     const body = result.raw;
     if (result.success) {
       const list = getArrayData(body?.data);

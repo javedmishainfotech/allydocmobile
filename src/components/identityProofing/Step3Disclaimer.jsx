@@ -3,13 +3,14 @@ import { Text, StyleSheet } from 'react-native';
 import { useIdentityProofing } from './IdentityProofingContext';
 import { IdpScreen, IdpButton, IdpCheckbox, IdpLoading } from './IdpUi';
 import LegalTextView from './LegalTextView';
-import { getIdpDisclaimer, acceptIdpDisclaimer } from '../../services/identityProofingService';
+import { useIdentityProofingApi } from '../../hooks/useIdentityProofingApi';
 import { parseDisclaimerForDisplay } from '../../utils/legalTextParser';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
 
 /** Port of components/IdentityProofing/Step3Disclaimer.jsx. */
 export default function Step3Disclaimer() {
+  const { getIdpDisclaimer, acceptIdpDisclaimer } = useIdentityProofingApi();
   const {
     disclaimerAccepted,
     setDisclaimerAccepted,

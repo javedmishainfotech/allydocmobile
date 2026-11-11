@@ -6,7 +6,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../../hooks/useAuth';
 import { setItem } from '../../utils/storage';
-import { setPin, updateDoseSpotStatus } from '../../services/settingsService';
+import { useSettings } from '../../hooks/useSettings';
 import SetPinModal from '../settings/SetPinModal';
 import { toast } from '../../utils/toast';
 import { adTokens, colors } from '../../theme/colors';
@@ -54,6 +54,7 @@ function ActionStepButton({ onPress, stepNumber, title, description }) {
 export default function EPCSAuthorizationRequiredModal({ visible, tfaCompleted, pinSet, onClose, onPinSet }) {
   const { profile } = useAuth();
   const navigation = useNavigation();
+  const { setPin, updateDoseSpotStatus } = useSettings();
   const roleName = String(profile?.roleName || '').toLowerCase().trim();
   const isDoctorAdmin = roleName === 'doctor admin';
   const [pinModalOpen, setPinModalOpen] = useState(false);

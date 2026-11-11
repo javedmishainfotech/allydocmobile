@@ -5,26 +5,9 @@ import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { usePatients } from '../../hooks/usePatients';
-import { getAppointmentDetails } from '../../services/pendingRequestDetailsService';
-import { searchMedications, selectMedication, getPharmacyById } from '../../services/doseSpotClinicalService';
-import {
-  addCodedPrescription,
-  editCodedPrescription,
-  getPrescriptionById,
-  sendPrescriptions,
-  deletePrescriptions,
-  getPatientPrescriptionsByStatus,
-  searchSupplies,
-  addSupplyPrescription,
-  editSupplyPrescription,
-  addSupplyFreeTextPrescription,
-  editSupplyFreeTextPrescription,
-  createCodedFavorite,
-  addCompiledCompoundPrescription,
-  editCompiledCompoundPrescription,
-  createCompoundFavorite,
-  setPrintedPrescriptions,
-} from '../../services/prescriptionService';
+import { usePendingRequestDetails } from '../../hooks/usePendingRequestDetails';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
+import { usePrescriptions } from '../../hooks/usePrescriptions';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import { localDateOnlyToApiString } from '../../utils/dateOnly';
 import { DISPENSE_UNIT_NAMES } from '../../utils/dispenseUnits';
@@ -255,6 +238,26 @@ export default function AddPrescriptionPage() {
   const route = useRoute();
   const { profile } = useAuth();
   const { getUserDetails } = usePatients();
+  const { searchMedications, selectMedication, getPharmacyById } = useDoseSpotClinical();
+  const { getAppointmentDetails } = usePendingRequestDetails();
+  const {
+    addCodedPrescription,
+    editCodedPrescription,
+    getPrescriptionById,
+    sendPrescriptions,
+    deletePrescriptions,
+    getPatientPrescriptionsByStatus,
+    searchSupplies,
+    addSupplyPrescription,
+    editSupplyPrescription,
+    addSupplyFreeTextPrescription,
+    editSupplyFreeTextPrescription,
+    createCodedFavorite,
+    addCompiledCompoundPrescription,
+    editCompiledCompoundPrescription,
+    createCompoundFavorite,
+    setPrintedPrescriptions,
+  } = usePrescriptions();
   const { appointmentId, doseSpotPatientId, patientId, patientName, initialStepIndex, initialPharmacyId } = route.params || {};
   const isFreelancerDoctor =
     String(profile?.userType || '').toLowerCase() === 'freelancer' && String(profile?.roleName || '').toLowerCase().trim() === 'doctor';

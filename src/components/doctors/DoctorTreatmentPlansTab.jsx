@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
-import { getDoctorTreatmentPlans } from '../../services/doctorsListService';
+import { useDoctorsList } from '../../hooks/useDoctorsList';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import StatusBadge from '../StatusBadge';
 import AppointmentInfoButton from '../AppointmentInfoButton';
@@ -19,6 +19,7 @@ const STATUS_FILTERS = [
  * everywhere else in the app. */
 export default function DoctorTreatmentPlansTab({ doctorId }) {
   const navigation = useNavigation();
+  const { getDoctorTreatmentPlans } = useDoctorsList();
   const [status, setStatus] = useState('inprogress');
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);

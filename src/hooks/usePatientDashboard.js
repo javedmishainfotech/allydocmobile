@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchPatientAppointmentHistory,
   fetchUserActiveSubscription,
+  fetchUserActiveSubscriptionRaw,
   fetchPendingBookingAttempt,
 } from '../store/slices/patientDashboardSlice';
 
@@ -18,10 +19,15 @@ export function usePatientDashboard() {
 
   const loadSubscription = useCallback(() => dispatch(fetchUserActiveSubscription()), [dispatch]);
 
+  const getUserActiveSubscriptionRaw = useCallback(
+    () => dispatch(fetchUserActiveSubscriptionRaw()).unwrap(),
+    [dispatch],
+  );
+
   const loadPendingPayment = useCallback(
     (patientId) => dispatch(fetchPendingBookingAttempt(patientId)).unwrap(),
     [dispatch],
   );
 
-  return { ...state, loadAppointments, loadSubscription, loadPendingPayment };
+  return { ...state, loadAppointments, loadSubscription, getUserActiveSubscriptionRaw, loadPendingPayment };
 }

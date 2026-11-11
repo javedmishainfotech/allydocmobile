@@ -3,13 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-nativ
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import {
-  resetPin,
-  setPin as setPinApi,
-  updateDoseSpotStatus,
-  requestTfaDeactivation,
-  tfaDeactivate,
-} from '../../services/settingsService';
+import { useSettings } from '../../hooks/useSettings';
 import { getItem, setItem } from '../../utils/storage';
 import { toast } from '../../utils/toast';
 import SetPinModal from './SetPinModal';
@@ -23,6 +17,8 @@ import { colors, adTokens } from '../../theme/colors';
  */
 export default function AccountSettingsTab({ userId }) {
   const navigation = useNavigation();
+  const { resetPin, setPin: setPinApi, updateDoseSpotStatus, requestTfaDeactivation, tfaDeactivate } =
+    useSettings();
   const [hasPinSetForTFA, setHasPinSetForTFA] = useState(null);
   const [adminResetPending, setAdminResetPending] = useState(false);
   const [tfaStatus, setTfaStatus] = useState(null);

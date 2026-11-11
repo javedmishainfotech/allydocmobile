@@ -7,7 +7,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Daily, { DailyMediaView } from '@daily-co/react-native-daily-js';
 import { useAuth } from '../../hooks/useAuth';
-import { startAppointmentCall, startCallRecording, stopCallRecording, pickCallSessionId } from '../../services/callService';
+import { useCall } from '../../hooks/useCall';
+import { pickCallSessionId } from '../../services/callService';
 import { toast } from '../../utils/toast';
 import { adTokens, colors } from '../../theme/colors';
 
@@ -19,7 +20,7 @@ function getRoleForRecording(roleName) {
 }
 
 // TEMP: on-screen call diagnostics (the APK runs without Metro, so console.log is not visible). Set to false / remove once the call video issue is sorted.
-const SHOW_CALL_DEBUG = true;
+const SHOW_CALL_DEBUG = false;
 
 // readyState / muted / enabled of a MediaStreamTrack. `muted:true` on a "playable" track means no frames are arriving.
 function describeTrack(track) {
@@ -102,6 +103,7 @@ export default function VideoCallPage() {
   const route = useRoute();
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
+  const { startAppointmentCall, startCallRecording, stopCallRecording } = useCall();
   const { appointmentId, isAudio = false, counterpartName } = route.params || {};
   const shouldControlRecording = getRoleForRecording(profile?.roleName) === 'doctor';
 

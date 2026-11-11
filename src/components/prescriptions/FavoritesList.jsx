@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import { getClinicianFavorites, getClinicFavorites } from '../../services/prescriptionService';
+import { usePrescriptions } from '../../hooks/usePrescriptions';
 import { getItem } from '../../utils/storage';
 import OptionPicker from './OptionPicker';
 import { adTokens } from '../../theme/colors';
@@ -35,6 +35,7 @@ const KIND_COLORS = {
  * then rows of "+" / display name + type badge / directions / "Qty • Refills • Strength", 20 a page.
  */
 export default function FavoritesList({ source, searchName = '', refreshKey = 0, pendingId, onUse }) {
+  const { getClinicianFavorites, getClinicFavorites } = usePrescriptions();
   const [type, setType] = useState(0);
   const [items, setItems] = useState([]);
   const [pageResult, setPageResult] = useState(null);

@@ -4,7 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 import { usePatients } from '../../hooks/usePatients';
-import { updatePatientProfile } from '../../services/profileService';
+import { useProfile } from '../../hooks/useProfile';
 import OptionPicker from '../prescriptions/OptionPicker';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
@@ -48,6 +48,7 @@ function EditField({ label, children }) {
 export default function PatientPersonalInfoTab({ patientId, onDoseSpotIdResolved }) {
   const { profile } = useAuth();
   const { getUserDetails, getPatientPharmacies } = usePatients();
+  const { updatePatientProfile } = useProfile();
   const roleName = String(profile?.roleName || '').toLowerCase().trim();
   const userType = String(profile?.userType || '').toLowerCase().trim();
   const canEditProfile = !(userType === 'freelancer' && roleName === 'doctor');

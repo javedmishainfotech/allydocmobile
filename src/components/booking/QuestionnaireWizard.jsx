@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
-import { getQuestionnaire, savePatientQuestionnaire, saveQuestionnaireAnswer } from '../../services/bookingService';
+import { useBooking } from '../../hooks/useBooking';
 import {
   ACTION_TYPES,
   BOOKING_BEHAVIOR,
@@ -69,6 +69,7 @@ export default function QuestionnaireWizard({
   onClose,
   resumeSavedAnswers,
 }) {
+  const { getQuestionnaire, savePatientQuestionnaire, saveQuestionnaireAnswer } = useBooking();
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [loadedQuestionnaireId, setLoadedQuestionnaireId] = useState(null);

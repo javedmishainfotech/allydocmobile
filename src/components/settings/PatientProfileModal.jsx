@@ -7,8 +7,8 @@ import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
 import { useFormik } from 'formik';
 import { useAuth } from '../../hooks/useAuth';
-import { createPatientProfile, updatePatientProfile } from '../../services/profileService';
-import { getCitiesByStateId, getStates } from '../../services/identityProofingService';
+import { useProfile } from '../../hooks/useProfile';
+import { useIdentityProofingApi } from '../../hooks/useIdentityProofingApi';
 import { getPatientProfileValidationSchema } from '../../utils/validationSchema';
 import { getItem, setItem } from '../../utils/storage';
 import { localDateOnlyToApiString, formatDateLabel } from '../../utils/dateOnly';
@@ -120,6 +120,8 @@ function Field({ label, required, error, children }) {
 export default function PatientProfileModal({ visible, edit = false, data, onClose, onSaved }) {
   const insets = useSafeAreaInsets();
   const { profile, updateProfileState, logout } = useAuth();
+  const { getStates, getCitiesByStateId } = useIdentityProofingApi();
+  const { createPatientProfile, updatePatientProfile } = useProfile();
 
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);

@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useIdentityProofing } from './IdentityProofingContext';
 import { IdpScreen, IdpButton, IdpAlert, IdpCard } from './IdpUi';
 import AttemptModal from './AttemptModal';
-import { submitIdpAnswers } from '../../services/identityProofingService';
+import { useIdentityProofingApi } from '../../hooks/useIdentityProofingApi';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
 
@@ -34,6 +34,7 @@ const ATTEMPT_MODALS = {
 
 /** Port of components/IdentityProofing/Step5Questionnaire.jsx (Experian knowledge-based questions). */
 export default function QuestionnaireScreen({ params }) {
+  const { submitIdpAnswers } = useIdentityProofingApi();
   const {
     idpAttemptCount,
     updateIdpStatus,

@@ -4,16 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
-import {
-  getDiseaseAssessment,
-  saveDiseaseQuestion,
-  deleteDiseaseQuestion,
-  duplicateDiseaseQuestion,
-  saveDiseaseAssessmentSettings,
-  setDiseaseQuestionPublish,
-  setDiseaseAssessmentPublish,
-  updateDiseaseQuestionSequence,
-} from '../../services/diseaseAssessmentService';
+import { useDiseaseAssessment } from '../../hooks/useDiseaseAssessment';
 import QuestionCard from '../../components/disease/QuestionCard';
 import QuestionFormModal from '../../components/disease/QuestionFormModal';
 import QuestionViewModal from '../../components/disease/QuestionViewModal';
@@ -66,6 +57,16 @@ export default function DiseaseQuestionnairePage() {
   const navigation = useNavigation();
   const route = useRoute();
   const { diseaseId, diseaseName: diseaseNameParam } = route.params || {};
+  const {
+    getDiseaseAssessment,
+    saveDiseaseQuestion,
+    deleteDiseaseQuestion,
+    duplicateDiseaseQuestion,
+    saveDiseaseAssessmentSettings,
+    setDiseaseQuestionPublish,
+    setDiseaseAssessmentPublish,
+    updateDiseaseQuestionSequence,
+  } = useDiseaseAssessment();
 
   const [disease, setDisease] = useState(null);
   const [questions, setQuestions] = useState([]);

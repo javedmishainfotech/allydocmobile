@@ -3,7 +3,8 @@ import { View, Text, TextInput, Pressable, FlatList, StyleSheet } from 'react-na
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
-import { getClinicianFavorites, getClinicFavorites, FAVORITE_TYPE } from '../../services/prescriptionService';
+import { FAVORITE_TYPE } from '../../services/prescriptionService';
+import { usePrescriptions } from '../../hooks/usePrescriptions';
 import MedicationFavoriteModal from '../../components/favorites/MedicationFavoriteModal';
 import SupplyFavoriteModal from '../../components/favorites/SupplyFavoriteModal';
 import CompoundFavoriteModal from '../../components/favorites/CompoundFavoriteModal';
@@ -46,6 +47,7 @@ function FavoriteRow({ item, onEdit }) {
 export default function FavoritesPage({ scope = 'clinician' }) {
   const dockInset = useDockInset();
   const { profile } = useAuth();
+  const { getClinicianFavorites, getClinicFavorites } = usePrescriptions();
   const scopeId = scope === 'clinic' ? profile?.clinicDoseSpotId || profile?.doseSpotRefrenceId : profile?.doseSpotRefrenceId;
 
   const [activeTab, setActiveTab] = useState('medications');

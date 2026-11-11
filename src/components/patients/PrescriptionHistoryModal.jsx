@@ -3,7 +3,7 @@ import { Modal, View, Text, ScrollView, Pressable, StyleSheet } from 'react-nati
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
-import { getPrescriptionLog } from '../../services/prescriptionService';
+import { usePrescriptions } from '../../hooks/usePrescriptions';
 import { getPrescriptionStatusTone } from '../../utils/treatmentPlanFields';
 import { formatPrescriptionLogDateTime, getPrescriptionLogMessage, sortPrescriptionLogs } from '../../utils/prescriptionLog';
 import { adTokens } from '../../theme/colors';
@@ -21,6 +21,7 @@ const TONE_COLORS = {
 /** Port of web's PrescriptionHistoryModal: the prescription's audit trail (`GET /prescriptions/{id}/log`), oldest first. */
 export default function PrescriptionHistoryModal({ visible, doseSpotPatientId, prescriptionId, onClose }) {
   const bottomSafe = useBottomSafeSpacing();
+  const { getPrescriptionLog } = usePrescriptions();
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');

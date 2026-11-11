@@ -5,13 +5,13 @@ import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
-import { getTreatmentPlanDetails, saveTranscriptData } from '../../services/treatmentPlanService';
-import { getPharmacyById, selectMedication } from '../../services/doseSpotClinicalService';
-import { getAppointmentDetails as getAppointmentActionMeta } from '../../services/pendingRequestDetailsService';
+import { useTreatmentPlan } from '../../hooks/useTreatmentPlan';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
+import { usePendingRequestDetails } from '../../hooks/usePendingRequestDetails';
 import { useManageAppointments } from '../../hooks/useManageAppointments';
 import { usePatients } from '../../hooks/usePatients';
 import { openExternalLink } from '../../utils/openExternalLink';
-import { createChatRoom } from '../../services/chatService';
+import { useChat } from '../../hooks/useChat';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import { getInfoButtonProps } from '../../utils/appointmentFields';
 import {
@@ -36,7 +36,7 @@ import RescheduleModal from '../../components/appointments/RescheduleModal';
 import PrescriptionDetailModal from '../../components/treatmentPlan/PrescriptionDetailModal';
 import CallRecordingPlayerModal from '../../components/treatmentPlan/CallRecordingPlayerModal';
 import PrescriptionActionModal from '../../components/treatmentPlan/PrescriptionActionModal';
-import { getPrescriptionById, cancelPrescription, deletePrescriptions } from '../../services/prescriptionService';
+import { usePrescriptions } from '../../hooks/usePrescriptions';
 import { CANCELABLE_PRESCRIPTION_STATUSES, CANCELABLE_MEDICATION_STATUSES } from '../../utils/dispenseUnits';
 import { toast } from '../../utils/toast';
 import { useDockInset } from '../../navigation/DockInsetContext';
@@ -246,6 +246,11 @@ export default function TreatmentPlanDetailPage() {
   const navigation = useNavigation();
   const route = useRoute();
   const { profile } = useAuth();
+  const { createChatRoom } = useChat();
+  const { getPharmacyById, selectMedication } = useDoseSpotClinical();
+  const { getAppointmentDetails: getAppointmentActionMeta } = usePendingRequestDetails();
+  const { getPrescriptionById, cancelPrescription, deletePrescriptions } = usePrescriptions();
+  const { getTreatmentPlanDetails, saveTranscriptData } = useTreatmentPlan();
   const { getPatientPharmacies } = usePatients();
   const {
     markAppointmentComplete,

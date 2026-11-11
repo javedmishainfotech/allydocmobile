@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
-import { getMedicationHistory } from '../../services/doseSpotClinicalService';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
 import { adTokens } from '../../theme/colors';
 
 /** Port of AllyDocReactApp's MedicationHistory.jsx - read-only list, fetched
  * only after MedicationHistoryConsentModal confirmation (gated by the parent
  * PatientDetailModal, same as web gates it in ViewPatientPage.jsx). */
 export default function MedicationHistoryTab({ doseSpotPatientId }) {
+  const { getMedicationHistory } = useDoseSpotClinical();
   const [entries, setEntries] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 

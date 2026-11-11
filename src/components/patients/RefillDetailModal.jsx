@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
-import { approveRefill, denyRefill } from '../../services/doseSpotClinicalService';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
 import { toast } from '../../utils/toast';
 import { colors, adTokens } from '../../theme/colors';
 import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
@@ -27,6 +27,7 @@ const DENIAL_REASONS = [
  */
 export default function RefillDetailModal({ visible, request, onClose, onResolved }) {
   const bottomSafe = useBottomSafeSpacing();
+  const { approveRefill, denyRefill } = useDoseSpotClinical();
   const [refills, setRefills] = useState('0');
   const [effectiveDate, setEffectiveDate] = useState('');
   const [comment, setComment] = useState('');

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, Switch, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather } from '@expo/vector-icons';
-import { searchMedications } from '../../services/doseSpotClinicalService';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
 import { SheetShell, SheetFooter, FormInput, NotesField, formatDateOnly } from './MedicationFormModal';
 import OptionPicker from './OptionPicker';
 import DatePickerSheet from '../DatePickerSheet';
@@ -69,6 +69,7 @@ export function validateCompoundForm(form) {
  * this is ported the same way (no client-side EPCS gate here, unlike the coded-medication path).
  */
 export default function CompoundFormModal({ visible, pharmacyName, form, triedSubmit, isEdit, saving, onChange, onSubmit, onClose }) {
+  const { searchMedications } = useDoseSpotClinical();
   const [showDate, setShowDate] = useState(false);
   const [substitutionConfirmOpen, setSubstitutionConfirmOpen] = useState(false);
   if (!form) return null;

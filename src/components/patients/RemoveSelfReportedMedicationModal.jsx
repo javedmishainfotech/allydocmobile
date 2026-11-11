@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
-import { updateSelfReportedMedicationStatus } from '../../services/doseSpotClinicalService';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
 import { toast } from '../../utils/toast';
 import { colors, adTokens } from '../../theme/colors';
 
@@ -16,6 +16,7 @@ const STATUS_OPTIONS = [
  * "removing" a self-reported medication is really a status update
  * (Inactive/Discontinued), not a hard delete. */
 export default function RemoveSelfReportedMedicationModal({ visible, doseSpotPatientId, medication, onClose, onRemoved }) {
+  const { updateSelfReportedMedicationStatus } = useDoseSpotClinical();
   const [status, setStatus] = useState('2');
   const [inactiveDate, setInactiveDate] = useState('');
   const [comment, setComment] = useState('');

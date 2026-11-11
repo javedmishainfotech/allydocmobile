@@ -6,8 +6,8 @@ import { BlurView } from 'expo-blur';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { usePatients } from '../../hooks/usePatients';
-import { searchPharmaciesAdvanced, addPatientPharmacy, deletePatientPharmacy } from '../../services/prescriptionService';
-import { getStates, getCitiesByStateId } from '../../services/identityProofingService';
+import { usePrescriptions } from '../../hooks/usePrescriptions';
+import { useIdentityProofingApi } from '../../hooks/useIdentityProofingApi';
 import { openExternalLink } from '../../utils/openExternalLink';
 import { toast } from '../../utils/toast';
 import OptionPicker from './OptionPicker';
@@ -135,6 +135,8 @@ function PharmacyCard({ pharmacy, selected, isDefault, isPreferred, dark, onPres
  */
 export default function PharmacyPicker({ doseSpotPatientId, mode = 'select', selectedPharmacy, onSelect, onLoaded, reloadKey = 0 }) {
   const { getPatientPharmacies } = usePatients();
+  const { getStates, getCitiesByStateId } = useIdentityProofingApi();
+  const { searchPharmaciesAdvanced, addPatientPharmacy, deletePatientPharmacy } = usePrescriptions();
   const [patientPharmacies, setPatientPharmacies] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState(EMPTY_SEARCH);

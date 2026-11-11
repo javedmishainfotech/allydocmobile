@@ -2,13 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
-import {
-  bookWithSubscriptionPlan,
-  checkoutAppointmentBooking,
-  getPaymentOptions,
-  getScheduleList,
-  saveAppointmentTime,
-} from '../../services/bookingService';
+import { useBooking } from '../../hooks/useBooking';
 import { extractPaymentToken, PAYMENT_RESULT_TYPES } from '../../utils/paymentFlow';
 import { getSlotRangeLabel, getSlotValue } from '../../utils/slotLabel';
 import { localDateOnlyToApiString } from '../../utils/dateOnly';
@@ -45,6 +39,7 @@ const buildWeeks = (startDate) => {
  */
 export function DateTimeStep({ questionnaireId, onNext }) {
   const { profile } = useAuth();
+  const { getScheduleList, saveAppointmentTime } = useBooking();
   const userId = profile?.userId;
   const viewerTimeZone = useMemo(() => {
     try {
@@ -237,6 +232,7 @@ function ActionButton({ label, loading, onPress, tone = 'primary' }) {
  * using an existing plan books straight away (`POST /BookAppointmentWithSubscriptionPlan`).
  */
 export function PaymentStep({ questionnaireId, authToken, onNext }) {
+  const { getPaymentOptions, checkoutAppointmentBooking, bookWithSubscriptionPlan } = useBooking();
   const [paymentOptions, setPaymentOptions] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');

@@ -3,8 +3,8 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useIdentityProofing } from './IdentityProofingContext';
 import { IdpScreen, IdpButton, IdpCard, IdpTextField } from './IdpUi';
 import IdpPinModal from './IdpPinModal';
-import { tfaActivate, updatePin } from '../../services/identityProofingService';
-import { setPin as setPinApi, updateDoseSpotStatus } from '../../services/settingsService';
+import { useIdentityProofingApi } from '../../hooks/useIdentityProofingApi';
+import { useSettings } from '../../hooks/useSettings';
 import { getItem, setItem } from '../../utils/storage';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
@@ -14,6 +14,8 @@ const digitsOnly = (text, max) => text.replace(/\D/g, '').slice(0, max);
 /** Port of Two-Factor-Authentication/Step3Confirm.jsx. */
 export default function TfaConfirmScreen() {
   const { goToOverview, updateTfaStatus } = useIdentityProofing();
+  const { tfaActivate, updatePin } = useIdentityProofingApi();
+  const { setPin: setPinApi, updateDoseSpotStatus } = useSettings();
 
   const [referenceNumber, setReferenceNumber] = useState('');
   const [passcode, setPasscode] = useState('');

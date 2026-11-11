@@ -8,8 +8,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useFormik } from 'formik';
 import { useAuth } from '../../hooks/useAuth';
-import { createDoctorProfile, updateDoctorProfile } from '../../services/profileService';
-import { getCitiesByStateId, getStates } from '../../services/identityProofingService';
+import { useProfile } from '../../hooks/useProfile';
+import { useIdentityProofingApi } from '../../hooks/useIdentityProofingApi';
 import { getDoctorProfileValidationSchema } from '../../utils/validationSchema';
 import { setItem } from '../../utils/storage';
 import { localDateOnlyToApiString, formatDateLabel } from '../../utils/dateOnly';
@@ -109,6 +109,8 @@ function FileRow({ file, onRemove }) {
 export default function DoctorProfileModal({ visible, edit = false, data, onClose, onSaved }) {
   const insets = useSafeAreaInsets();
   const { profile, updateProfileState, logout } = useAuth();
+  const { getStates, getCitiesByStateId } = useIdentityProofingApi();
+  const { createDoctorProfile, updateDoctorProfile } = useProfile();
   const isNurse = String(profile?.roleName || '').toLowerCase().trim() === 'nurse';
 
   const [states, setStates] = useState([]);

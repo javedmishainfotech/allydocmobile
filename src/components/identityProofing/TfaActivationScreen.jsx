@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useIdentityProofing } from './IdentityProofingContext';
 import { IdpScreen, IdpButton, IdpCard, IdpCheckbox, IdpTextField } from './IdpUi';
-import { sendMobileTfa } from '../../services/identityProofingService';
+import { useIdentityProofingApi } from '../../hooks/useIdentityProofingApi';
 import { toast } from '../../utils/toast';
 
 const validatePhoneNumber = (digits) => {
@@ -26,6 +26,7 @@ function SectionHeader({ icon, title }) {
 /** Port of Two-Factor-Authentication/Step1ActivationText.jsx. */
 export default function TfaActivationScreen() {
   const { navigate, goToOverview, updateTfaStatus } = useIdentityProofing();
+  const { sendMobileTfa } = useIdentityProofingApi();
 
   const [phoneNumber, setPhoneNumber] = useState('');
   const [smsAgreement, setSmsAgreement] = useState(false);

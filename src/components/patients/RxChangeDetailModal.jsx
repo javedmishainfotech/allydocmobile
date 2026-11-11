@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
-import { approveRxChange, denyRxChange } from '../../services/doseSpotClinicalService';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
 import { toast } from '../../utils/toast';
 import { colors, adTokens } from '../../theme/colors';
 import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
@@ -74,6 +74,7 @@ function buildApprovePayload(request, { comment, priorAuthNumber }) {
  * the full inline edit-before-approve UI is not ported in this pass. */
 export default function RxChangeDetailModal({ visible, request, onClose, onResolved }) {
   const bottomSafe = useBottomSafeSpacing();
+  const { approveRxChange, denyRxChange } = useDoseSpotClinical();
   const [comment, setComment] = useState('');
   const [priorAuthNumber, setPriorAuthNumber] = useState('');
   const [denialReason, setDenialReason] = useState(null);

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
-import { getPendingRefillRequestsDetailed } from '../../services/doseSpotClinicalService';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
 import RefillDetailModal from './RefillDetailModal';
 import { adTokens } from '../../theme/colors';
 
@@ -30,6 +30,7 @@ function RequestRow({ item, onOpen }) {
  * `requestScope="clinic"` (used by the Doctor Requests page) omits `patientId`
  * entirely, same as web's `attachPatientIdToPendingParamsIfPatientScope`. */
 export default function RefillsTab({ doseSpotPatientId, requestScope = 'patient' }) {
+  const { getPendingRefillRequestsDetailed } = useDoseSpotClinical();
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState(null);

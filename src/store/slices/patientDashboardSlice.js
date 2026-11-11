@@ -40,6 +40,17 @@ export const fetchUserActiveSubscription = createAsyncThunk(
   },
 );
 
+/** Same endpoint as `fetchUserActiveSubscription`, but SubscriptionPlansTab.jsx needs the raw
+ * response body (`result.raw`) for `getRenewPlanInfo` metadata, not the single-subscription value
+ * the dashboard thunk above narrows to - kept as a separate thunk so neither caller's shape leaks
+ * into the other's (same reasoning as the pending-booking-attempt thunk). Always fulfills with
+ * the full result object instead of rejecting, since the tab's own code branches on
+ * `result.success`/`result.raw` directly. */
+export const fetchUserActiveSubscriptionRaw = createAsyncThunk(
+  'patientDashboard/fetchSubscriptionRaw',
+  () => patientDashboardService.getUserActiveSubscription(),
+);
+
 /** Mirrors GetPendingBookingAttemptAction. Returns the raw attempt (or null) - callers decide
  * what to do with it: the dashboard only cares about a staff-initiated one sitting at the
  * payment step ("Pay now" banner), BookAppointmentPage resumes ANY attempt's wizard state. */

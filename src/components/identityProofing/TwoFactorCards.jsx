@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useIdentityProofing } from './IdentityProofingContext';
 import { IdpCard, IdpButton, IdpAlert, IdpBulletList } from './IdpUi';
-import { requestTfaActivation } from '../../services/identityProofingService';
+import { useIdentityProofingApi } from '../../hooks/useIdentityProofingApi';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
 import { IDP_MAX_ATTEMPTS, isTfaActivated } from '../../utils/idpStatus';
@@ -40,6 +40,7 @@ const BANNER_COPY = {
 
 /** Port of useTfaInitiationRequest.js. */
 function useTfaInitiationRequest() {
+  const { requestTfaActivation } = useIdentityProofingApi();
   const [isRequesting, setIsRequesting] = useState(false);
   const [isRequested, setIsRequested] = useState(false);
 

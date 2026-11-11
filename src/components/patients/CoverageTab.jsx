@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
-import { getPatientEligibilities } from '../../services/doseSpotClinicalService';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
 import { adTokens } from '../../theme/colors';
 
 function InfoRow({ label, value }) {
@@ -27,6 +27,7 @@ function formatDateOfBirth(value) {
  * /api/Eligibilities/{doseSpotPatientId}/eligibilities. If multiple plans
  * exist, a chip selector switches between them (default: first). */
 export default function CoverageTab({ doseSpotPatientId }) {
+  const { getPatientEligibilities } = useDoseSpotClinical();
   const [eligibilities, setEligibilities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState(0);

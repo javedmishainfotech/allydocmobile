@@ -3,7 +3,7 @@ import { View, Text, FlatList, Image, Pressable, RefreshControl, StyleSheet } fr
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { getTreatmentPlansList } from '../../services/treatmentPlanService';
+import { useTreatmentPlan } from '../../hooks/useTreatmentPlan';
 import { formatStatusFilterLabel, hasActiveStatusFilter, parseAppointmentListResponse } from '../../utils/appointmentListApi';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import { getInfoButtonProps } from '../../utils/appointmentFields';
@@ -133,6 +133,7 @@ export default function TreatmentPlanList({
 }) {
   const navigation = useNavigation();
   const dockInset = useDockInset();
+  const { getTreatmentPlansList } = useTreatmentPlan();
 
   const [filter, setFilter] = useState(emptyFilter);
   const [page, setPage] = useState(1);

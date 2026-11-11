@@ -3,7 +3,7 @@ import { View, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 're
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { usePatientDashboard } from '../../hooks/usePatientDashboard';
-import { dismissBookingAttempt } from '../../services/bookingService';
+import { useBooking } from '../../hooks/useBooking';
 import { getItem } from '../../utils/storage';
 import { LoadingBlock } from '../../components/booking/BookingUi';
 import QuestionnaireWizard from '../../components/booking/QuestionnaireWizard';
@@ -31,6 +31,7 @@ export default function BookAppointmentPage() {
   const route = useRoute();
   const { profile } = useAuth();
   const { loadPendingPayment } = usePatientDashboard();
+  const { dismissBookingAttempt } = useBooking();
   const patientId = route.params?.patientId || profile?.userId;
   const isFreelancer = String(profile?.userType || '').toLowerCase() === 'freelancer';
   // "Pay now" for a booking a staff member started for the patient: straight to the payment step.

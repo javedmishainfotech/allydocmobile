@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useIdentityProofing } from './IdentityProofingContext';
 import { IdpScreen, IdpButton, IdpCheckbox, IdpLoading } from './IdpUi';
 import LegalTextView from './LegalTextView';
-import { getLegalAgreement, acceptLegalAgreement } from '../../services/identityProofingService';
+import { useIdentityProofingApi } from '../../hooks/useIdentityProofingApi';
 import { parseLegalAgreementForDisplay } from '../../utils/legalTextParser';
 import { getItem } from '../../utils/storage';
 import { toast } from '../../utils/toast';
@@ -13,6 +13,7 @@ import { adTokens } from '../../theme/colors';
 /** Port of components/IdentityProofing/Step2Consent.jsx. */
 export default function Step2Consent() {
   const { profile } = useAuth();
+  const { getLegalAgreement, acceptLegalAgreement } = useIdentityProofingApi();
   const {
     consentAccepted,
     setConsentAccepted,

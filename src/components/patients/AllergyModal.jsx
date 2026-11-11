@@ -4,13 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
-import {
-  searchAllergens,
-  addCodedAllergy,
-  addFreeTextAllergy,
-  editPatientAllergy,
-  addNoKnownAllergy,
-} from '../../services/doseSpotClinicalService';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
 import { toast } from '../../utils/toast';
 import { colors, adTokens } from '../../theme/colors';
 import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
@@ -55,6 +49,8 @@ function toIsoDate(date) {
  * panel, matching web. */
 export default function AllergyModal({ visible, doseSpotPatientId, editing, onClose, onSaved }) {
   const bottomSafe = useBottomSafeSpacing();
+  const { searchAllergens, addCodedAllergy, addFreeTextAllergy, editPatientAllergy, addNoKnownAllergy } =
+    useDoseSpotClinical();
   const [searchText, setSearchText] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);

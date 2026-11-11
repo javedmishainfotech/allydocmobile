@@ -3,7 +3,7 @@ import { View, Text, TextInput, Pressable, FlatList, StyleSheet } from 'react-na
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import { getCertificates, addCertificate, removeCertificate } from '../../services/settingsService';
+import { useSettings } from '../../hooks/useSettings';
 import { toast } from '../../utils/toast';
 import DocumentPreviewModal from '../DocumentPreviewModal';
 import { colors, adTokens } from '../../theme/colors';
@@ -43,6 +43,7 @@ function CertificateRow({ item, onPreview, onDelete, isDeleting }) {
 
 /** Port of AllyDocReactApp/.../Settings/Certifications.jsx. */
 export default function CertificationsTab({ userId }) {
+  const { getCertificates, addCertificate, removeCertificate } = useSettings();
   const [certificates, setCertificates] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [certificateName, setCertificateName] = useState('');

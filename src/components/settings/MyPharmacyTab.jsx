@@ -2,12 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import {
-  addMyPharmacy,
-  deleteMyPharmacy,
-  getMyPharmacies,
-  searchPharmacies,
-} from '../../services/patientPharmacyService';
+import { usePatientPharmacy } from '../../hooks/usePatientPharmacy';
 import { openExternalLink } from '../../utils/openExternalLink';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
@@ -124,6 +119,7 @@ function EmptyBox({ icon, text, onGoSearch }) {
  * opens the address in Google Maps (the web embeds a map).
  */
 export default function MyPharmacyTab() {
+  const { searchPharmacies, getMyPharmacies, addMyPharmacy, deleteMyPharmacy } = usePatientPharmacy();
   const [section, setSection] = useState(SECTIONS.SEARCH);
 
   const [myPharmacies, setMyPharmacies] = useState([]);

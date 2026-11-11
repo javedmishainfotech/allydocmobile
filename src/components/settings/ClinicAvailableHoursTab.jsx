@@ -4,13 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
-import {
-  getDailyAvailableHours,
-  getDuration,
-  getDoctorTimeZone,
-  getTimeZones,
-  saveWeeklySchedule,
-} from '../../services/settingsService';
+import { useSettings } from '../../hooks/useSettings';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
 
@@ -60,6 +54,8 @@ function formatTimeDisplay(value) {
  * web's `<input type="time">` produces. */
 export default function ClinicAvailableHoursTab() {
   const { profile } = useAuth();
+  const { getDailyAvailableHours, getDuration, getDoctorTimeZone, getTimeZones, saveWeeklySchedule } =
+    useSettings();
   const userId = profile?.userId;
 
   const [days, setDays] = useState(buildDefaultDays());

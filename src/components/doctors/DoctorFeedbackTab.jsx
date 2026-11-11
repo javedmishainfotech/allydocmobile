@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getDoctorFeedbackAppointments } from '../../services/doctorsListService';
+import { useDoctorsList } from '../../hooks/useDoctorsList';
 import { getAppointmentDisplay } from '../../utils/formatAppointmentDate';
 import { adTokens } from '../../theme/colors';
 
@@ -45,6 +45,7 @@ function CommentText({ comment }) {
 /** Port of ClinicDoctorPatientFeedback.jsx (scoped-to-one-doctor case only - the no-id "hub"
  * state doesn't apply here since this is always opened from a specific doctor's detail). */
 export default function DoctorFeedbackTab({ doctorId }) {
+  const { getDoctorFeedbackAppointments } = useDoctorsList();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 

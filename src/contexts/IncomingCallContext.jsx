@@ -4,7 +4,8 @@ import * as Notifications from 'expo-notifications';
 import { getMessaging, onMessage, onNotificationOpenedApp, getInitialNotification } from '@react-native-firebase/messaging';
 import { useAuth } from '../hooks/useAuth';
 import { useNotifications } from '../hooks/useNotifications';
-import { acceptCall, declineCall, getCallAcceptRefusal } from '../services/callService';
+import { useCall } from '../hooks/useCall';
+import { getCallAcceptRefusal } from '../services/callService';
 import { syncPushToken } from '../services/pushNotifications';
 import { navigate } from '../navigation/navigationRef';
 import { toast } from '../utils/toast';
@@ -70,6 +71,7 @@ function parseIncomingCallData(data = {}) {
  */
 export function IncomingCallProvider({ children }) {
   const { isAuthenticated } = useAuth();
+  const { acceptCall, declineCall } = useCall();
   const { refreshUnreadCount } = useNotifications();
   const [incomingCall, setIncomingCall] = useState(null);
   const wasAuthenticatedRef = useRef(false);

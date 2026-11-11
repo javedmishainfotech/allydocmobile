@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getUserDetails } from '../../services/settingsService';
+import { useSettings } from '../../hooks/useSettings';
 import Avatar from '../Avatar';
 import PatientProfileModal from './PatientProfileModal';
 import RingtoneSelector from './RingtoneSelector';
@@ -48,6 +48,7 @@ function Field({ label, value }) {
  * and the incoming-call ringtone picker (RingtoneSelector).
  */
 export default function PatientProfileTab({ userId }) {
+  const { getUserDetails } = useSettings();
   const [details, setDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);

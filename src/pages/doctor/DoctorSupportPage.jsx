@@ -4,7 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { fetchMyTickets } from '../../services/supportService';
+import { useSupport } from '../../hooks/useSupport';
 import { relativeTime } from '../../utils/supportFields';
 import SupportStatusPill from '../../components/support/SupportStatusPill';
 import NewTicketModal from '../../components/support/NewTicketModal';
@@ -93,6 +93,7 @@ function TicketRow({ ticket, onPress }) {
 export default function DoctorSupportPage() {
   const navigation = useNavigation();
   const dockInset = useDockInset();
+  const { fetchMyTickets } = useSupport();
   const [tickets, setTickets] = useState([]);
   const [counts, setCounts] = useState({ total: 0, new: 0, inProgress: 0, resolved: 0, closed: 0 });
   const [statusFilter, setStatusFilter] = useState('all');

@@ -18,7 +18,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useChatHub from '../../hooks/useChatHub';
-import { uploadChatImages } from '../../services/chatService';
+import { useChat } from '../../hooks/useChat';
 import Avatar from '../../components/Avatar';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
@@ -70,6 +70,7 @@ export default function ChatWindowPage() {
   const chat = route.params?.chat;
   const { userId, isConnected, connectionError, messages, loading, joinChatRoom, sendMessage, sendFileMessage } =
     useChatHub();
+  const { uploadChatImages } = useChat();
 
   const [text, setText] = useState('');
   const [images, setImages] = useState([]);

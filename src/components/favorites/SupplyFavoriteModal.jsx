@@ -3,7 +3,7 @@ import { Modal, View, Text, TextInput, Pressable, ScrollView, Switch, StyleSheet
 import { ActivityIndicator } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
 import { Feather } from '@expo/vector-icons';
-import { searchSupplies, createSupplyFavorite, updateSupplyFavorite } from '../../services/prescriptionService';
+import { usePrescriptions } from '../../hooks/usePrescriptions';
 import OptionPicker from '../prescriptions/OptionPicker';
 import SubstitutionConfirmationModal from '../prescriptions/SubstitutionConfirmationModal';
 import { DISPENSE_UNIT_OPTIONS } from '../../utils/dispenseUnits';
@@ -33,6 +33,7 @@ function Field({ label, required, children }) {
 export default function SupplyFavoriteModal({ visible, scope, scopeId, favorite, onClose, onSaved }) {
   const bottomSafe = useBottomSafeSpacing();
   const insets = useSafeAreaInsets();
+  const { searchSupplies, createSupplyFavorite, updateSupplyFavorite } = usePrescriptions();
   const isEdit = Boolean(favorite);
 
   const [searchQuery, setSearchQuery] = useState('');

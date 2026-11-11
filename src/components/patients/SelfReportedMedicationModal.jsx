@@ -2,16 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, TextInput, Pressable, ScrollView, FlatList, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
-import {
-  searchMedications,
-  selectMedication,
-  addCodedSelfReportedMedication,
-  addFreetextSelfReportedMedication,
-  addSimpleSelfReportedMedication,
-  editCodedSelfReportedMedication,
-  editFreetextSelfReportedMedication,
-  editSimpleSelfReportedMedication,
-} from '../../services/doseSpotClinicalService';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
 import { toast } from '../../utils/toast';
 import { colors, adTokens } from '../../theme/colors';
 import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
@@ -40,6 +31,16 @@ const EMPTY_FORM = {
  */
 export default function SelfReportedMedicationModal({ visible, doseSpotPatientId, editing, onClose, onSaved }) {
   const bottomSafe = useBottomSafeSpacing();
+  const {
+    searchMedications,
+    selectMedication,
+    addCodedSelfReportedMedication,
+    addFreetextSelfReportedMedication,
+    addSimpleSelfReportedMedication,
+    editCodedSelfReportedMedication,
+    editFreetextSelfReportedMedication,
+    editSimpleSelfReportedMedication,
+  } = useDoseSpotClinical();
   const [searchText, setSearchText] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, Alert, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { getPatientAllergies, editPatientAllergy } from '../../services/doseSpotClinicalService';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
 import AllergyModal from './AllergyModal';
 import { toast } from '../../utils/toast';
 import { colors, adTokens } from '../../theme/colors';
@@ -46,6 +46,7 @@ function AllergyRow({ item, onEdit, onDelete }) {
  * Known Allergy parity. "Delete" is an edit with statusType=Deleted (3),
  * there's no separate hard-delete endpoint - same as web. */
 export default function AllergiesTab({ doseSpotPatientId }) {
+  const { getPatientAllergies, editPatientAllergy } = useDoseSpotClinical();
   const [allergies, setAllergies] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);

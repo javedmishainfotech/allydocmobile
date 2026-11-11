@@ -6,7 +6,7 @@ import * as Yup from 'yup';
 import { useIdentityProofing } from './IdentityProofingContext';
 import { IdpScreen, IdpButton, IdpCheckbox, IdpLoading, IdpTextField, IdpSelectField, idpColors } from './IdpUi';
 import AttemptModal from './AttemptModal';
-import { createIdp, getStates, getCitiesByStateId } from '../../services/identityProofingService';
+import { useIdentityProofingApi } from '../../hooks/useIdentityProofingApi';
 import { getItem } from '../../utils/storage';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
@@ -115,6 +115,7 @@ const validationSchema = Yup.object().shape({
 
 /** Port of components/IdentityProofing/Step4PrescriberInfo.jsx. */
 export default function Step4PrescriberInfo() {
+  const { createIdp, getStates, getCitiesByStateId } = useIdentityProofingApi();
   const {
     formData,
     updateFormData,

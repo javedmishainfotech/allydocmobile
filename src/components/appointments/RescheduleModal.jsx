@@ -5,7 +5,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Toast from 'react-native-toast-message';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import InlineCalendar from '../InlineCalendar';
-import { getScheduleList } from '../../services/bookingService';
+import { useBooking } from '../../hooks/useBooking';
 import { useManageAppointments } from '../../hooks/useManageAppointments';
 import { getSlotRangeLabel, getSlotValue } from '../../utils/slotLabel';
 import { localDateOnlyToApiString } from '../../utils/dateOnly';
@@ -22,6 +22,7 @@ import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 export default function RescheduleModal({ visible, appointmentId, patientId, initialDate, onClose, onRescheduled }) {
   const bottomSafe = useBottomSafeSpacing();
   const { updateAppointment } = useManageAppointments();
+  const { getScheduleList } = useBooking();
   const [selectedDate, setSelectedDate] = useState(() => initialDate || new Date());
   const [slots, setSlots] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);

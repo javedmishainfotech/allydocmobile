@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather } from '@expo/vector-icons';
-import { changePassword } from '../../services/settingsService';
+import { useSettings } from '../../hooks/useSettings';
 import {
   PASSWORD_MAX_LENGTH,
   getPasswordRulesStatus,
@@ -44,6 +44,7 @@ function PasswordField({ label, value, onChangeText, visible, onToggleVisible })
 
 /** Port of AllyDocReactApp/src/components/ChangePasswordTab.jsx. */
 export default function ChangePasswordTab() {
+  const { changePassword } = useSettings();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

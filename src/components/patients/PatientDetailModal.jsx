@@ -14,7 +14,7 @@ import RxChangeTab from './RxChangeTab';
 import RefillsTab from './RefillsTab';
 import PrescriptionsTab from './PrescriptionsTab';
 import PatientDetailTabBar, { NURSE_ALLOWED_TABS } from './PatientDetailTabBar';
-import { consentToMedicationHistory } from '../../services/doseSpotClinicalService';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
 import { toast } from '../../utils/toast';
 import { adTokens, colors } from '../../theme/colors';
 import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
@@ -36,6 +36,7 @@ export default function PatientDetailModal({ visible, patientId, patientName, in
   const bottomSafe = useBottomSafeSpacing();
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
+  const { consentToMedicationHistory } = useDoseSpotClinical();
   // Nurse only gets Personal Info, Appointments History and Prescriptions on this page
   // (web: ViewPatientPage.jsx NURSE_ALLOWED_TABS).
   const isNurse = String(profile?.roleName || '').toLowerCase().trim() === 'nurse';

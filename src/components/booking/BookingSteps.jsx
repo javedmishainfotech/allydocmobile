@@ -4,7 +4,7 @@ import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SearchableDropdown from './SearchableDropdown';
-import { getAllSymptoms, getBookingConsent, recordConsentAcceptance } from '../../services/bookingService';
+import { useBooking } from '../../hooks/useBooking';
 import { Card, ButtonRow, ErrorText, LoadingBlock, PrimaryButton, SecondaryButton, StepHeader, soloButtonStyle } from './BookingUi';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
@@ -20,6 +20,7 @@ const consentDocument = (html) =>
 /** Patient consent: the wording the super admin published is shown (it is html, so in a WebView) and
  * must be accepted - and that acceptance recorded - before the booking continues. */
 export function ConsentStep({ onNext, questionnaireId }) {
+  const { getBookingConsent, recordConsentAcceptance } = useBooking();
   const [state, setState] = useState({ loading: true, html: '', error: '' });
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState('');
@@ -117,6 +118,7 @@ export function ConsentStep({ onNext, questionnaireId }) {
 
 /** Condition / symptom: the patient's primary reason for the consultation (`GET /AllSymptoms`). */
 export function ConditionStep({ onNext, onPrev, setSymptomList }) {
+  const { getAllSymptoms } = useBooking();
   const [symptoms, setSymptoms] = useState(null);
   const [loadError, setLoadError] = useState('');
   const [selectedId, setSelectedId] = useState(null);

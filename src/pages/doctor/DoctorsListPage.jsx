@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable, RefreshControl, StyleSheet } from 'r
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
-import { getListOfDoctors, getDoctorFeedbackAppointments } from '../../services/doctorsListService';
+import { useDoctorsList } from '../../hooks/useDoctorsList';
 import { normalizeDoctor, parsePagedListResponse } from '../../utils/patientListUtils';
 import PatientFilterModal, { EMPTY_FREELANCER_PATIENT_FILTER } from '../../components/patients/PatientFilterModal';
 import DoctorDetailModal from '../../components/doctors/DoctorDetailModal';
@@ -14,6 +14,7 @@ import { useDockInset } from '../../navigation/DockInsetContext';
 const PAGE_SIZE = 20;
 
 function FeedbackBadge({ doctorId }) {
+  const { getDoctorFeedbackAppointments } = useDoctorsList();
   const [summary, setSummary] = useState(null);
 
   useEffect(() => {
@@ -103,6 +104,7 @@ function DoctorRow({ doctor, showFeedback, onOpenProfile, onOpenAppointments, on
 export default function DoctorsListPage() {
   const dockInset = useDockInset();
   const { profile } = useAuth();
+  const { getListOfDoctors } = useDoctorsList();
   const roleName = String(profile?.roleName || '').toLowerCase().trim();
   const userType = String(profile?.userType || '').toLowerCase().trim();
   // Web's showClinicAdminFeedback: doctor admin at a clinic/hospital.

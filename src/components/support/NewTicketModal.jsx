@@ -6,7 +6,8 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import OptionPicker from '../prescriptions/OptionPicker';
 import AttachmentChip from './AttachmentChip';
-import { SUBJECT_OPTIONS, ATTACHMENT_MIME_TYPES, MESSAGE_MAX, checkAttachments, createTicket } from '../../services/supportService';
+import { SUBJECT_OPTIONS, ATTACHMENT_MIME_TYPES, MESSAGE_MAX, checkAttachments } from '../../services/supportService';
+import { useSupport } from '../../hooks/useSupport';
 import { toast } from '../../utils/toast';
 import { adTokens, colors } from '../../theme/colors';
 import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
@@ -14,6 +15,7 @@ import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
 /** Port of web's NewTicketModal: subject + issue description + up to 5 PDF/image attachments. */
 export default function NewTicketModal({ visible, onClose, onCreated }) {
   const bottomSafe = useBottomSafeSpacing();
+  const { createTicket } = useSupport();
   const [subject, setSubject] = useState(SUBJECT_OPTIONS[0]);
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState([]);

@@ -6,7 +6,7 @@ import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
-import { confirmFailedPayment, confirmSuccessfulPayment } from '../../services/subscriptionService';
+import { useSubscription } from '../../hooks/useSubscription';
 import { getPaymentResultConfig, parsePaymentReturnUrl } from '../../utils/paymentFlow';
 import { adTokens } from '../../theme/colors';
 
@@ -39,6 +39,7 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 export default function PaymentCheckoutSheet({ visible, token, fallbackType = null, onDone, onCancel }) {
   const insets = useSafeAreaInsets();
+  const { confirmFailedPayment, confirmSuccessfulPayment } = useSubscription();
   const [phase, setPhase] = useState('paying'); // paying | confirming | success | failure | unconfirmed
   const [attempt, setAttempt] = useState(0);
   const [resolvedType, setResolvedType] = useState(fallbackType);

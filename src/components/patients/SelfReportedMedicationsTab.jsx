@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { Feather } from '@expo/vector-icons';
-import { getSelfReportedMedications } from '../../services/doseSpotClinicalService';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
 import SelfReportedMedicationModal from './SelfReportedMedicationModal';
 import RemoveSelfReportedMedicationModal from './RemoveSelfReportedMedicationModal';
 import { colors, adTokens } from '../../theme/colors';
@@ -47,6 +47,7 @@ function MedicationRow({ item, onEdit, onRemove }) {
  * /api/patients/{doseSpotPatientId}/selfReportedMedications, with full
  * Add/Edit/Remove parity. */
 export default function SelfReportedMedicationsTab({ doseSpotPatientId }) {
+  const { getSelfReportedMedications } = useDoseSpotClinical();
   const [medications, setMedications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [addModalVisible, setAddModalVisible] = useState(false);

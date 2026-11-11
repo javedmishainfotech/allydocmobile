@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import { getUserDetails } from '../../services/settingsService';
+import { useSettings } from '../../hooks/useSettings';
 import DocumentPreviewModal from '../DocumentPreviewModal';
 import RingtoneSelector from './RingtoneSelector';
 import { adTokens } from '../../theme/colors';
@@ -39,6 +39,7 @@ function FileRow({ icon = 'file-document-outline', name, onPreview }) {
  * nothing is missing here by leaving editing out.
  */
 export default function ProfileTab({ userId }) {
+  const { getUserDetails } = useSettings();
   const [details, setDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [previewFile, setPreviewFile] = useState(null);

@@ -4,7 +4,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { getItem } from '../../utils/storage';
-import { getAssignedDiseases, assignDiseases } from '../../services/settingsService';
+import { useSettings } from '../../hooks/useSettings';
 import { adTokens } from '../../theme/colors';
 import SegmentedTabs from '../ui/SegmentedTabs';
 
@@ -29,6 +29,7 @@ function normalizeDiseaseOptions(raw) {
  */
 export default function AssignDiseaseTab() {
   const navigation = useNavigation();
+  const { getAssignedDiseases, assignDiseases } = useSettings();
   const [clinicCode, setClinicCode] = useState('');
   const [options, setOptions] = useState([]);
   const [selected, setSelected] = useState([]);

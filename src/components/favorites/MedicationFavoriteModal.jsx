@@ -3,8 +3,8 @@ import { Modal, View, Text, TextInput, Pressable, ScrollView, Switch, StyleSheet
 import { ActivityIndicator } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
 import { Feather } from '@expo/vector-icons';
-import { searchMedications, selectMedication } from '../../services/doseSpotClinicalService';
-import { createCodedFavorite, createClinicCodedFavorite, updateCodedFavorite } from '../../services/prescriptionService';
+import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
+import { usePrescriptions } from '../../hooks/usePrescriptions';
 import OptionPicker from '../prescriptions/OptionPicker';
 import SubstitutionConfirmationModal from '../prescriptions/SubstitutionConfirmationModal';
 import { DISPENSE_UNIT_OPTIONS } from '../../utils/dispenseUnits';
@@ -38,6 +38,8 @@ function Field({ label, required, children }) {
 export default function MedicationFavoriteModal({ visible, scope, scopeId, favorite, onClose, onSaved }) {
   const bottomSafe = useBottomSafeSpacing();
   const insets = useSafeAreaInsets();
+  const { searchMedications, selectMedication } = useDoseSpotClinical();
+  const { createCodedFavorite, createClinicCodedFavorite, updateCodedFavorite } = usePrescriptions();
   const isEdit = Boolean(favorite);
 
   const [searchQuery, setSearchQuery] = useState('');
