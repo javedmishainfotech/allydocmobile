@@ -173,6 +173,10 @@ export const fetchPrescriptionLog = createAsyncThunk(
     prescriptionService.getPrescriptionLog(doseSpotPatientId, prescriptionId),
 );
 
+export const fetchSupplyById = createAsyncThunk('prescription/fetchSupplyById', (supplyId) =>
+  prescriptionService.getSupplyById(supplyId),
+);
+
 export const fetchEpcsSuggestions = createAsyncThunk(
   'prescription/fetchEpcsSuggestions',
   ({ doseSpotPatientId, prescriptionId }) =>

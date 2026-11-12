@@ -369,6 +369,19 @@ export async function getPrescriptionLog(doseSpotPatientId, prescriptionId) {
   }
 }
 
+/** Mirrors GetSupplyByIdAction: `GET /api/Supply/GetSupplyById?supplyId=`. Resolves a supply
+ * prescription row's display name on Treatment Plan detail, same as `selectMedication` does for
+ * a coded drug row. */
+export async function getSupplyById(supplyId) {
+  try {
+    const response = await apiClient.get('/api/Supply/GetSupplyById', { params: { supplyId } });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
+}
+
 // ---- EPCS signing (controlled-substance e-prescribing) ----
 // Port of AllyDocReactApp's EpcsWorkflowModal.jsx / EpcsWorkflowStepper.jsx 4-step flow:
 // DEA suggestion lookup -> readyToSign -> PIN+OTP sign/send, all against an already-created

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "AllyDocMobile",
+    "name": "AllyDoc",
     "slug": "AllyDocMobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -21,7 +21,7 @@
       "package": "com.allydoc.healthcare",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0F172A",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

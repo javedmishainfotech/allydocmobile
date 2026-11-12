@@ -38,6 +38,15 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActionPaths: ['meta.arg.onProgress'],
       },
+      // Dev-only: deep-freezes and diffs the ENTIRE state tree on every single dispatch to catch
+      // accidental mutations. With 30 slices now in the store (the service->slice->hook retrofit),
+      // that full-tree walk is expensive enough on React Native's JS thread to visibly freeze the
+      // UI on screens that dispatch often (e.g. ManageAppointments) - this is the actual cause,
+      // not the unrelated "multiple React Native hosts" DevTools Performance-tab message. Disabled
+      // here since it has no effect in a release build anyway (RTK already no-ops it there) and
+      // `serializableCheck` above still catches the far more common real mistake (the kind of
+      // non-serializable-value bug this exact check surfaced recently).
+      immutableCheck: false,
     }),
   reducer: {
     auth: authReducer,

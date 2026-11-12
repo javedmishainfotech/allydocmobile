@@ -102,3 +102,55 @@ export async function getDoctorPatientDropdown() {
     return normalizeApiError(err);
   }
 }
+
+// Every field except patientId funnels through the backend's duplicate-patient-detection query
+// shape (web ChangePatientSearchModal.jsx: `duplicateFields=FirstName,LastName&firstName=...`);
+// patientId alone uses a direct `PatientId` param. Filter key names here are the exact camelCase
+// query param names the backend expects (not just a naming convention - e.g. "dosespotId", one s).
+const PATIENT_SEARCH_DUPLICATE_FIELD = {
+  firstName: 'FirstName',
+  middleName: 'MiddleName',
+  lastName: 'LastName',
+  dateOfBirth: 'DateOfBirth',
+  dosespotId: 'DosespotId',
+  phoneNumber: 'PhoneNumber',
+  email: 'Email',
+};
+
+/** Mirrors PatientSearchAction: `GET /PatientSearch` - finds an existing clinic patient to
+ * re-link an unmatched RxChange/Refill request to (see changeRxChangePatient/changeRefillPatient
+ * below). Any combination of fields may be given; `patientId` alone searches by id directly,
+ * everything else goes through the duplicate-detection query shape above. */
+export async function searchPatients({
+  firstName,
+  middleName,
+  lastName,
+  dateOfBirth,
+  dosespotId,
+  phoneNumber,
+  email,
+  patientId,
+  pageNumber = 1,
+  pageSize = 20,
+} = {}) {
+  const params = { pageNumber, pageSize };
+  const duplicateFields = [];
+  const values = { firstName, middleName, lastName, dateOfBirth, dosespotId, phoneNumber, email };
+  Object.entries(values).forEach(([key, value]) => {
+    const trimmed = String(value ?? '').trim();
+    if (!trimmed) return;
+    duplicateFields.push(PATIENT_SEARCH_DUPLICATE_FIELD[key]);
+    params[key] = trimmed;
+  });
+  if (duplicateFields.length) params.duplicateFields = duplicateFields.join(',');
+  const trimmedPatientId = String(patientId ?? '').trim();
+  if (trimmedPatientId) params.PatientId = trimmedPatientId;
+
+  try {
+    const response = await apiClient.get('/PatientSearch', { params });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
+}

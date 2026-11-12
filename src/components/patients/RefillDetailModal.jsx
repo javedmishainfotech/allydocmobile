@@ -6,6 +6,8 @@ import { useDoseSpotClinical } from '../../hooks/useDoseSpotClinical';
 import { toast } from '../../utils/toast';
 import { colors, adTokens } from '../../theme/colors';
 import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
+import ChangePatientModal from './ChangePatientModal';
+import ModifyApproveRefillModal from './ModifyApproveRefillModal';
 
 // RefillDenialReason, numeric enum on this endpoint (unlike RxChange's
 // string enum) - same small common set of reasons.
@@ -18,26 +20,29 @@ const DENIAL_REASONS = [
 ];
 
 /**
- * Port of AllyDocReactApp's RefillDetailedView.jsx - simple Approve and
- * Deny parity. "Modify & Approve" (replace) is NOT ported here: web branches
- * its request body 5 ways by prescription type for that action and
- * hardcodes a TODO placeholder appointmentId, which needs its own dedicated
- * pass rather than guessing at the full payload shape. Controlled-substance
- * refills correctly block simple Approve here too, same as web.
+ * Port of AllyDocReactApp's RefillDetailedView.jsx - simple Approve/Deny, "Link Patient", and
+ * "Modify & Approve" (Replace - see ModifyApproveRefillModal.jsx for the 5-way type-branched
+ * payload). Controlled-substance refills block simple Approve (same as web) but can still use
+ * Modify & Approve with a PIN + passcode/OTP, same as web's EPCS path for this flow.
  */
 export default function RefillDetailModal({ visible, request, onClose, onResolved }) {
   const bottomSafe = useBottomSafeSpacing();
-  const { approveRefill, denyRefill } = useDoseSpotClinical();
+  const { approveRefill, denyRefill, changeRefillPatient, replaceRefill } = useDoseSpotClinical();
   const [refills, setRefills] = useState('0');
   const [effectiveDate, setEffectiveDate] = useState('');
   const [comment, setComment] = useState('');
   const [denialReason, setDenialReason] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [linkPatientOpen, setLinkPatientOpen] = useState(false);
+  const [modifyApproveOpen, setModifyApproveOpen] = useState(false);
 
   if (!request) return null;
 
+  const refillId = request.RefillId ?? request.RefillRequestId;
   const isControlled = Boolean(request.refillRequestIsControlled ?? request.IsControlled);
   const med = request.dispensedPrescription || request.DispensedPrescription;
+  // web: refillRequestIsNewPatient/isNewPatientRefill - blocks approve until linked to a patient.
+  const isNewPatient = request.NewPatient === true || String(request.NewPatient).toLowerCase() === 'true';
 
   const handleApprove = async () => {
     if (isControlled) {
@@ -49,7 +54,7 @@ export default function RefillDetailModal({ visible, request, onClose, onResolve
       return;
     }
     setIsSubmitting(true);
-    const response = await approveRefill(request.RefillId ?? request.RefillRequestId, {
+    const response = await approveRefill(refillId, {
       refills: Number(refills) || 0,
       effectiveDate,
       comment,
@@ -69,7 +74,7 @@ export default function RefillDetailModal({ visible, request, onClose, onResolve
       return;
     }
     setIsSubmitting(true);
-    const response = await denyRefill(request.RefillId ?? request.RefillRequestId, {
+    const response = await denyRefill(refillId, {
       denialReason,
       note: comment,
     });
@@ -80,6 +85,18 @@ export default function RefillDetailModal({ visible, request, onClose, onResolve
     } else {
       toast.error(response.message || 'Unable to deny refill.');
     }
+  };
+
+  const handleLinkPatientConfirm = async (selectedPatient) => {
+    const response = await changeRefillPatient(refillId, selectedPatient.doseSpotId);
+    if (response.success) onResolved?.();
+    return response;
+  };
+
+  const handleModifyApproveConfirm = async (payload) => {
+    const response = await replaceRefill(refillId, payload);
+    if (response.success) onResolved?.();
+    return response;
   };
 
   return (
@@ -109,6 +126,17 @@ export default function RefillDetailModal({ visible, request, onClose, onResolve
                 </View>
               ) : null}
             </View>
+
+            {isNewPatient ? (
+              <View style={styles.controlledBanner}>
+                <Text style={styles.controlledBannerText}>
+                  This request isn&apos;t linked to a clinic patient yet. Link it before approving - you can still deny it.
+                </Text>
+                <Pressable style={styles.linkPatientButton} onPress={() => setLinkPatientOpen(true)}>
+                  <Text style={styles.linkPatientButtonText}>Link Patient</Text>
+                </Pressable>
+              </View>
+            ) : null}
 
             {!isControlled ? (
               <>
@@ -143,12 +171,36 @@ export default function RefillDetailModal({ visible, request, onClose, onResolve
             <Pressable style={styles.denyButton} onPress={handleDeny} disabled={isSubmitting}>
               {isSubmitting ? <ActivityIndicator size={14} color={colors.white} /> : <Text style={styles.denyButtonText}>Deny</Text>}
             </Pressable>
-            <Pressable style={[styles.approveButton, isControlled && styles.approveButtonDisabled]} onPress={handleApprove} disabled={isSubmitting || isControlled}>
+            <Pressable
+              style={[styles.approveButton, (isControlled || isNewPatient) && styles.approveButtonDisabled]}
+              onPress={handleApprove}
+              disabled={isSubmitting || isControlled || isNewPatient}
+            >
               {isSubmitting ? <ActivityIndicator size={14} color={colors.white} /> : <Text style={styles.approveButtonText}>Approve</Text>}
             </Pressable>
           </View>
+          {med && !isNewPatient ? (
+            <Pressable style={styles.modifyApproveButton} onPress={() => setModifyApproveOpen(true)} disabled={isSubmitting}>
+              <Text style={styles.modifyApproveButtonText}>Modify &amp; Approve</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
+
+      <ChangePatientModal
+        visible={linkPatientOpen}
+        requestPatient={request.Patient}
+        entityLabel="refill request"
+        onClose={() => setLinkPatientOpen(false)}
+        onConfirm={handleLinkPatientConfirm}
+      />
+      <ModifyApproveRefillModal
+        visible={modifyApproveOpen}
+        request={request}
+        isControlled={isControlled}
+        onClose={() => setModifyApproveOpen(false)}
+        onConfirm={handleModifyApproveConfirm}
+      />
     </Modal>
   );
 }
@@ -162,8 +214,10 @@ const styles = StyleSheet.create({
   infoCard: { backgroundColor: adTokens.gray50, borderRadius: 10, padding: 12, marginBottom: 14, gap: 2 },
   infoLabel: { fontSize: 10.5, fontWeight: '700', color: adTokens.textSecondary, textTransform: 'uppercase', marginTop: 8 },
   infoValue: { fontSize: 13, color: adTokens.textPrimary },
-  controlledBanner: { backgroundColor: adTokens.warningLight, borderRadius: 8, padding: 10, marginTop: 10 },
+  controlledBanner: { backgroundColor: adTokens.warningLight, borderRadius: 8, padding: 10, marginTop: 10, gap: 8 },
   controlledBannerText: { fontSize: 11.5, color: adTokens.warningDark },
+  linkPatientButton: { alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: adTokens.warningDark },
+  linkPatientButtonText: { fontSize: 12.5, fontWeight: '700', color: colors.white },
 
   fieldLabel: { fontSize: 12, fontWeight: '600', color: adTokens.textSecondary, marginBottom: 6, marginTop: 4 },
   input: { borderWidth: 1, borderColor: adTokens.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13.5, color: adTokens.textPrimary, marginBottom: 8 },
@@ -182,4 +236,6 @@ const styles = StyleSheet.create({
   approveButton: { flex: 1, paddingVertical: 11, borderRadius: 10, backgroundColor: adTokens.success, alignItems: 'center' },
   approveButtonDisabled: { opacity: 0.5 },
   approveButtonText: { fontSize: 13, fontWeight: '700', color: colors.white },
+  modifyApproveButton: { alignItems: 'center', paddingVertical: 10, marginTop: 6 },
+  modifyApproveButtonText: { fontSize: 12.5, fontWeight: '700', color: adTokens.primaryDark, textDecorationLine: 'underline' },
 });

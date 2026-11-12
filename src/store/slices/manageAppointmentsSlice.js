@@ -10,8 +10,8 @@ const initialState = {
 /** Mirrors getAllAppointmentsBasedOnDate. */
 export const fetchAppointmentsBasedOnDate = createAsyncThunk(
   'manageAppointments/fetchByDate',
-  async (date, { rejectWithValue }) => {
-    const result = await manageAppointmentsService.getAppointmentsBasedOnDate(date);
+  async (dateString, { rejectWithValue }) => {
+    const result = await manageAppointmentsService.getAppointmentsBasedOnDate(dateString);
     if (!result.success) return rejectWithValue(result.message || 'Unable to load appointments.');
     return result.data;
   },

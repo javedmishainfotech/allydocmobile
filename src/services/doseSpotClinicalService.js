@@ -203,6 +203,18 @@ export async function searchAllergens(name, pageNumber = 1) {
   }
 }
 
+/** Mirrors SearchDiagnosesAction: `GET /api/Diagnoses/DiagnosisSearch?searchTerm=&pageNumber=`.
+ * Used by the RxChange "Approve with Changes" flow's Primary/Secondary Diagnosis fields. */
+export async function searchDiagnoses(searchTerm, pageNumber = 1) {
+  try {
+    const response = await apiClient.get('/api/Diagnoses/DiagnosisSearch', { params: { searchTerm, pageNumber } });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
+}
+
 export async function addCodedAllergy(doseSpotPatientId, { allergenId, reaction, reactionType, statusType, onsetDate }) {
   try {
     const response = await apiClient.post(
@@ -306,6 +318,38 @@ export async function denyRxChange(rxChangeId, { reason, selectedMedicationId, c
   }
 }
 
+/** Mirrors ReconcileRxChangeRequestAction: `POST /api/RxChange/{rxChangeId}/patients/{patientId}/reconcile`.
+ * Links an "unmatched" RxChange request (one DoseSpot couldn't auto-match to an existing
+ * prescription) to the prescription the doctor picked as its original. */
+export async function reconcileRxChange(rxChangeId, patientId, referencedPrescriptionId) {
+  try {
+    const response = await apiClient.post(`/api/RxChange/${rxChangeId}/patients/${patientId}/reconcile`, {
+      ReferencedPrescriptionId: referencedPrescriptionId,
+    });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
+}
+
+/** Mirrors ChangeRxChangePatientAction: `PATCH /api/RxChange/{rxChangeId}/changePatient`
+ * (x-www-form-urlencoded, field `PatientId`) - re-links a request the pharmacy sent for an
+ * unrecognized patient to an existing clinic patient (web: "Link Patient" flow). */
+export async function changeRxChangePatient(rxChangeId, targetPatientId) {
+  const body = new URLSearchParams();
+  body.append('PatientId', String(targetPatientId ?? ''));
+  try {
+    const response = await apiClient.patch(`/api/RxChange/${rxChangeId}/changePatient`, body.toString(), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
+}
+
 export async function getPharmacyById(pharmacyId) {
   try {
     const response = await apiClient.get(`/api/Pharmacies/GetPharmacyById/${pharmacyId}`);
@@ -354,6 +398,37 @@ export async function approveRefill(refillId, { refills, effectiveDate, comment 
 export async function denyRefill(refillId, { denialReason, note }) {
   try {
     const response = await apiClient.post(`/api/Refills/${refillId}/deny`, { denialReason: Number(denialReason), note });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
+}
+
+/** Mirrors ChangeRefillPatientAction: `PATCH /api/Refills/{refillId}/changePatient`
+ * (multipart/form-data, field `patientId`) - re-links a request the pharmacy sent for an
+ * unrecognized patient to an existing clinic patient (web: "Link Patient" flow). */
+export async function changeRefillPatient(refillId, targetPatientId) {
+  const formData = new FormData();
+  formData.append('patientId', String(targetPatientId ?? ''));
+  try {
+    const response = await apiClient.patch(`/api/Refills/${refillId}/changePatient`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
+}
+
+/** Mirrors ReplaceRefillRequestAction: `POST /api/refills/{refillId}/replace` ("Modify &
+ * Approve" - web's RefillDetailedView.jsx buildReplacePayload). The payload's shape (which of
+ * newPrescription/newSupplyPrescription/newCompoundPrescription/newFreeTextPrescription is sent)
+ * depends on the dispensed prescription's type - see ModifyApproveRefillModal.jsx. */
+export async function replaceRefill(refillId, payload) {
+  try {
+    const response = await apiClient.post(`/api/refills/${refillId}/replace`, payload);
     return normalizeApiBody(response.data, true);
   } catch (err) {
     if (err.response) return normalizeApiBody(err.response.data, false);

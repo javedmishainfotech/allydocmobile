@@ -10,7 +10,7 @@ import { DISPENSE_UNIT_OPTIONS } from '../../utils/dispenseUnits';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
 import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DISPENSE_UNIT_NAME_LIST = DISPENSE_UNIT_OPTIONS.map((o) => o.name);
 const DISPENSE_UNIT_ID_BY_NAME = Object.fromEntries(DISPENSE_UNIT_OPTIONS.map((o) => [o.name, o.id]));
@@ -29,8 +29,21 @@ function Field({ label, required, children }) {
 }
 
 /** Port of AllyDocReactApp's Favorites "Add/Edit Supply" form: search supplies, or fall back
- * to a custom freetext entry when nothing matches. */
-export default function SupplyFavoriteModal({ visible, scope, scopeId, favorite, onClose, onSaved }) {
+ * to a custom freetext entry when nothing matches.
+ *
+ * Wrapped in its own `SafeAreaProvider` - see MedicationFavoriteModal.jsx for why: RN's `Modal`
+ * on iOS needs a nested provider for `useSafeAreaInsets()` to read real (non-zero) insets. */
+export default function SupplyFavoriteModal(props) {
+  return (
+    <Modal visible={props.visible} animationType="slide" onRequestClose={props.onClose}>
+      <SafeAreaProvider>
+        <SupplyFavoriteForm {...props} />
+      </SafeAreaProvider>
+    </Modal>
+  );
+}
+
+function SupplyFavoriteForm({ visible, scope, scopeId, favorite, onClose, onSaved }) {
   const bottomSafe = useBottomSafeSpacing();
   const insets = useSafeAreaInsets();
   const { searchSupplies, createSupplyFavorite, updateSupplyFavorite } = usePrescriptions();
@@ -41,6 +54,8 @@ export default function SupplyFavoriteModal({ visible, scope, scopeId, favorite,
   const [searching, setSearching] = useState(false);
   const [selectedSupply, setSelectedSupply] = useState(null);
   const [isCustom, setIsCustom] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [displayName, setDisplayName] = useState('');
   const [noSubstitutions, setNoSubstitutions] = useState(false);
@@ -59,6 +74,8 @@ export default function SupplyFavoriteModal({ visible, scope, scopeId, favorite,
     setSearchResults([]);
     setSelectedSupply(null);
     setIsCustom(false);
+    setPage(1);
+    setTotalPages(1);
     if (isEdit) {
       setDisplayName(favorite.Title || favorite.Name || '');
       setNoSubstitutions(Boolean(favorite.NoSubstitutions));
@@ -80,24 +97,31 @@ export default function SupplyFavoriteModal({ visible, scope, scopeId, favorite,
     }
   }, [visible, isEdit, favorite]);
 
-  const runSearch = async (text) => {
+  const runSearch = async (text, targetPage = 1) => {
     setSearchQuery(text);
     if (text.trim().length < 3) {
       setSearchResults([]);
+      setTotalPages(1);
       return;
     }
     setSearching(true);
-    const res = await searchSupplies(text.trim(), 1);
+    const res = await searchSupplies(text.trim(), targetPage);
     const list = Array.isArray(res.data) ? res.data : res.data?.Items || [];
     setSearchResults(res.success ? list : []);
+    setPage(targetPage);
+    setTotalPages(res.data?.PageResult?.TotalPages || 1);
     setSearching(false);
   };
+
+  const goToPage = (targetPage) => runSearch(searchQuery, targetPage);
 
   const pickSupply = (item) => {
     setSelectedSupply(item);
     setIsCustom(false);
     setDisplayName(item.Name || item.DisplayName || searchQuery);
     setSearchResults([]);
+    setPage(1);
+    setTotalPages(1);
   };
 
   const useAsCustom = () => {
@@ -105,6 +129,8 @@ export default function SupplyFavoriteModal({ visible, scope, scopeId, favorite,
     setIsCustom(true);
     setDisplayName(searchQuery);
     setSearchResults([]);
+    setPage(1);
+    setTotalPages(1);
   };
 
   const canSubmit = displayName.trim() && patientDirections.trim() && quantity.trim() && !submitting;
@@ -121,10 +147,10 @@ export default function SupplyFavoriteModal({ visible, scope, scopeId, favorite,
       notes: pharmacyNotes,
       directions: patientDirections.trim(),
       title: displayName.trim(),
-      firstPrescriptionDiagnosis1: 0,
-      firstPrescriptionDiagnosis2: 0,
-      firstPrescriptionDiagnosis3: 0,
-      firstPrescriptionDiagnosis4: 0,
+      firstPrescriptionDiagnosisPrimaryDiagnosisId: 0,
+      firstPrescriptionDiagnosisSecondaryDiagnosisId: 0,
+      secondPrescriptionDiagnosisPrimaryDiagnosisId: 0,
+      secondPrescriptionDiagnosisSecondaryDiagnosisId: 0,
       ...(isCustom
         ? { freetext: displayName.trim() }
         : { supplyId: selectedSupply?.SupplyId ?? selectedSupply?.Id ?? favorite?.SupplyId }),
@@ -142,7 +168,7 @@ export default function SupplyFavoriteModal({ visible, scope, scopeId, favorite,
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={submitting ? undefined : onClose}>
+    <>
       <Toast />
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.title}>{isEdit ? 'Edit' : 'Add'} Supply Favorite</Text>
@@ -165,6 +191,29 @@ export default function SupplyFavoriteModal({ visible, scope, scopeId, favorite,
                 <Text style={styles.resultText}>{item.Name || item.DisplayName}</Text>
               </Pressable>
             ))}
+            {totalPages > 1 && searchResults.length > 0 ? (
+              <View style={styles.pager}>
+                <Pressable
+                  style={[styles.pagerButton, page <= 1 && styles.pagerButtonDisabled]}
+                  disabled={page <= 1 || searching}
+                  onPress={() => goToPage(page - 1)}
+                >
+                  <Feather name="chevron-left" size={14} color={page <= 1 ? adTokens.textMuted : adTokens.primaryDark} />
+                  <Text style={[styles.pagerText, page <= 1 && styles.pagerTextDisabled]}>Prev</Text>
+                </Pressable>
+                <Text style={styles.pagerInfo}>
+                  Page {page} of {totalPages}
+                </Text>
+                <Pressable
+                  style={[styles.pagerButton, page >= totalPages && styles.pagerButtonDisabled]}
+                  disabled={page >= totalPages || searching}
+                  onPress={() => goToPage(page + 1)}
+                >
+                  <Text style={[styles.pagerText, page >= totalPages && styles.pagerTextDisabled]}>Next</Text>
+                  <Feather name="chevron-right" size={14} color={page >= totalPages ? adTokens.textMuted : adTokens.primaryDark} />
+                </Pressable>
+              </View>
+            ) : null}
             {searchQuery.trim().length >= 3 && !searching && searchResults.length === 0 ? (
               <Pressable style={styles.customButton} onPress={useAsCustom}>
                 <Text style={styles.customButtonText}>Add &quot;{searchQuery.trim()}&quot; as custom supply</Text>
@@ -227,7 +276,7 @@ export default function SupplyFavoriteModal({ visible, scope, scopeId, favorite,
           {submitting ? <ActivityIndicator size={14} color={adTokens.white} /> : <Text style={styles.saveButtonText}>Save</Text>}
         </Pressable>
       </View>
-    </Modal>
+    </>
   );
 }
 
@@ -243,6 +292,12 @@ const styles = StyleSheet.create({
   loader: { marginVertical: 10 },
   resultRow: { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: adTokens.border },
   resultText: { fontSize: 13, color: adTokens.textPrimary },
+  pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
+  pagerButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 8, backgroundColor: adTokens.primaryTint },
+  pagerButtonDisabled: { backgroundColor: adTokens.gray100 },
+  pagerText: { fontSize: 12.5, fontWeight: '700', color: adTokens.primaryDark },
+  pagerTextDisabled: { color: adTokens.textMuted },
+  pagerInfo: { fontSize: 12, color: adTokens.textSecondary, fontWeight: '600' },
   customButton: { paddingVertical: 10, paddingHorizontal: 12, backgroundColor: adTokens.primaryTint, borderRadius: 8, marginTop: 6 },
   customButtonText: { fontSize: 12.5, fontWeight: '600', color: adTokens.primaryDark },
   checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },

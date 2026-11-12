@@ -11,7 +11,7 @@ import { DISPENSE_UNIT_OPTIONS } from '../../utils/dispenseUnits';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
 import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DISPENSE_UNIT_NAME_LIST = DISPENSE_UNIT_OPTIONS.map((o) => o.name);
 const DISPENSE_UNIT_ID_BY_NAME = Object.fromEntries(DISPENSE_UNIT_OPTIONS.map((o) => [o.name, o.id]));
@@ -34,8 +34,24 @@ function Field({ label, required, children }) {
  * MedicationFormSection.jsx), simplified to its "Custom Format" directions mode (free-text
  * Patient Directions) rather than also porting the SIG-Builder auto-compose dropdowns - both
  * are first-class supported paths on web, Custom Format is just the simpler one to operate.
+ *
+ * Wrapped in its own `SafeAreaProvider`: RN's `Modal` renders on iOS in a separate native
+ * window, and `useSafeAreaInsets()`/`useBottomSafeSpacing()` read all-zero insets unless a
+ * `SafeAreaProvider` is nested inside the Modal itself (a confirmed upstream limitation of
+ * react-native-safe-area-context, not something fixable in app code any other way) - without
+ * this, the header rendered right under the status bar/notch instead of clearing it.
  */
-export default function MedicationFavoriteModal({ visible, scope, scopeId, favorite, onClose, onSaved }) {
+export default function MedicationFavoriteModal(props) {
+  return (
+    <Modal visible={props.visible} animationType="slide" onRequestClose={props.onClose}>
+      <SafeAreaProvider>
+        <MedicationFavoriteForm {...props} />
+      </SafeAreaProvider>
+    </Modal>
+  );
+}
+
+function MedicationFavoriteForm({ visible, scope, scopeId, favorite, onClose, onSaved }) {
   const bottomSafe = useBottomSafeSpacing();
   const insets = useSafeAreaInsets();
   const { searchMedications, selectMedication } = useDoseSpotClinical();
@@ -46,6 +62,11 @@ export default function MedicationFavoriteModal({ visible, scope, scopeId, favor
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [selectedDrug, setSelectedDrug] = useState(null);
+  // The query actually searched - pagination pages through THIS, not whatever the user has
+  // since typed into the box (web: ClinicMedicationForm.jsx's handleSearch(page)/pageNumber).
+  const [searchedQuery, setSearchedQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [displayName, setDisplayName] = useState('');
   const [noSubstitutions, setNoSubstitutions] = useState(false);
@@ -62,6 +83,9 @@ export default function MedicationFavoriteModal({ visible, scope, scopeId, favor
     setSearchQuery('');
     setSearchResults([]);
     setSelectedDrug(null);
+    setSearchedQuery('');
+    setPage(1);
+    setTotalPages(1);
     if (isEdit) {
       setDisplayName(favorite.Title || favorite.MedDisplayName || '');
       setNoSubstitutions(Boolean(favorite.NoSubstitutions));
@@ -81,17 +105,26 @@ export default function MedicationFavoriteModal({ visible, scope, scopeId, favor
     }
   }, [visible, isEdit, favorite]);
 
-  const runSearch = async (text) => {
-    setSearchQuery(text);
-    if (text.trim().length < 3) {
-      setSearchResults([]);
+  // Search only runs when the user taps Search (or submits the field) - not on every keystroke,
+  // which used to race multiple in-flight requests against each other (a slower, earlier
+  // response could resolve after a faster, later one and overwrite it with stale results).
+  const runSearch = async (targetPage = 1) => {
+    // A fresh search (not a Prev/Next page tap) always re-reads the box, since that's what
+    // "page through" means for whatever was last actually searched.
+    const text = targetPage === 1 ? searchQuery.trim() : searchedQuery;
+    if (text.length < 3) {
+      toast.error('Type at least 3 characters to search.');
       return;
     }
     setSearching(true);
-    const res = await searchMedications(text.trim(), 1);
+    const res = await searchMedications(text, targetPage);
     const list = Array.isArray(res.data) ? res.data : res.data?.Items || [];
     setSearchResults(res.success ? list : []);
+    setSearchedQuery(text);
+    setPage(targetPage);
+    setTotalPages(res.data?.PageResult?.TotalPages || 1);
     setSearching(false);
+    if (!res.success) toast.error(res.message || 'Unable to search medications.');
   };
 
   const pickDrug = async (item) => {
@@ -100,12 +133,17 @@ export default function MedicationFavoriteModal({ visible, scope, scopeId, favor
     const res = await selectMedication(id);
     setSearching(false);
     if (res.success) {
-      const detail = res.data;
+      // SelectMedication wraps the detail object under `Item` (singular) - the search list
+      // above wraps its array under `Items` (plural), a different shape from the same API family.
+      const detail = res.data?.Item || res.data || {};
       setSelectedDrug({ ...detail, DispensableDrugId: id });
-      setDisplayName(detail.DisplayName || detail.Name || item.DisplayName || '');
+      setDisplayName(detail.DisplayName || detail.DrugName || item.DrugName || item.NameWithRouteDoseForm || '');
       setTotalDispenseForm(DISPENSE_UNIT_OPTIONS.find((o) => o.id === (detail.DispenseUnitId ?? detail.DispenseUnitTypeId))?.name || 'Each');
       setSearchResults([]);
       setSearchQuery('');
+      setSearchedQuery('');
+      setPage(1);
+      setTotalPages(1);
     } else {
       toast.error(res.message || 'Unable to load medication details.');
     }
@@ -120,16 +158,20 @@ export default function MedicationFavoriteModal({ visible, scope, scopeId, favor
       dispensableDrugId: selectedDrug?.DispensableDrugId ?? favorite?.DispensableDrugId,
       refills: Number(refills) || 0,
       daysSupply: 0,
-      quantity: Number(totalDispense) || 0,
+      // The backend's DTO declares this a string (confirmed against web, which never casts it to
+      // a number either) - sending a JSON number fails model binding entirely (the deserializer
+      // aborts the whole body, which is why the API also complains the top-level request is
+      // missing, not just this one field).
+      quantity: totalDispense.trim(),
       dispenseUnitTypeId: DISPENSE_UNIT_ID_BY_NAME[totalDispenseForm] || 32,
       noSubstitutions,
       notes: pharmacyNotes,
       directions: patientDirections.trim(),
       title: displayName.trim(),
-      firstPrescriptionDiagnosis1: 0,
-      firstPrescriptionDiagnosis2: 0,
-      firstPrescriptionDiagnosis3: 0,
-      firstPrescriptionDiagnosis4: 0,
+      firstPrescriptionDiagnosisPrimaryDiagnosisId: 0,
+      firstPrescriptionDiagnosisSecondaryDiagnosisId: 0,
+      secondPrescriptionDiagnosisPrimaryDiagnosisId: 0,
+      secondPrescriptionDiagnosisSecondaryDiagnosisId: 0,
     };
     const res = isEdit
       ? await updateCodedFavorite(scope, scopeId, favorite.Id ?? favorite.id, payload)
@@ -146,7 +188,7 @@ export default function MedicationFavoriteModal({ visible, scope, scopeId, favor
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={submitting ? undefined : onClose}>
+    <>
       <Toast />
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.title}>{isEdit ? 'Edit' : 'Add'} Medication Favorite</Text>
@@ -157,18 +199,51 @@ export default function MedicationFavoriteModal({ visible, scope, scopeId, favor
       <ScrollView contentContainerStyle={styles.body}>
         {!isEdit ? (
           <Field label="Search medication">
-            <TextInput
-              style={styles.input}
-              placeholder="Type at least 3 characters..."
-              value={searchQuery}
-              onChangeText={runSearch}
-            />
-            {searching ? <ActivityIndicator style={styles.loader} /> : null}
+            <View style={styles.searchRow}>
+              <TextInput
+                style={[styles.input, styles.searchInput]}
+                placeholder="Type at least 3 characters..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmitEditing={() => runSearch(1)}
+                returnKeyType="search"
+              />
+              <Pressable style={styles.searchButton} onPress={() => runSearch(1)} disabled={searching} accessibilityLabel="Search">
+                {searching ? (
+                  <ActivityIndicator size={16} color={adTokens.white} />
+                ) : (
+                  <Feather name="search" size={17} color={adTokens.white} />
+                )}
+              </Pressable>
+            </View>
             {searchResults.map((item, index) => (
               <Pressable key={item.DispensableDrugId ?? index} style={styles.resultRow} onPress={() => pickDrug(item)}>
-                <Text style={styles.resultText}>{item.DisplayName || item.Name}</Text>
+                <Text style={styles.resultText}>{item.DrugName || item.NameWithRouteDoseForm}</Text>
               </Pressable>
             ))}
+            {totalPages > 1 && searchResults.length > 0 ? (
+              <View style={styles.pager}>
+                <Pressable
+                  style={[styles.pagerButton, page <= 1 && styles.pagerButtonDisabled]}
+                  disabled={page <= 1 || searching}
+                  onPress={() => runSearch(page - 1)}
+                >
+                  <Feather name="chevron-left" size={14} color={page <= 1 ? adTokens.textMuted : adTokens.primaryDark} />
+                  <Text style={[styles.pagerText, page <= 1 && styles.pagerTextDisabled]}>Prev</Text>
+                </Pressable>
+                <Text style={styles.pagerInfo}>
+                  Page {page} of {totalPages}
+                </Text>
+                <Pressable
+                  style={[styles.pagerButton, page >= totalPages && styles.pagerButtonDisabled]}
+                  disabled={page >= totalPages || searching}
+                  onPress={() => runSearch(page + 1)}
+                >
+                  <Text style={[styles.pagerText, page >= totalPages && styles.pagerTextDisabled]}>Next</Text>
+                  <Feather name="chevron-right" size={14} color={page >= totalPages ? adTokens.textMuted : adTokens.primaryDark} />
+                </Pressable>
+              </View>
+            ) : null}
           </Field>
         ) : null}
 
@@ -227,7 +302,7 @@ export default function MedicationFavoriteModal({ visible, scope, scopeId, favor
           {submitting ? <ActivityIndicator size={14} color={adTokens.white} /> : <Text style={styles.saveButtonText}>Save</Text>}
         </Pressable>
       </View>
-    </Modal>
+    </>
   );
 }
 
@@ -240,9 +315,24 @@ const styles = StyleSheet.create({
   required: { color: adTokens.danger },
   input: { borderWidth: 1, borderColor: adTokens.border, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 12, fontSize: 13.5, color: adTokens.textPrimary },
   textarea: { minHeight: 70, textAlignVertical: 'top' },
-  loader: { marginVertical: 10 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  searchInput: { flex: 1 },
+  searchButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: adTokens.primary,
+  },
   resultRow: { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: adTokens.border },
   resultText: { fontSize: 13, color: adTokens.textPrimary },
+  pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
+  pagerButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 8, backgroundColor: adTokens.primaryTint },
+  pagerButtonDisabled: { backgroundColor: adTokens.gray100 },
+  pagerText: { fontSize: 12.5, fontWeight: '700', color: adTokens.primaryDark },
+  pagerTextDisabled: { color: adTokens.textMuted },
+  pagerInfo: { fontSize: 12, color: adTokens.textSecondary, fontWeight: '600' },
   checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
   checkboxLabel: { fontSize: 13, color: adTokens.textPrimary },
   footer: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, padding: 16, borderTopWidth: 1, borderTopColor: adTokens.border },

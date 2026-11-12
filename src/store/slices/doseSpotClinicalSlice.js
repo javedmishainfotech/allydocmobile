@@ -100,6 +100,11 @@ export const searchAllergens = createAsyncThunk(
   ({ name, pageNumber }) => doseSpotClinicalService.searchAllergens(name, pageNumber),
 );
 
+export const searchDiagnoses = createAsyncThunk(
+  'doseSpotClinical/searchDiagnoses',
+  ({ searchTerm, pageNumber }) => doseSpotClinicalService.searchDiagnoses(searchTerm, pageNumber),
+);
+
 export const addCodedAllergy = createAsyncThunk(
   'doseSpotClinical/addCodedAllergy',
   ({ doseSpotPatientId, fields }) => doseSpotClinicalService.addCodedAllergy(doseSpotPatientId, fields),
@@ -142,6 +147,17 @@ export const denyRxChange = createAsyncThunk(
   ({ rxChangeId, fields }) => doseSpotClinicalService.denyRxChange(rxChangeId, fields),
 );
 
+export const reconcileRxChange = createAsyncThunk(
+  'doseSpotClinical/reconcileRxChange',
+  ({ rxChangeId, patientId, referencedPrescriptionId }) =>
+    doseSpotClinicalService.reconcileRxChange(rxChangeId, patientId, referencedPrescriptionId),
+);
+
+export const changeRxChangePatient = createAsyncThunk(
+  'doseSpotClinical/changeRxChangePatient',
+  ({ rxChangeId, targetPatientId }) => doseSpotClinicalService.changeRxChangePatient(rxChangeId, targetPatientId),
+);
+
 export const fetchPharmacyById = createAsyncThunk(
   'doseSpotClinical/fetchPharmacyById',
   (pharmacyId) => doseSpotClinicalService.getPharmacyById(pharmacyId),
@@ -166,6 +182,15 @@ export const approveRefill = createAsyncThunk(
 export const denyRefill = createAsyncThunk(
   'doseSpotClinical/denyRefill',
   ({ refillId, fields }) => doseSpotClinicalService.denyRefill(refillId, fields),
+);
+
+export const changeRefillPatient = createAsyncThunk(
+  'doseSpotClinical/changeRefillPatient',
+  ({ refillId, targetPatientId }) => doseSpotClinicalService.changeRefillPatient(refillId, targetPatientId),
+);
+
+export const replaceRefill = createAsyncThunk('doseSpotClinical/replaceRefill', ({ refillId, payload }) =>
+  doseSpotClinicalService.replaceRefill(refillId, payload),
 );
 
 const doseSpotClinicalSlice = createSlice({

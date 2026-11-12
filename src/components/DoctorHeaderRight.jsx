@@ -62,7 +62,12 @@ export default function DoctorHeaderRight({ navigation }) {
 
   const closeMenu = () => setMenuVisible(false);
   const roleName = String(profile?.roleName || '').toLowerCase().trim();
-  const roleLine = [profile?.userType, roleName]
+  // Same display collapsing as the web header (DefaultLayout/Header.jsx): "doctor sub" shows
+  // as just "doctor" and "doctor admin" as just "admin" - every other check in this file still
+  // needs the raw `roleName` value, only the label shown to the user is collapsed.
+  const roleNameForDisplay =
+    roleName === 'doctor admin' ? 'admin' : roleName === 'doctor sub' ? 'doctor' : roleName;
+  const roleLine = [profile?.userType, roleNameForDisplay]
     .filter(Boolean)
     .map((part) => String(part).toUpperCase())
     .join(' | ');

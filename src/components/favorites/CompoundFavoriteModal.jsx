@@ -11,7 +11,7 @@ import { DISPENSE_UNIT_OPTIONS } from '../../utils/dispenseUnits';
 import { toast } from '../../utils/toast';
 import { adTokens } from '../../theme/colors';
 import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DISPENSE_UNIT_NAME_LIST = DISPENSE_UNIT_OPTIONS.map((o) => o.name);
 const DISPENSE_UNIT_ID_BY_NAME = Object.fromEntries(DISPENSE_UNIT_OPTIONS.map((o) => [o.name, o.id]));
@@ -35,6 +35,8 @@ function emptyIngredient() {
     query: '',
     results: [],
     searching: false,
+    page: 1,
+    totalPages: 1,
     dispensableDrugId: null,
     freeText: '',
     isCustom: false,
@@ -51,8 +53,20 @@ function emptyIngredient() {
  * (1,164 lines, EPCS-aware per-ingredient dosage forms); this is the smaller favorites-only
  * version: each ingredient has its own inline medication search (min 3 chars) with a custom
  * freetext fallback, no shared EPCS workflow.
- */
-export default function CompoundFavoriteModal({ visible, scope, scopeId, favorite, onClose, onSaved }) {
+ *
+ * Wrapped in its own `SafeAreaProvider` - see MedicationFavoriteModal.jsx for why: RN's `Modal`
+ * on iOS needs a nested provider for `useSafeAreaInsets()` to read real (non-zero) insets. */
+export default function CompoundFavoriteModal(props) {
+  return (
+    <Modal visible={props.visible} animationType="slide" onRequestClose={props.onClose}>
+      <SafeAreaProvider>
+        <CompoundFavoriteForm {...props} />
+      </SafeAreaProvider>
+    </Modal>
+  );
+}
+
+function CompoundFavoriteForm({ visible, scope, scopeId, favorite, onClose, onSaved }) {
   const bottomSafe = useBottomSafeSpacing();
   const insets = useSafeAreaInsets();
   const { searchMedications } = useDoseSpotClinical();
@@ -114,30 +128,48 @@ export default function CompoundFavoriteModal({ visible, scope, scopeId, favorit
     setIngredients((prev) => prev.map((ing) => (ing.key === key ? { ...ing, ...patch } : ing)));
   };
 
-  const searchIngredient = async (key, text) => {
+  const searchIngredient = async (key, text, targetPage = 1) => {
     updateIngredient(key, { query: text, isCustom: false });
     if (text.trim().length < 3) {
-      updateIngredient(key, { results: [] });
+      updateIngredient(key, { results: [], page: 1, totalPages: 1 });
       return;
     }
     updateIngredient(key, { searching: true });
-    const res = await searchMedications(text.trim(), 1);
+    const res = await searchMedications(text.trim(), targetPage);
     const list = Array.isArray(res.data) ? res.data : res.data?.Items || [];
-    updateIngredient(key, { results: res.success ? list : [], searching: false });
+    updateIngredient(key, {
+      results: res.success ? list : [],
+      searching: false,
+      page: targetPage,
+      totalPages: res.data?.PageResult?.TotalPages || 1,
+    });
   };
+
+  const goToIngredientPage = (key, query, targetPage) => searchIngredient(key, query, targetPage);
 
   const pickIngredientDrug = (key, item) => {
     updateIngredient(key, {
-      name: item.DisplayName || item.Name,
+      name: item.DrugName || item.NameWithRouteDoseForm,
       dispensableDrugId: item.DispensableDrugId ?? item.dispensableDrugId,
       isCustom: false,
       results: [],
       query: '',
+      page: 1,
+      totalPages: 1,
     });
   };
 
   const useIngredientAsCustom = (key, text) => {
-    updateIngredient(key, { name: text, isCustom: true, freeText: text, dispensableDrugId: null, results: [], query: '' });
+    updateIngredient(key, {
+      name: text,
+      isCustom: true,
+      freeText: text,
+      dispensableDrugId: null,
+      results: [],
+      query: '',
+      page: 1,
+      totalPages: 1,
+    });
   };
 
   const addIngredient = () => setIngredients((prev) => [...prev, emptyIngredient()]);
@@ -159,22 +191,25 @@ export default function CompoundFavoriteModal({ visible, scope, scopeId, favorit
     const payload = {
       compoundDescription: compoundName.trim(),
       title: displayName.trim(),
+      // Both this compound's own quantity and every ingredient's quantity are strings on the
+      // backend's DTO (confirmed against web, which never casts either to a number) - a JSON
+      // number fails model binding entirely for the whole body, not just that one field.
       compoundIngredients: ingredients.map((ing) =>
         ing.isCustom
-          ? { quantity: Number(ing.quantity) || 0, dispenseUnitId: DISPENSE_UNIT_ID_BY_NAME[ing.dispenseUnit] || 32, freeText: ing.name.trim(), isFreeTextEPCS: false }
-          : { quantity: Number(ing.quantity) || 0, dispenseUnitId: DISPENSE_UNIT_ID_BY_NAME[ing.dispenseUnit] || 32, dispensableDrugId: ing.dispensableDrugId },
+          ? { quantity: ing.quantity.trim() || '0', dispenseUnitId: DISPENSE_UNIT_ID_BY_NAME[ing.dispenseUnit] || 32, freeText: ing.name.trim(), isFreeTextEPCS: false }
+          : { quantity: ing.quantity.trim() || '0', dispenseUnitId: DISPENSE_UNIT_ID_BY_NAME[ing.dispenseUnit] || 32, dispensableDrugId: ing.dispensableDrugId },
       ),
       notes: pharmacyNotes,
       directions: patientDirections.trim(),
       refills: Number(refills) || 0,
       daysSupply: Number(daySupply) || 0,
-      quantity: Number(totalDispense) || 0,
+      quantity: totalDispense.trim(),
       dispenseUnitTypeId: DISPENSE_UNIT_ID_BY_NAME[totalDispenseForm] || 32,
       noSubstitutions,
-      firstPrescriptionDiagnosis1: 0,
-      firstPrescriptionDiagnosis2: 0,
-      firstPrescriptionDiagnosis3: 0,
-      firstPrescriptionDiagnosis4: 0,
+      firstPrescriptionDiagnosisPrimaryDiagnosisId: 0,
+      firstPrescriptionDiagnosisSecondaryDiagnosisId: 0,
+      secondPrescriptionDiagnosisPrimaryDiagnosisId: 0,
+      secondPrescriptionDiagnosisSecondaryDiagnosisId: 0,
     };
     const res = isEdit
       ? await updateCompoundFavorite(scope, scopeId, favorite.Id ?? favorite.id, payload)
@@ -189,7 +224,7 @@ export default function CompoundFavoriteModal({ visible, scope, scopeId, favorit
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={submitting ? undefined : onClose}>
+    <>
       <Toast />
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.title}>{isEdit ? 'Edit' : 'Add'} Compound Favorite</Text>
@@ -250,9 +285,32 @@ export default function CompoundFavoriteModal({ visible, scope, scopeId, favorit
                 {ing.searching ? <ActivityIndicator style={styles.loader} /> : null}
                 {ing.results.map((item, i) => (
                   <Pressable key={item.DispensableDrugId ?? i} style={styles.resultRow} onPress={() => pickIngredientDrug(ing.key, item)}>
-                    <Text style={styles.resultText}>{item.DisplayName || item.Name}</Text>
+                    <Text style={styles.resultText}>{item.DrugName || item.NameWithRouteDoseForm}</Text>
                   </Pressable>
                 ))}
+                {ing.totalPages > 1 && ing.results.length > 0 ? (
+                  <View style={styles.pager}>
+                    <Pressable
+                      style={[styles.pagerButton, ing.page <= 1 && styles.pagerButtonDisabled]}
+                      disabled={ing.page <= 1 || ing.searching}
+                      onPress={() => goToIngredientPage(ing.key, ing.query, ing.page - 1)}
+                    >
+                      <Feather name="chevron-left" size={14} color={ing.page <= 1 ? adTokens.textMuted : adTokens.primaryDark} />
+                      <Text style={[styles.pagerText, ing.page <= 1 && styles.pagerTextDisabled]}>Prev</Text>
+                    </Pressable>
+                    <Text style={styles.pagerInfo}>
+                      Page {ing.page} of {ing.totalPages}
+                    </Text>
+                    <Pressable
+                      style={[styles.pagerButton, ing.page >= ing.totalPages && styles.pagerButtonDisabled]}
+                      disabled={ing.page >= ing.totalPages || ing.searching}
+                      onPress={() => goToIngredientPage(ing.key, ing.query, ing.page + 1)}
+                    >
+                      <Text style={[styles.pagerText, ing.page >= ing.totalPages && styles.pagerTextDisabled]}>Next</Text>
+                      <Feather name="chevron-right" size={14} color={ing.page >= ing.totalPages ? adTokens.textMuted : adTokens.primaryDark} />
+                    </Pressable>
+                  </View>
+                ) : null}
                 {ing.query.trim().length >= 3 && !ing.searching && ing.results.length === 0 ? (
                   <Pressable style={styles.customButton} onPress={() => useIngredientAsCustom(ing.key, ing.query.trim())}>
                     <Text style={styles.customButtonText}>Add &quot;{ing.query.trim()}&quot; as custom ingredient</Text>
@@ -307,7 +365,7 @@ export default function CompoundFavoriteModal({ visible, scope, scopeId, favorit
           {submitting ? <ActivityIndicator size={14} color={adTokens.white} /> : <Text style={styles.saveButtonText}>Save</Text>}
         </Pressable>
       </View>
-    </Modal>
+    </>
   );
 }
 
@@ -325,6 +383,12 @@ const styles = StyleSheet.create({
   loader: { marginVertical: 10 },
   resultRow: { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: adTokens.border },
   resultText: { fontSize: 13, color: adTokens.textPrimary },
+  pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
+  pagerButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 8, backgroundColor: adTokens.primaryTint },
+  pagerButtonDisabled: { backgroundColor: adTokens.gray100 },
+  pagerText: { fontSize: 12.5, fontWeight: '700', color: adTokens.primaryDark },
+  pagerTextDisabled: { color: adTokens.textMuted },
+  pagerInfo: { fontSize: 12, color: adTokens.textSecondary, fontWeight: '600' },
   customButton: { paddingVertical: 9, paddingHorizontal: 12, backgroundColor: adTokens.primaryTint, borderRadius: 8, marginTop: 6 },
   customButtonText: { fontSize: 12, fontWeight: '600', color: adTokens.primaryDark },
   checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },

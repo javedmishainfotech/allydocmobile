@@ -70,6 +70,13 @@ export const fetchDoctorPatientDropdown = createAsyncThunk(
   },
 );
 
+/** Mirrors PatientSearchAction (the "Link Patient" flow's search) - resolves with the full
+ * result envelope (no rejectWithValue) since its one caller, ChangePatientModal, needs
+ * `success`/`message` to show an inline error rather than a toast. */
+export const searchPatients = createAsyncThunk('patients/searchPatients', (params) =>
+  patientsService.searchPatients(params),
+);
+
 const patientsSlice = createSlice({
   name: 'patients',
   initialState,

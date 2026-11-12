@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
+import { localDateOnlyToApiString } from '../utils/dateOnly';
 import {
   fetchAppointmentsBasedOnDate,
   fetchDoctorAppointments,
@@ -16,8 +17,10 @@ import {
 export function useManageAppointments() {
   const dispatch = useDispatch();
 
+  // Formatted to a plain "YYYY-MM-DD" string before dispatch - a raw Date instance as the thunk's
+  // arg trips redux-toolkit's serializableCheck ("non-serializable value in meta.arg").
   const getAppointmentsBasedOnDate = useCallback(
-    (date) => dispatch(fetchAppointmentsBasedOnDate(date)).unwrap(),
+    (date) => dispatch(fetchAppointmentsBasedOnDate(localDateOnlyToApiString(date))).unwrap(),
     [dispatch],
   );
 

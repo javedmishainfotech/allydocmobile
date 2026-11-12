@@ -96,7 +96,11 @@ function AppointmentRow({ appointment, onOpen }) {
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.row, pressed && canOpen && styles.rowPressed]}
+      style={({ pressed }) => [
+        styles.row,
+        requested && styles.rowRequested,
+        pressed && canOpen && styles.rowPressed,
+      ]}
       disabled={!canOpen}
       onPress={() => onOpen(appointment.appointmentId)}
     >
@@ -320,7 +324,11 @@ export default function PatientDashboardPage() {
 
       {nextAppointment ? (
         <Pressable
-          style={({ pressed }) => [styles.card, pressed && styles.rowPressed]}
+          style={({ pressed }) => [
+            styles.card,
+            String(nextAppointment.appointmentStatus || '').toLowerCase() === 'requested' && styles.rowRequested,
+            pressed && styles.rowPressed,
+          ]}
           onPress={() => openDetail(nextAppointment.appointmentId)}
         >
           <Text style={styles.nextEyebrow}>NEXT APPOINTMENT</Text>
@@ -562,6 +570,15 @@ const styles = StyleSheet.create({
   nextName: { fontSize: 16, fontWeight: '700', color: adTokens.textPrimary },
 
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
+  rowRequested: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: adTokens.infoDark,
+    backgroundColor: adTokens.infoLight,
+    borderRadius: adTokens.cardBorderRadius,
+    paddingHorizontal: 10,
+    marginHorizontal: -10,
+  },
   rowPressed: { backgroundColor: adTokens.gray50 },
   rowBody: { flex: 1, gap: 3 },
   rowTitle: { fontSize: 14.5, fontWeight: '700', color: adTokens.textPrimary },

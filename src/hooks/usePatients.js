@@ -7,6 +7,7 @@ import {
   fetchPatientAppointmentHistoryForDetail,
   fetchPatientPharmacies,
   fetchDoctorPatientDropdown,
+  searchPatients,
 } from '../store/slices/patientsSlice';
 
 /** Thin unwrap-based wrapper around the patients slice's thunks - see patientsSlice.js for why
@@ -38,6 +39,7 @@ export function usePatients() {
     () => dispatch(fetchDoctorPatientDropdown()).unwrap(),
     [dispatch],
   );
+  const searchPatientsFn = useCallback((params) => dispatch(searchPatients(params)).unwrap(), [dispatch]);
 
   return {
     getFreelancerPatients,
@@ -46,5 +48,6 @@ export function usePatients() {
     getPatientAppointmentHistory,
     getPatientPharmacies,
     getDoctorPatientDropdown,
+    searchPatients: searchPatientsFn,
   };
 }

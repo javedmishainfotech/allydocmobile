@@ -22,6 +22,7 @@ import {
   getPatientFullNameFromDetail,
   getPrescriptionStatusTone,
   getRenewalPrescriptionLabel,
+  getSupplyIdsForRow,
   isPatientVisiblePrescriptionStatus,
   naText,
   normalizeDoseSpotStatusKey,
@@ -135,8 +136,8 @@ function FieldLine({ label, value }) {
 
 const pharmacyName = (pharmacy) => pharmacy?.StoreName || pharmacy?.storeName || pharmacy?.Name || 'Unknown Pharmacy';
 
-function PrescriptionCard({ rx, drugNames, pharmacies, actions }) {
-  const label = getMedicationLabel(rx, drugNames);
+function PrescriptionCard({ rx, drugNames, supplyNames, pharmacies, actions }) {
+  const label = getMedicationLabel(rx, drugNames, supplyNames);
   const status = rx.Status ?? rx.status;
   const rxToneColor = (TONES[getPrescriptionStatusTone(status)] || TONES.neutral).color;
   const cancellationLabel = getCancellationStatusLabel(status);
@@ -249,7 +250,7 @@ export default function TreatmentPlanDetailPage() {
   const { createChatRoom } = useChat();
   const { getPharmacyById, selectMedication } = useDoseSpotClinical();
   const { getAppointmentDetails: getAppointmentActionMeta } = usePendingRequestDetails();
-  const { getPrescriptionById, cancelPrescription, deletePrescriptions } = usePrescriptions();
+  const { getPrescriptionById, cancelPrescription, deletePrescriptions, getSupplyById } = usePrescriptions();
   const { getTreatmentPlanDetails, saveTranscriptData } = useTreatmentPlan();
   const { getPatientPharmacies } = usePatients();
   const {
@@ -281,8 +282,10 @@ export default function TreatmentPlanDetailPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [openQuestions, setOpenQuestions] = useState(() => new Set());
   const [drugNames, setDrugNames] = useState({});
+  const [supplyNames, setSupplyNames] = useState({});
   const [pharmacies, setPharmacies] = useState({});
   const fetchedDrugs = useRef(new Set());
+  const fetchedSupplies = useRef(new Set());
   const fetchedPharmacies = useRef(new Set());
 
   // Staff-only: the AppointmentDetailsVM carries the action-visibility flags (isMarkAsCompleteVisible,
@@ -595,7 +598,8 @@ export default function TreatmentPlanDetailPage() {
   );
   const canContinuePrescription = Boolean(inProgressPrescription);
 
-  // Resolve drug names (SelectMedication) and pharmacy records (GetPharmacyById) once per id.
+  // Resolve drug names (SelectMedication), supply names (GetSupplyById) and pharmacy records
+  // (GetPharmacyById) once per id.
   useEffect(() => {
     const ids = [...new Set(prescriptions.flatMap(getDrugIdsForRow))].filter((id) => !fetchedDrugs.current.has(id));
     ids.forEach((drugId) => {
@@ -603,6 +607,17 @@ export default function TreatmentPlanDetailPage() {
       selectMedication(Number(drugId)).then((result) => {
         const item = result.success ? result.data?.Item || result.data?.item : null;
         setDrugNames((prev) => ({ ...prev, [drugId]: item?.DisplayName ?? null }));
+      });
+    });
+
+    const supplyIds = [...new Set(prescriptions.flatMap(getSupplyIdsForRow))].filter(
+      (id) => !fetchedSupplies.current.has(id),
+    );
+    supplyIds.forEach((supplyId) => {
+      fetchedSupplies.current.add(supplyId);
+      getSupplyById(Number(supplyId)).then((result) => {
+        const item = result.success ? result.data?.Item || result.data?.item : null;
+        setSupplyNames((prev) => ({ ...prev, [supplyId]: item?.Name ?? item?.name ?? null }));
       });
     });
 
@@ -1086,6 +1101,7 @@ export default function TreatmentPlanDetailPage() {
                 key={String(rx.PrescriptionId ?? rx.prescriptionRowId ?? index)}
                 rx={rx}
                 drugNames={drugNames}
+                supplyNames={supplyNames}
                 pharmacies={pharmacies}
                 actions={
                   isPatient
@@ -1161,7 +1177,7 @@ export default function TreatmentPlanDetailPage() {
           />
           <PrescriptionActionModal
             visible={rxAction.open}
-            name={rxAction.rx ? getMedicationLabel(rxAction.rx, drugNames) : ''}
+            name={rxAction.rx ? getMedicationLabel(rxAction.rx, drugNames, supplyNames) : ''}
             mode={rxAction.mode}
             comment={rxAction.comment}
             onChangeComment={(comment) => setRxAction((prev) => ({ ...prev, comment }))}

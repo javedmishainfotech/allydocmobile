@@ -1,13 +1,15 @@
 import apiClient from '../api/client';
 import { normalizeApiBody, normalizeApiError } from '../utils/apiEnvelope';
-import { localDateOnlyToApiString } from '../utils/dateOnly';
 import { buildDoctorAppointmentsQuery, buildFacilityAppointmentsQuery } from '../utils/appointmentListApi';
 
-/** Mirrors getAllAppointmentsBasedOnDate in AllyDocReactApp/src/store/actions. Date-only filter. */
-export async function getAppointmentsBasedOnDate(date) {
-  const formattedDate = localDateOnlyToApiString(date);
+/** Mirrors getAllAppointmentsBasedOnDate in AllyDocReactApp/src/store/actions. Date-only filter.
+ * `dateString` must already be a "YYYY-MM-DD" string (see useManageAppointments.js) - the caller
+ * formats it, not this function, so a Redux thunk's `meta.arg` never holds a raw Date instance
+ * (which redux-toolkit's serializableCheck flags), and so a date already formatted here never
+ * risks a day-shift from being round-tripped through `new Date(string)` a second time. */
+export async function getAppointmentsBasedOnDate(dateString) {
   try {
-    const response = await apiClient.get(`/AllAppointmentsBasedOnDate?date=${encodeURIComponent(formattedDate)}`);
+    const response = await apiClient.get(`/AllAppointmentsBasedOnDate?date=${encodeURIComponent(dateString)}`);
     return normalizeApiBody(response.data, true);
   } catch (err) {
     if (err.response) return normalizeApiBody(err.response.data, false);

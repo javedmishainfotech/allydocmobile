@@ -14,6 +14,7 @@ import RegisterPage from '../pages/auth/RegisterPage';
 import UpdateTempPasswordPage from '../pages/auth/UpdateTempPasswordPage';
 import LegalWebViewScreen from '../pages/legal/LegalWebViewScreen';
 import RoleNavigator from './RoleNavigator';
+import LogoutOverlay from '../components/LogoutOverlay';
 import useAutoLogoutOnInactivity from '../hooks/useAutoLogoutOnInactivity';
 import { setSessionExpiredHandler, isAuthLogoutInProgress } from '../services/authSessionState';
 import { toast } from '../utils/toast';
@@ -139,6 +140,8 @@ export default function RootNavigator() {
           </View>
         </View>
       ) : null}
+
+      <LogoutOverlay />
     </View>
   );
 }

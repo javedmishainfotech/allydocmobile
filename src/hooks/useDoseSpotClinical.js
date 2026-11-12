@@ -17,6 +17,7 @@ import {
   updateSelfReportedMedicationStatus,
   fetchPatientAllergies,
   searchAllergens,
+  searchDiagnoses,
   addCodedAllergy,
   addFreeTextAllergy,
   editPatientAllergy,
@@ -25,11 +26,15 @@ import {
   fetchPendingRxChangeRequestsDetailed,
   approveRxChange,
   denyRxChange,
+  reconcileRxChange,
+  changeRxChangePatient,
   fetchPharmacyById,
   fetchPendingRefillRequests,
   fetchPendingRefillRequestsDetailed,
   approveRefill,
   denyRefill,
+  changeRefillPatient,
+  replaceRefill,
 } from '../store/slices/doseSpotClinicalSlice';
 
 /** Thin unwrap-based wrapper around the dose-spot-clinical slice's thunks, one per
@@ -128,6 +133,11 @@ export function useDoseSpotClinical() {
     [dispatch],
   );
 
+  const searchDiagnosesFn = useCallback(
+    (searchTerm, pageNumber = 1) => dispatch(searchDiagnoses({ searchTerm, pageNumber })).unwrap(),
+    [dispatch],
+  );
+
   const addCodedAllergyFn = useCallback(
     (doseSpotPatientId, fields) => dispatch(addCodedAllergy({ doseSpotPatientId, fields })).unwrap(),
     [dispatch],
@@ -169,6 +179,17 @@ export function useDoseSpotClinical() {
     [dispatch],
   );
 
+  const reconcileRxChangeFn = useCallback(
+    (rxChangeId, patientId, referencedPrescriptionId) =>
+      dispatch(reconcileRxChange({ rxChangeId, patientId, referencedPrescriptionId })).unwrap(),
+    [dispatch],
+  );
+
+  const changeRxChangePatientFn = useCallback(
+    (rxChangeId, targetPatientId) => dispatch(changeRxChangePatient({ rxChangeId, targetPatientId })).unwrap(),
+    [dispatch],
+  );
+
   const getPharmacyById = useCallback(
     (pharmacyId) => dispatch(fetchPharmacyById(pharmacyId)).unwrap(),
     [dispatch],
@@ -194,6 +215,16 @@ export function useDoseSpotClinical() {
     [dispatch],
   );
 
+  const changeRefillPatientFn = useCallback(
+    (refillId, targetPatientId) => dispatch(changeRefillPatient({ refillId, targetPatientId })).unwrap(),
+    [dispatch],
+  );
+
+  const replaceRefillFn = useCallback(
+    (refillId, payload) => dispatch(replaceRefill({ refillId, payload })).unwrap(),
+    [dispatch],
+  );
+
   return {
     getPatientEligibilities,
     consentToMedicationHistory: consentMedicationHistory,
@@ -211,6 +242,7 @@ export function useDoseSpotClinical() {
     updateSelfReportedMedicationStatus: updateSelfReportedMedicationStatusFn,
     getPatientAllergies,
     searchAllergens: searchAllergensFn,
+    searchDiagnoses: searchDiagnosesFn,
     addCodedAllergy: addCodedAllergyFn,
     addFreeTextAllergy: addFreeTextAllergyFn,
     editPatientAllergy: editPatientAllergyFn,
@@ -219,10 +251,14 @@ export function useDoseSpotClinical() {
     getPendingRxChangeRequestsDetailed,
     approveRxChange: approveRxChangeFn,
     denyRxChange: denyRxChangeFn,
+    reconcileRxChange: reconcileRxChangeFn,
+    changeRxChangePatient: changeRxChangePatientFn,
     getPharmacyById,
     getPendingRefillRequests,
     getPendingRefillRequestsDetailed,
     approveRefill: approveRefillFn,
     denyRefill: denyRefillFn,
+    changeRefillPatient: changeRefillPatientFn,
+    replaceRefill: replaceRefillFn,
   };
 }

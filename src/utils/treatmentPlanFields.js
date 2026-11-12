@@ -190,12 +190,20 @@ export function getDrugIdsForRow(rx) {
   return [direct, ...ingredientIds].filter((id) => id != null && id !== '' && Number(id) > 0).map(String);
 }
 
+/** The supply id a row refers to, if any (web: uniqueSupplyIds - only the row's own supplyId,
+ * never a compound ingredient's, since a compound's ingredients are always drugs). */
+export function getSupplyIdsForRow(rx) {
+  const id = rx?.supplyId ?? rx?.SupplyId;
+  return id != null && id !== '' && Number(id) > 0 ? [String(id)] : [];
+}
+
 /**
  * Display label of a prescription's medication (web getTreatmentPlanMedicationLabel):
- * the resolved drug name when known (`drugNames` is { [drugId]: name|null }), else the row's own
- * display name / compound description. Returns null while a name is still being resolved.
+ * the resolved drug name when known (`drugNames` is { [drugId]: name|null }), else the resolved
+ * supply name when known (`supplyNames` is { [supplyId]: name|null }), else the row's own display
+ * name / compound description. Returns null while a name is still being resolved.
  */
-export function getMedicationLabel(rx, drugNames) {
+export function getMedicationLabel(rx, drugNames, supplyNames = {}) {
   const prescriptionType = String(rx.prescriptionType ?? rx.PrescriptionType ?? '').toLowerCase().trim();
   const compoundDescription = String(rx.compoundDescription ?? rx.CompoundDescription ?? '').trim();
   const medDisplay = String(rx.medicationDisplayName ?? rx.MedicationDisplayName ?? '').trim();
@@ -205,6 +213,12 @@ export function getMedicationLabel(rx, drugNames) {
     const key = String(drugId);
     if (!Object.prototype.hasOwnProperty.call(drugNames, key)) return null;
     return drugNames[key] || fallback || 'N/A';
+  }
+  const supplyId = rx.supplyId ?? rx.SupplyId;
+  if (supplyId != null && supplyId !== '' && Number(supplyId) > 0) {
+    const key = String(supplyId);
+    if (!Object.prototype.hasOwnProperty.call(supplyNames, key)) return null;
+    return supplyNames[key] || fallback || 'N/A';
   }
   return fallback || rx.DrugName || 'N/A';
 }

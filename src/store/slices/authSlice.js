@@ -15,6 +15,7 @@ const initialState = {
   status: 'idle', // idle | bootstrapping | loading | succeeded | failed
   isAuthenticated: false,
   isTempPassword: false,
+  isLoggingOut: false,
   accountDisabledMessage: null,
   error: null,
   profile: null,
@@ -87,7 +88,11 @@ export const loginUser = createAsyncThunk(
       roleName: userData.roleName,
       doseSpotRefrenceId: userData.doseSpotRefrenceId ?? null,
       idpStatus: userData.idpStatus ?? null,
-      clinicDoseSpotId: userData.clinicDoseSpotId ?? null,
+      // Backend field is `doseSpotClinicId` (confirmed against web's own localStorage key of the
+      // same name) - this was reading `userData.clinicDoseSpotId` (words swapped), which is never
+      // present on the login response, so a clinic doctor's `profile.clinicDoseSpotId` was always
+      // null and every Clinic Favorites create/update call went out with `undefined` in the URL.
+      clinicDoseSpotId: userData.doseSpotClinicId ?? null,
     };
 
     return {
@@ -125,14 +130,19 @@ export const bootstrapAuth = createAsyncThunk('auth/bootstrap', async () => {
     scheduleProactiveRefresh();
   }
 
-  const [roleName, orgName, isTempPassword, userId, fullName, userType] = await Promise.all([
-    getItem('roleName'),
-    getItem('orgName'),
-    getItem('isTempPassword'),
-    getItem('userId'),
-    getItem('fullName'),
-    getItem('userType'),
-  ]);
+  const [roleName, orgName, isTempPassword, userId, fullName, userType, doseSpotRefrenceId, clinicDoseSpotId] =
+    await Promise.all([
+      getItem('roleName'),
+      getItem('orgName'),
+      getItem('isTempPassword'),
+      getItem('userId'),
+      getItem('fullName'),
+      getItem('userType'),
+      getItem('doseSpotRefrenceId'),
+      // Stored under the backend's own field name (the generic per-field save loop in
+      // loginUser() below) - same key web's own localStorage uses for this.
+      getItem('doseSpotClinicId'),
+    ]);
 
   // Same role/org gate as login: never restore a session the app has no shell for.
   if (!validateSession({ roleName, userType, orgName }).ok) {
@@ -148,6 +158,8 @@ export const bootstrapAuth = createAsyncThunk('auth/bootstrap', async () => {
       userId: userId || undefined,
       fullName: fullName || undefined,
       userType: userType || undefined,
+      doseSpotRefrenceId: doseSpotRefrenceId || undefined,
+      clinicDoseSpotId: clinicDoseSpotId || undefined,
     },
     orgName,
     isTempPassword: isTempPassword === 'true',
@@ -244,7 +256,15 @@ const authSlice = createSlice({
       .addCase(updateTempPassword.fulfilled, (state) => {
         state.isTempPassword = false;
       })
-      .addCase(logoutUser.fulfilled, () => initialState);
+      // Web: LogoutProgressModal, shown for the same cleanup work (revoke refresh token,
+      // unregister push token, wipe storage) this thunk already does.
+      .addCase(logoutUser.pending, (state) => {
+        state.isLoggingOut = true;
+      })
+      .addCase(logoutUser.fulfilled, () => initialState)
+      .addCase(logoutUser.rejected, (state) => {
+        state.isLoggingOut = false;
+      });
   },
 });
 

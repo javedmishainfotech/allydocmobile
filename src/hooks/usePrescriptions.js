@@ -30,6 +30,7 @@ import {
   createClinicCodedFavorite,
   fetchPatientPrescriptions,
   fetchPrescriptionLog,
+  fetchSupplyById,
   fetchEpcsSuggestions,
   postReadyToSign,
   sendEpcs,
@@ -211,6 +212,8 @@ export function usePrescriptions() {
     [dispatch],
   );
 
+  const getSupplyById = useCallback((supplyId) => dispatch(fetchSupplyById(supplyId)).unwrap(), [dispatch]);
+
   const getEpcsSuggestions = useCallback(
     (doseSpotPatientId, prescriptionId) =>
       dispatch(fetchEpcsSuggestions({ doseSpotPatientId, prescriptionId })).unwrap(),
@@ -263,6 +266,7 @@ export function usePrescriptions() {
     createClinicCodedFavorite: createClinicCoded,
     getPatientPrescriptions: getPatientPrescriptionsFn,
     getPrescriptionLog,
+    getSupplyById,
     getEpcsSuggestions,
     postReadyToSign: readyToSign,
     sendEpcs: sendEpcsFn,
