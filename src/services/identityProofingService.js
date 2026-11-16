@@ -154,3 +154,37 @@ export async function requestTfaActivation() {
     return normalizeApiError(err);
   }
 }
+
+/** Mirrors sendIdpInitiationEmailAction - doctor emails admin to kick off the IDP process. */
+export async function sendIdpInitiationEmail(userId) {
+  try {
+    const response = await apiClient.post('/api/SendEmail/DoctorToAdmin', {
+      userId: parseInt(userId || '0', 10),
+    });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
+}
+
+/** Mirrors checkRemainingEmailTimeAction - rate-limit check before DoctorToAdmin can be re-sent.
+ * `data` resolves to `{ canSendMail, retryAfterSeconds }`. */
+export async function checkRemainingEmailTime(userId) {
+  try {
+    const response = await apiClient.post(`api/SendEmail/CheckRemainingEmailTime?UserId=${encodeURIComponent(userId)}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
+}
+
+// NOTE: /api/SendEmail/RequestTfaPinReset (web: requestTfaPinResetAction in
+// components/IdentityProofing/Actions.js, "testing API") is not implemented here - it is dead
+// code in both web repos. It is defined in Actions.js but never dispatched from any component in
+// AllyDocReactAppLatest or AllyDocReactApp (no call site for requestTfaPinResetAction anywhere
+// outside its own definition). Web's actual self-service PIN reset flow uses a different,
+// already-wired endpoint (/api/Clinicians/ResetPin via resetPinAction, ported here as
+// settingsService.resetPin) which resets the PIN directly for an already-authenticated doctor,
+// not an email-to-admin request. Skipped per the "dead code in both web repos" rule.

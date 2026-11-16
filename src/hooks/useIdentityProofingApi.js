@@ -14,6 +14,8 @@ import {
   tfaActivate,
   updatePin,
   requestTfaActivation,
+  sendIdpInitiationEmail,
+  checkRemainingEmailTime,
 } from '../store/slices/identityProofingSlice';
 
 /** Thin unwrap-based wrapper around the identity-proofing slice's thunks, with the exact same
@@ -74,6 +76,16 @@ export function useIdentityProofingApi() {
     [dispatch],
   );
 
+  const sendIdpInitiationEmailFn = useCallback(
+    (userId) => dispatch(sendIdpInitiationEmail(userId)).unwrap(),
+    [dispatch],
+  );
+
+  const checkRemainingEmailTimeFn = useCallback(
+    (userId) => dispatch(checkRemainingEmailTime(userId)).unwrap(),
+    [dispatch],
+  );
+
   return {
     createIdp: createIdpFn,
     submitIdpAnswers: submitIdpAnswersFn,
@@ -88,5 +100,7 @@ export function useIdentityProofingApi() {
     tfaActivate: tfaActivateFn,
     updatePin: updatePinFn,
     requestTfaActivation: requestTfaActivationFn,
+    sendIdpInitiationEmail: sendIdpInitiationEmailFn,
+    checkRemainingEmailTime: checkRemainingEmailTimeFn,
   };
 }

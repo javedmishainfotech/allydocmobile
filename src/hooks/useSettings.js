@@ -11,6 +11,11 @@ import {
   fetchDoctorTimeZone,
   fetchTimeZones,
   saveWeeklySchedule,
+  addSchedule,
+  updateSchedule,
+  deleteSchedule,
+  addDuration,
+  updateDuration,
   changePassword,
   fetchCertificates,
   addCertificate,
@@ -75,6 +80,31 @@ export function useSettings() {
     [dispatch],
   );
 
+  const addScheduleFn = useCallback(
+    (values) => dispatch(addSchedule(values)).unwrap(),
+    [dispatch],
+  );
+
+  const updateScheduleFn = useCallback(
+    (values) => dispatch(updateSchedule(values)).unwrap(),
+    [dispatch],
+  );
+
+  const deleteScheduleFn = useCallback(
+    (scheduleId) => dispatch(deleteSchedule(scheduleId)).unwrap(),
+    [dispatch],
+  );
+
+  const addDurationFn = useCallback(
+    (values) => dispatch(addDuration(values)).unwrap(),
+    [dispatch],
+  );
+
+  const updateDurationFn = useCallback(
+    (values) => dispatch(updateDuration(values)).unwrap(),
+    [dispatch],
+  );
+
   const changePasswordFn = useCallback(
     (params) => dispatch(changePassword(params)).unwrap(),
     [dispatch],
@@ -125,6 +155,11 @@ export function useSettings() {
     getDoctorTimeZone,
     getTimeZones,
     saveWeeklySchedule: saveWeeklyScheduleFn,
+    addSchedule: addScheduleFn,
+    updateSchedule: updateScheduleFn,
+    deleteSchedule: deleteScheduleFn,
+    addDuration: addDurationFn,
+    updateDuration: updateDurationFn,
     changePassword: changePasswordFn,
     getCertificates,
     addCertificate: addCertificateFn,

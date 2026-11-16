@@ -113,6 +113,65 @@ export async function saveWeeklySchedule(values) {
   }
 }
 
+/** Mirrors AddScheduleAction (AllyDocReactApp/.../Settings/action.js) - adds a single day's
+ * availability slot. Granular counterpart to saveWeeklySchedule's bulk replace-all; payload
+ * field names (day, userId, startTime, endTime, timeZoneId) match the web action exactly. */
+export async function addSchedule({ day, userId, startTime, endTime, timeZoneId }) {
+  try {
+    const response = await apiClient.post('/AddSchedule', { day, userId, startTime, endTime, timeZoneId });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
+}
+
+/** Mirrors UpdateScheduleAction - edits one existing slot by its schedule id (`id`). */
+export async function updateSchedule({ id, day, userId, startTime, endTime, timeZoneId }) {
+  try {
+    const response = await apiClient.post('/UpdateSchedule', { id, day, userId, startTime, endTime, timeZoneId });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
+}
+
+/** Mirrors DeleteScheduleAction - DELETE with the schedule id as a path param, not a query param. */
+export async function deleteSchedule(scheduleId) {
+  try {
+    const response = await apiClient.delete(`/DailyAvailableHours/${scheduleId}`);
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
+}
+
+/** Mirrors AddDurationAction - creates the doctor's default-appointment-duration record
+ * (FacilityMaster row). `duration` here is the request-body field name; GET /Duration returns
+ * the same value back as `durationOfAppointment` on a different (entity) shape - see getDuration. */
+export async function addDuration({ userId, duration }) {
+  try {
+    const response = await apiClient.post('/AddDuration', { userId, duration });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
+}
+
+/** Mirrors UpdateDurationAction - edits the existing duration record by its id. */
+export async function updateDuration({ id, duration }) {
+  try {
+    const response = await apiClient.post('/UpdateDuration', { id, duration });
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
+}
+
 /** Mirrors ChangePasswordActions. */
 export async function changePassword({ currentPassword, newPassword, confirmPassword }) {
   try {

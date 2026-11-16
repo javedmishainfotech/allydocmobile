@@ -21,6 +21,21 @@ export const saveTranscriptData = createAsyncThunk(
   (params) => treatmentPlanService.saveTranscriptData(params),
 );
 
+export const fetchMedicineStock = createAsyncThunk(
+  'treatmentPlan/fetchMedicineStock',
+  () => treatmentPlanService.getAllActiveMedicineStock(),
+);
+
+export const addMedicine = createAsyncThunk(
+  'treatmentPlan/addMedicine',
+  (params) => treatmentPlanService.addMedicine(params),
+);
+
+export const deleteMedicine = createAsyncThunk(
+  'treatmentPlan/deleteMedicine',
+  (id) => treatmentPlanService.deleteMedicine(id),
+);
+
 const treatmentPlanSlice = createSlice({
   name: 'treatmentPlan',
   initialState,

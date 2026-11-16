@@ -4,6 +4,9 @@ import {
   fetchTreatmentPlansList,
   fetchTreatmentPlanDetails,
   saveTranscriptData,
+  fetchMedicineStock,
+  addMedicine,
+  deleteMedicine,
 } from '../store/slices/treatmentPlanSlice';
 
 /** Thin unwrap-based wrapper around the treatment-plan slice's thunks, with the exact same call
@@ -27,9 +30,27 @@ export function useTreatmentPlan() {
     [dispatch],
   );
 
+  const getAllActiveMedicineStock = useCallback(
+    () => dispatch(fetchMedicineStock()).unwrap(),
+    [dispatch],
+  );
+
+  const addMedicineItem = useCallback(
+    (params) => dispatch(addMedicine(params)).unwrap(),
+    [dispatch],
+  );
+
+  const deleteMedicineItem = useCallback(
+    (id) => dispatch(deleteMedicine(id)).unwrap(),
+    [dispatch],
+  );
+
   return {
     getTreatmentPlansList,
     getTreatmentPlanDetails,
     saveTranscriptData: saveTranscript,
+    getAllActiveMedicineStock,
+    addMedicine: addMedicineItem,
+    deleteMedicine: deleteMedicineItem,
   };
 }

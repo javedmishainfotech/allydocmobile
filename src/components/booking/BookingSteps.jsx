@@ -340,6 +340,32 @@ export function SuccessStep({ onClose }) {
   );
 }
 
+/**
+ * Terminal step shown to staff (Nurse/Doctor) after they pick a slot on behalf of a patient -
+ * replaces the payment/success steps in "staffBooking" mode (web: StaffBookingConfirmedStep.jsx).
+ * The patient has already been emailed a "Pay Now" link by the backend once the time is saved
+ * (SelectAppointmentTime); nothing further happens here, this is just the confirmation.
+ */
+export function StaffBookingConfirmedStep({ onClose }) {
+  return (
+    <View style={styles.success}>
+      <View style={styles.successIcon}>
+        <MaterialCommunityIcons name="check" size={44} color={adTokens.successDark} />
+      </View>
+      <Text style={styles.successTitle}>Request Sent</Text>
+      <View style={styles.successNote}>
+        <Text style={styles.successNoteText}>
+          The patient has been emailed a link to complete payment. Once they pay, this appointment will be confirmed
+          and ready to accept.
+        </Text>
+      </View>
+      <ButtonRow>
+        <PrimaryButton label="Done" onPress={onClose} icon={null} />
+      </ButtonRow>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   consentStep: { flex: 1 },
   consentBox: {

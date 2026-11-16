@@ -17,6 +17,25 @@ export async function registerUser(values) {
   }
 }
 
+/**
+ * POST /RegisterEmailCheck - mirrors AllyDocReactApp/src/components/SignUp/New/CreateAccountForm.jsx
+ * (isEmailRegistered): fired while the user is still typing/leaving the email field, to warn
+ * "this email already exists" before they fill out the rest of the form.
+ */
+export async function checkEmailExists(email) {
+  try {
+    const response = await apiClient.post(
+      '/RegisterEmailCheck',
+      { email },
+      { skipAuthTokenAttach: true },
+    );
+    return normalizeApiBody(response.data, true);
+  } catch (err) {
+    if (err.response) return normalizeApiBody(err.response.data, false);
+    return normalizeApiError(err);
+  }
+}
+
 /** POST /VerifyOtpV4 - confirms the registration OTP. */
 export async function verifyRegistrationOtp({ userId, otpNumber }) {
   try {

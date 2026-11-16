@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFormik } from 'formik';
@@ -6,6 +6,7 @@ import { signUpValidationSchema, clinicSetupValidationSchema } from '../../utils
 import { useRegister } from '../../hooks/useRegister';
 import { useForgotPassword } from '../../hooks/useForgotPassword';
 import { useIdentityProofingApi } from '../../hooks/useIdentityProofingApi';
+import { checkEmailExists } from '../../services/registerService';
 import { PASSWORD_MAX_LENGTH } from '../../utils/passwordValidation';
 import { colors } from '../../theme/colors';
 import { toast } from '../../utils/toast';
@@ -37,6 +38,10 @@ const PATIENT_ROLE_ID = 9;
 const FREELANCE_CLINICIAN = { roleId: 8, userTypeId: '1' };
 const CLINIC_OWNER = { roleId: 11, userTypeId: '2' };
 const DEFAULT_COUNTRY_CODE = '+1';
+// Gate for the debounced "email exists" check in renderForm's email field: only bother asking
+// the server once the value looks like a complete address, same intent as the web's gate.
+const EMAIL_LOOKS_COMPLETE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const EMAIL_CHECK_DEBOUNCE_MS = 500;
 
 const PHONE_TYPES = [
   { value: '1', label: 'Beeper' },
@@ -65,6 +70,48 @@ export default function RegisterPage({ navigation, route }) {
   const [clinicianType, setClinicianType] = useState(FREELANCE_CLINICIAN);
   const [registered, setRegistered] = useState(null); // { userId, email }
   const [submitting, setSubmitting] = useState(false);
+
+  // Port of the web's isEmailRegistered: asks the server whether the typed email is already
+  // registered and surfaces the message under the email field. A failed request is ignored on
+  // purpose - the final submit below still checks before anything is sent.
+  const [emailExistsError, setEmailExistsError] = useState('');
+  const emailCheckTimerRef = useRef(null);
+  const emailCheckSeqRef = useRef(0);
+  useEffect(() => () => clearTimeout(emailCheckTimerRef.current), []);
+
+  const isEmailRegistered = async (email) => {
+    const value = String(email || '').trim();
+    if (!value) return false;
+    try {
+      const seq = ++emailCheckSeqRef.current;
+      const result = await checkEmailExists(value);
+      // a newer email was typed while this request was in flight: drop the stale answer
+      if (seq !== emailCheckSeqRef.current) return false;
+      if (result.success === false && result.statusCode !== 400) {
+        setEmailExistsError(result.message || 'This user already exists.');
+        return true;
+      }
+    } catch (err) {
+      // ignore
+    }
+    return false;
+  };
+
+  const handleEmailChangeText = (value) => {
+    formik.handleChange('email')(value);
+    setEmailExistsError('');
+    clearTimeout(emailCheckTimerRef.current);
+    emailCheckSeqRef.current += 1;
+    // check as soon as a complete email is typed (after a short pause), not only when leaving the field
+    if (EMAIL_LOOKS_COMPLETE.test(value.trim())) {
+      emailCheckTimerRef.current = setTimeout(() => isEmailRegistered(value), EMAIL_CHECK_DEBOUNCE_MS);
+    }
+  };
+
+  const handleEmailBlur = (event) => {
+    formik.handleBlur('email')(event);
+    if (!formik.errors.email) isEmailRegistered(formik.values.email);
+  };
 
   const goToLogin = () => navigation.navigate('Login');
 
@@ -99,6 +146,8 @@ export default function RegisterPage({ navigation, route }) {
     initialValues: { FirstName: '', LastName: '', email: '', phoneNo: '', password: '', confirmPassword: '' },
     validationSchema: signUpValidationSchema,
     onSubmit: async (values) => {
+      // already registered: say so here, not after the whole clinic / doctor form is filled
+      if (await isEmailRegistered(values.email)) return;
       if (activeTab === 'patient') {
         await submitRegistration(basePayload(values, { roleId: PATIENT_ROLE_ID, userTypeId: 1 }));
       } else {
@@ -169,9 +218,9 @@ export default function RegisterPage({ navigation, route }) {
         maxLength={80}
         placeholder="Email Address"
         value={formik.values.email}
-        onChangeText={formik.handleChange('email')}
-        onBlur={formik.handleBlur('email')}
-        error={fieldError('email')}
+        onChangeText={handleEmailChangeText}
+        onBlur={handleEmailBlur}
+        error={emailExistsError || fieldError('email')}
       />
       <FormField
         label={`Phone Number (${DEFAULT_COUNTRY_CODE})`}

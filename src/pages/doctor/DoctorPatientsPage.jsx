@@ -19,7 +19,7 @@ import { useDockInset } from '../../navigation/DockInsetContext';
 
 const PAGE_SIZE = 10;
 
-function PatientRow({ patient, onOpen, onOpenAppointmentHistory, onOpenTreatmentPlans }) {
+function PatientRow({ patient, onOpen, onOpenAppointmentHistory, onOpenTreatmentPlans, onBookAppointment, canBookAppointment }) {
   const isRegistered = patient.profileStatusLabel?.toLowerCase().trim() === 'profile created';
   return (
     <View style={styles.row}>
@@ -76,6 +76,19 @@ function PatientRow({ patient, onOpen, onOpenAppointmentHistory, onOpenTreatment
             color={isRegistered ? adTokens.primaryDark : adTokens.textMuted}
           />
         </Pressable>
+        {canBookAppointment ? (
+          <Pressable
+            style={[styles.viewButton, !isRegistered && styles.viewButtonDisabled]}
+            disabled={!isRegistered}
+            onPress={() => onBookAppointment(patient)}
+          >
+            <MaterialCommunityIcons
+              name="calendar-plus"
+              size={16}
+              color={isRegistered ? adTokens.primaryDark : adTokens.textMuted}
+            />
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
@@ -93,13 +106,21 @@ function PatientRow({ patient, onOpen, onOpenAppointmentHistory, onOpenTreatment
  * see it, matching `canAddPatient` below. Opens AddPatientModal (POST /AddUser, roleId 9).
  *
  * Row actions: web has 3 icons on both variants (profile/appointments/treatment-plans), all
- * disabled until the patient's profile is created - none of the three are role-gated on web (only
- * "Book Appointment", a 4th icon neither web variant's menu this app has reached shows, is gated
- * by roleName2 !== 'doctor admin'). The profile (eye) and appointment-history icons both open
- * PatientDetailModal (on its "Personal Info" vs "Appointments" tab respectively). The
- * treatment-plan icon navigates to a dedicated per-patient list on web
- * (patients/:id/treatment-plans); this app has no such screen/endpoint ported, so it instead opens
- * the shared DoctorTreatmentPlanPage pre-filtered to that patient, which shows the same data.
+ * disabled until the patient's profile is created - none of the three are role-gated on web. The
+ * profile (eye) and appointment-history icons both open PatientDetailModal (on its "Personal Info"
+ * vs "Appointments" tab respectively). The treatment-plan icon navigates to a dedicated per-patient
+ * list on web (patients/:id/treatment-plans); this app has no such screen/endpoint ported, so it
+ * instead opens the shared DoctorTreatmentPlanPage pre-filtered to that patient, which shows the
+ * same data. Since this page is shared by Doctor and Nurse, the navigate() target must be the
+ * role's own screen key ('DoctorTreatmentPlan' vs 'NurseTreatmentPlan' - see doctorMenuItems.jsx),
+ * not a hardcoded one, or the nurse's stack (which never registers 'DoctorTreatmentPlan') no-ops.
+ *
+ * "Book Appointment" is a 4th row icon, only on the clinic/hospital variant and only when
+ * roleName2 !== 'doctor admin' (web: module/Doctor/Pages/Patients/index.jsx, `handleBookAppointment`
+ * opening BookAppointmentModal with `bookingMode="staffForPatient"` - the freelancer DoctorPatients
+ * variant never has this button). It pushes the same BookAppointment screen a patient uses for their
+ * own booking, with `staffBooking: true` so it skips the payment step (web: Step4/Step5 are swapped
+ * for StaffBookingConfirmedStep) since the patient pays later via an emailed link.
  */
 export default function DoctorPatientsPage() {
   const dockInset = useDockInset();
@@ -125,10 +146,19 @@ export default function DoctorPatientsPage() {
   // Web's canShowMergePatientLink(): hidden for doctor admin and nurse.
   const roleNameLower = String(profile?.roleName || '').toLowerCase().trim();
   const canShowMergePatientLink = roleNameLower !== 'doctor admin' && roleNameLower !== 'nurse';
+  // This page is shared by Doctor and Nurse (NURSE_MENU_ITEMS also points 'NursePatients' at
+  // this component), but each role's Treatment Plan screen is registered under its own
+  // namespaced route key (doctorMenuItems.jsx: 'DoctorTreatmentPlan' vs 'NurseTreatmentPlan') -
+  // a nurse's stack has no 'DoctorTreatmentPlan' screen, so the row icon below must target the
+  // screen key that actually exists for the signed-in role.
+  const treatmentPlanScreenKey = roleNameLower === 'nurse' ? 'NurseTreatmentPlan' : 'DoctorTreatmentPlan';
   // Web's module/Doctor/Pages/Patients/index.jsx - the clinic/hospital "+ Add Patients" button
   // only renders when roleName2 !== 'doctor admin' (not shown for doctor admin, shown for doctor
   // sub / clinic doctors); it doesn't exist at all on the freelancer DoctorPatients page.
   const canAddPatient = !isFreelancerDoctor && roleNameLower !== 'doctor admin';
+  // Web's "Book Appointment" row icon: only on the clinic/hospital variant, same role gate as
+  // canAddPatient above.
+  const canBookAppointment = !isFreelancerDoctor && roleNameLower !== 'doctor admin';
 
   const loadPatients = useCallback(
     async (pageNumber, activeFilter) => {
@@ -218,9 +248,17 @@ export default function DoctorPatientsPage() {
                 setSelectedPatient(p);
               }}
               onOpenTreatmentPlans={(p) =>
-                navigation.navigate('DoctorTreatmentPlan', {
+                navigation.navigate(treatmentPlanScreenKey, {
                   initialPatientId: p.userId,
                   initialPatientName: p.fullName,
+                })
+              }
+              canBookAppointment={canBookAppointment}
+              onBookAppointment={(p) =>
+                navigation.navigate('BookAppointment', {
+                  patientId: p.userId,
+                  patientName: p.fullName,
+                  staffBooking: true,
                 })
               }
             />

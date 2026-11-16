@@ -49,6 +49,26 @@ export const saveWeeklySchedule = createAsyncThunk('settings/saveWeeklySchedule'
   settingsService.saveWeeklySchedule(values),
 );
 
+export const addSchedule = createAsyncThunk('settings/addSchedule', (values) =>
+  settingsService.addSchedule(values),
+);
+
+export const updateSchedule = createAsyncThunk('settings/updateSchedule', (values) =>
+  settingsService.updateSchedule(values),
+);
+
+export const deleteSchedule = createAsyncThunk('settings/deleteSchedule', (scheduleId) =>
+  settingsService.deleteSchedule(scheduleId),
+);
+
+export const addDuration = createAsyncThunk('settings/addDuration', (values) =>
+  settingsService.addDuration(values),
+);
+
+export const updateDuration = createAsyncThunk('settings/updateDuration', (values) =>
+  settingsService.updateDuration(values),
+);
+
 export const changePassword = createAsyncThunk('settings/changePassword', (params) =>
   settingsService.changePassword(params),
 );

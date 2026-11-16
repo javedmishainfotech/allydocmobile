@@ -63,6 +63,16 @@ export const requestTfaActivation = createAsyncThunk('identityProofing/requestTf
   identityProofingService.requestTfaActivation(),
 );
 
+export const sendIdpInitiationEmail = createAsyncThunk(
+  'identityProofing/sendIdpInitiationEmail',
+  (userId) => identityProofingService.sendIdpInitiationEmail(userId),
+);
+
+export const checkRemainingEmailTime = createAsyncThunk(
+  'identityProofing/checkRemainingEmailTime',
+  (userId) => identityProofingService.checkRemainingEmailTime(userId),
+);
+
 const identityProofingSlice = createSlice({
   name: 'identityProofing',
   initialState,

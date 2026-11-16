@@ -7,7 +7,14 @@ import { useBooking } from '../../hooks/useBooking';
 import { getItem } from '../../utils/storage';
 import { LoadingBlock } from '../../components/booking/BookingUi';
 import QuestionnaireWizard from '../../components/booking/QuestionnaireWizard';
-import { ConsentStep, ConditionStep, MedicalInfoStep, ResumePrompt, SuccessStep } from '../../components/booking/BookingSteps';
+import {
+  ConsentStep,
+  ConditionStep,
+  MedicalInfoStep,
+  ResumePrompt,
+  SuccessStep,
+  StaffBookingConfirmedStep,
+} from '../../components/booking/BookingSteps';
 import { DateTimeStep, PaymentStep } from '../../components/booking/BookingPaymentSteps';
 import { adTokens } from '../../theme/colors';
 import { useBottomSafeSpacing } from '../../hooks/useBottomSafeSpacing';
@@ -24,6 +31,12 @@ const RESUME_STEP_INDEX = { Consent: 1, Questionnaire: 3, DateTime: 4 };
  * consent -> condition -> medical information -> questionnaire -> date & time (clinic / hospital
  * patients only; a freelancer's doctor sets the time) -> payment -> success. An abandoned booking
  * found on open can be continued exactly where it stopped, or dismissed.
+ *
+ * `route.params?.staffBooking` (web: `bookingMode="staffForPatient"`, set from the Patients page's
+ * "Book Appointment" row icon) is a Nurse/Doctor booking FOR a patient - they pick the slot (consent
+ * through date/time) but never see the payment step themselves. The patient is emailed a "Pay Now"
+ * link to complete payment separately (backend: RepoPatientQuestionnaire.SetAppointmentTime ->
+ * SendPayNowEmailToPatient), so this mode replaces payment/success with a confirmation step instead.
  */
 export default function BookAppointmentPage() {
   const bottomSafe = useBottomSafeSpacing();
@@ -33,15 +46,19 @@ export default function BookAppointmentPage() {
   const { loadPendingPayment } = usePatientDashboard();
   const { dismissBookingAttempt } = useBooking();
   const patientId = route.params?.patientId || profile?.userId;
+  const isStaffBooking = Boolean(route.params?.staffBooking);
   const isFreelancer = String(profile?.userType || '').toLowerCase() === 'freelancer';
   // "Pay now" for a booking a staff member started for the patient: straight to the payment step.
   const payOnlyQuestionnaireId = route.params?.paymentQuestionnaireId;
 
-  // The step list: consent, condition, medical info, questionnaire, [date/time], payment, success.
+  // The step list: consent, condition, medical info, questionnaire, [date/time], payment, success -
+  // or, in staff mode, a single confirmation step in place of payment/success.
   const views = useMemo(() => {
-    const list = ['consent', 'condition', 'medicalInfo', 'questionnaire', 'dateTime', 'payment', 'success'];
-    return isFreelancer ? list.filter((view) => view !== 'dateTime') : list;
-  }, [isFreelancer]);
+    let list = ['consent', 'condition', 'medicalInfo', 'questionnaire', 'dateTime', 'payment', 'success'];
+    if (isFreelancer) list = list.filter((view) => view !== 'dateTime');
+    if (isStaffBooking) list = list.filter((view) => view !== 'payment' && view !== 'success').concat('staffConfirmed');
+    return list;
+  }, [isFreelancer, isStaffBooking]);
 
   const [currentIndex, setCurrentIndex] = useState(() => (payOnlyQuestionnaireId ? views.indexOf('payment') : 0));
   const [symptomList, setSymptomList] = useState(null);
@@ -142,6 +159,8 @@ export default function BookAppointmentPage() {
         return <PaymentStep questionnaireId={questionnaireId} authToken={authToken} onNext={handleNext} />;
       case 'success':
         return <SuccessStep onClose={close} />;
+      case 'staffConfirmed':
+        return <StaffBookingConfirmedStep onClose={close} />;
       default:
         return null;
     }

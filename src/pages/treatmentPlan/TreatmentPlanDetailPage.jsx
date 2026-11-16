@@ -37,6 +37,8 @@ import RescheduleModal from '../../components/appointments/RescheduleModal';
 import PrescriptionDetailModal from '../../components/treatmentPlan/PrescriptionDetailModal';
 import CallRecordingPlayerModal from '../../components/treatmentPlan/CallRecordingPlayerModal';
 import PrescriptionActionModal from '../../components/treatmentPlan/PrescriptionActionModal';
+import AddMedicineModal from '../../components/treatmentPlan/AddMedicineModal';
+import DeleteMedicineModal from '../../components/treatmentPlan/DeleteMedicineModal';
 import { usePrescriptions } from '../../hooks/usePrescriptions';
 import { CANCELABLE_PRESCRIPTION_STATUSES, CANCELABLE_MEDICATION_STATUSES } from '../../utils/dispenseUnits';
 import { toast } from '../../utils/toast';
@@ -251,7 +253,7 @@ export default function TreatmentPlanDetailPage() {
   const { getPharmacyById, selectMedication } = useDoseSpotClinical();
   const { getAppointmentDetails: getAppointmentActionMeta } = usePendingRequestDetails();
   const { getPrescriptionById, cancelPrescription, deletePrescriptions, getSupplyById } = usePrescriptions();
-  const { getTreatmentPlanDetails, saveTranscriptData } = useTreatmentPlan();
+  const { getTreatmentPlanDetails, saveTranscriptData, getAllActiveMedicineStock, deleteMedicine: deleteMedicineStockRow } = useTreatmentPlan();
   const { getPatientPharmacies } = usePatients();
   const {
     markAppointmentComplete,
@@ -318,6 +320,12 @@ export default function TreatmentPlanDetailPage() {
   const [noteSaving, setNoteSaving] = useState(false);
   const noteLoaded = useRef(false);
 
+  // In-office "Medicine Stock" (Medicines card on the SOAP tab) - see AddMedicineModal.jsx.
+  const [medicineStock, setMedicineStock] = useState([]);
+  const [isAddMedicineOpen, setIsAddMedicineOpen] = useState(false);
+  const [medicineDeleteId, setMedicineDeleteId] = useState(null);
+  const [isDeletingMedicine, setIsDeletingMedicine] = useState(false);
+
   const load = useCallback(async () => {
     if (appointmentId == null) return;
     setLoadError(null);
@@ -370,6 +378,38 @@ export default function TreatmentPlanDetailPage() {
     if (isPatient || appointmentId == null) return;
     loadRecording(false);
   }, [isPatient, appointmentId, loadRecording]);
+
+  // Medicine Stock autocomplete list (GetAllActiveMedicineStock) - staff only, loaded once up
+  // front so AddMedicineModal has it ready the first time it opens.
+  useEffect(() => {
+    if (isPatient) return;
+    getAllActiveMedicineStock().then((result) => {
+      if (result.success) setMedicineStock(Array.isArray(result.data) ? result.data : []);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPatient]);
+
+  const handleMedicineSaved = () => {
+    setIsAddMedicineOpen(false);
+    load();
+    getAllActiveMedicineStock().then((result) => {
+      if (result.success) setMedicineStock(Array.isArray(result.data) ? result.data : []);
+    });
+  };
+
+  const confirmDeleteMedicine = async () => {
+    if (medicineDeleteId == null) return;
+    setIsDeletingMedicine(true);
+    const result = await deleteMedicineStockRow(medicineDeleteId);
+    setIsDeletingMedicine(false);
+    if (!result.success) {
+      toast.error(result.message || 'Unable to delete this medicine.');
+      return;
+    }
+    toast.success(result.message || 'Medicine deleted.');
+    setMedicineDeleteId(null);
+    load();
+  };
 
   const doseSpotPatientId = actionMeta?.doseSpotId;
   const [pharmacyReload, setPharmacyReload] = useState(0);
@@ -575,6 +615,13 @@ export default function TreatmentPlanDetailPage() {
     toast.success(isSubmitted ? 'SOAP notes submitted.' : 'Saved as draft.');
     load();
   };
+
+  // Medicines card (in-office dispensed meds, Action.js's mediticationLists - sic, kept verbatim).
+  // Same permission gate web uses for both its Add and Delete buttons: allowedAddMedicine, and
+  // not a doctor admin - folded into canPrescribe here since nurse is view-only for every other
+  // clinical action on this screen too.
+  const medicationList = useMemo(() => detail?.mediticationLists ?? [], [detail?.mediticationLists]);
+  const canManageMedicine = canPrescribe && Boolean(detail?.allowedAddMedicine);
 
   const questionnaire = useMemo(() => detail?.questionAnwerLists ?? [], [detail?.questionAnwerLists]);
   useEffect(() => {
@@ -1047,6 +1094,53 @@ export default function TreatmentPlanDetailPage() {
       </Card>
       ) : null}
 
+      {isPatient || activeTab === 'soap' ? (
+        <Card title="Medicines" subtitle={isPatient ? undefined : 'In-office dispensed medicine for this visit'}>
+          {canManageMedicine ? (
+            <Pressable style={styles.addPrescriptionButton} onPress={() => setIsAddMedicineOpen(true)}>
+              <Feather name="plus" size={14} color={adTokens.primaryDark} />
+              <Text style={styles.addPrescriptionButtonText}>Add medicine</Text>
+            </Pressable>
+          ) : null}
+          {medicationList.length === 0 ? (
+            <Text style={styles.emptyText}>No medicines added for this visit yet.</Text>
+          ) : (
+            <View style={styles.rxList}>
+              {medicationList.map((medicine, index) => (
+                <View key={String(medicine.id ?? index)} style={[styles.rx, { borderLeftWidth: 3, borderLeftColor: adTokens.primary }]}>
+                  <View style={styles.rxHeader}>
+                    <View style={[styles.rxIcon, { backgroundColor: `${adTokens.primary}1F` }]}>
+                      <MaterialCommunityIcons name="pill" size={20} color={adTokens.primaryDark} />
+                    </View>
+                    <View style={styles.rxBody}>
+                      <Text style={styles.rxName}>{medicine.medicineName || 'N/A'}</Text>
+                      <View style={styles.rxPills}>
+                        {medicine.frequency ? <Pill tone="info">{medicine.frequency}</Pill> : null}
+                      </View>
+                    </View>
+                    {canManageMedicine ? (
+                      <Pressable
+                        style={[styles.rxActionButton, styles.rxActionDanger]}
+                        onPress={() => setMedicineDeleteId(medicine.id)}
+                        hitSlop={8}
+                      >
+                        <Feather name="trash-2" size={14} color={adTokens.danger} />
+                      </Pressable>
+                    ) : null}
+                  </View>
+                  <View style={styles.rxDetails}>
+                    <FieldLine label="Dose" value={naText(`${medicine.doseQuantity ?? ''} ${medicine.doseUnit ?? ''}`.trim())} />
+                    <FieldLine label="Duration" value={naText(medicine.durationDays ? `${medicine.durationDays} days` : null)} />
+                    <FieldLine label="Timing" value={naText(medicine.beforeAfterFood ? `${medicine.beforeAfterFood} food` : null)} />
+                    {medicine.instruction ? <FieldLine label="Instructions" value={medicine.instruction} /> : null}
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </Card>
+      ) : null}
+
       {(isPatient ? questionnaire.length > 0 : activeTab === 'questionnaire') ? (
         <Card title="Questionnaire" subtitle={`${questionnaire.length} question${questionnaire.length === 1 ? '' : 's'}`}>
           <View style={styles.questions}>
@@ -1203,6 +1297,19 @@ export default function TreatmentPlanDetailPage() {
             visible={recordingPlayerOpen}
             url={recordingLink}
             onClose={() => setRecordingPlayerOpen(false)}
+          />
+          <AddMedicineModal
+            visible={isAddMedicineOpen}
+            appointmentId={appointmentId}
+            medicineStock={medicineStock}
+            onClose={() => setIsAddMedicineOpen(false)}
+            onSaved={handleMedicineSaved}
+          />
+          <DeleteMedicineModal
+            visible={medicineDeleteId != null}
+            submitting={isDeletingMedicine}
+            onConfirm={confirmDeleteMedicine}
+            onClose={() => setMedicineDeleteId(null)}
           />
         </>
       ) : null}
